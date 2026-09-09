@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "component": "torchvision VGG19 IMAGENET1K_V1 pretrained weights",
+      "license_id": "LicenseRef-Local-Parity-Only",
+      "source_url": "https://download.pytorch.org/models/vgg19-dcbb9e9d.pth",
+      "notice": "Local numerical-parity testing only. Redistribution requires separate license review and an approved release license bundle."
+    }
+  ]
+}

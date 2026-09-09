@@ -1,0 +1,25 @@
+[package]
+name = "feathertalk-inference"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn.workspace = true
+feathertalk-audio = { path = "../feathertalk-audio" }
+feathertalk-media = { path = "../feathertalk-media" }
+feathertalk-models = { path = "../feathertalk-models", default-features = false }
+feathertalk-preprocess = { path = "../feathertalk-preprocess" }
+jpeg-decoder.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.4", default-features = false, features = ["fs", "std"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+base64.workspace = true
+tempfile.workspace = true

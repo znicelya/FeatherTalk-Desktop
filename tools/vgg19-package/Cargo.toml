@@ -1,0 +1,21 @@
+[package]
+name = "feathertalk-vgg19-package"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn.workspace = true
+burn-store.workspace = true
+clap.workspace = true
+feathertalk-training = { path = "../../crates/feathertalk-training" }
+feathertalk-weights = { path = "../../crates/feathertalk-weights" }
+hex.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+zip.workspace = true

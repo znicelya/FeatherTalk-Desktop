@@ -1,0 +1,88 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/feathertalk-domain",
+  "crates/feathertalk-worker",
+  "crates/feathertalk-client",
+  "crates/feathertalk-supervisor",
+  "crates/feathertalk-cli",
+  "crates/feathertalk-face",
+  "crates/feathertalk-preprocess",
+  "crates/feathertalk-media",
+  "crates/feathertalk-project",
+  "crates/feathertalk-models",
+  "crates/feathertalk-weights",
+  "crates/feathertalk-parity",
+  "crates/feathertalk-pfld",
+  "crates/feathertalk-scrfd",
+  "crates/feathertalk-frame-pipeline",
+  "crates/feathertalk-image",
+  "crates/feathertalk-frame-adapters",
+  "crates/feathertalk-audio",
+  "crates/feathertalk-training",
+  "crates/feathertalk-inference",
+  "crates/feathertalk-export",
+  "crates/feathertalk-training-data",
+  "crates/feathertalk-training-run",
+  "tools/pfld-artifact",
+  "tools/vgg19-package",
+  "tools/model-package",
+  "tools/onnx-validate",
+]
+exclude = ["crates/feathertalk-app", "tools/scrfd-import", "vendor/cubek-matmul"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+base64 = "0.22"
+# Vulkan enables CubeCL's native SPIR-V compiler; fusion and autotuning avoid
+# the unfused/direct-only kernel configuration on production GPU workloads.
+burn = { version = "=0.21.0", default-features = false, features = ["std", "autodiff", "ndarray", "vulkan", "fusion", "autotune", "store"] }
+burn-store = { version = "=0.21.0", default-features = false, features = ["std", "pytorch", "safetensors"] }
+burn-wgpu = { version = "=0.21.0", default-features = false, features = ["vulkan", "fusion", "autotune"] }
+cap-std = "3.4.5"
+clap = { version = "4.5", features = ["derive"] }
+ctrlc = "=3.4.5"
+hex = "0.4"
+jpeg-decoder = "0.3"
+ndarray = "0.17.1"
+ndarray-npy = "0.10.0"
+prost = "0.14.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+safetensors = "=0.7.0"
+sha2 = "0.11.0"
+tempfile = "3.20"
+thiserror = "2.0"
+time = { version = "0.3.55", features = ["parsing", "formatting", "macros"] }
+zip = { version = "6", default-features = false, features = ["deflate"] }
+
+[patch.crates-io]
+# Cubek 0.2.0 double-buffered matmul needs K bounds checks for an odd number
+# of whole stages. See vendor/cubek-matmul/FEATHERTALK-PATCH.md.
+cubek-matmul = { path = "vendor/cubek-matmul" }
+
+# burn's tensor kernels are generic, so they are monomorphized into whichever
+# crate calls them and compile at opt-level 0 in a plain `cargo test`. That makes
+# a 160x160 micro-UNet forward plus backward take about 47 s instead of about
+# 1 s: `feathertalk-training-run`'s six single-frame step tests measured 285 s at
+# opt-level 0 against 7 s at opt-level 2. Overriding only the dependencies with
+# `[profile.dev.package."*"]` does not help, for the same monomorphization
+# reason, so the whole dev profile is optimized. Debug info stays enabled.
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.bench]
+opt-level = 3
+lto = true
+codegen-units = 1

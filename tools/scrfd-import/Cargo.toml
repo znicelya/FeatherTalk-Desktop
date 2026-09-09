@@ -1,0 +1,26 @@
+[package]
+name = "feathertalk-scrfd-import"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "Apache-2.0"
+
+[workspace]
+
+exclude = ["target"]
+
+[dependencies]
+burn-onnx = { version = "=0.21.0", default-features = false, features = ["mmap"] }
+burn = { version = "=0.21.0", default-features = false, features = ["std", "ndarray", "store"] }
+burn-store = { version = "=0.21.0", default-features = false, features = ["std", "burnpack", "safetensors"] }
+clap = { version = "=4.6.6", features = ["derive"] }
+feathertalk-scrfd = { path = "../../crates/feathertalk-scrfd", default-features = false }
+hex = "=0.4.3"
+prost = "=0.14.4"
+serde_json = "=1.0.151"
+sha2 = "=0.11.0"
+tempfile = "=3.27.0"
+thiserror = "=2.0.20"
+
+[patch.crates-io]
+onnx-ir = { path = "vendor/onnx-ir-0.21.0" }

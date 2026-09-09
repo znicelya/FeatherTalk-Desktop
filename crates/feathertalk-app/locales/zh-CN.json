@@ -1,0 +1,391 @@
+{
+  "shell": {
+    "title": "FeatherTalk 工作台",
+    "subtitle": "本地训练与生成，不依赖云端",
+    "navigation": "主导航",
+    "worker": {
+      "ready": "worker 就绪",
+      "missing": "未找到 worker",
+      "path": "可执行文件",
+      "probed": "已探测的位置",
+      "unset": "未配置",
+      "source": {
+        "cli": "命令行参数",
+        "env": "环境变量",
+        "sibling": "程序同目录"
+      }
+    }
+  },
+  "compute": {
+    "label": "计算设备",
+    "refresh": "刷新设备",
+    "automatic": "自动选择",
+    "discovering": "正在检测计算设备…",
+    "unavailable": "设备信息不可用，可刷新重试",
+    "experimental": "实验性设备，不可用于任务",
+    "vram": "显存",
+    "vram_unavailable": "显存信息不可用",
+    "invalid": "计算设备配置无效",
+    "blocked": "所选设备暂不能运行此任务，请检查底部设备配置或刷新"
+  },
+  "nav": {
+    "assets": "素材",
+    "training": "训练",
+    "generate": "生成",
+    "models": "模型",
+    "tasks": "任务"
+  },
+  "page": {
+    "assets": {
+      "title": "素材",
+      "pending": "导入人物视频后，这一页显示时长、帧率、分辨率、音轨、响度与人脸可见率，启动标准化、抽帧、关键点与特征提取，在时间轴上标记异常帧，并在校验通过后锁定素材包版本。"
+    },
+    "training": {
+      "title": "训练",
+      "pending": "这一页选择 UNet variant、训练预设、设备与保存路径，高级面板展开完整参数；训练期间显示 epoch、step、总 loss 与各分量、每秒样本数、预计剩余时间、固定样本预测与嘴部 ROI，以及显存和 worker 状态。"
+    },
+    "generate": {
+      "title": "生成",
+      "pending": "这一页选择素材包、checkpoint 与驱动音频，设置输出尺寸、编码器、质量与路径，生成短预览或完整视频，完成后播放视频或打开输出目录。"
+    },
+    "models": {
+      "title": "模型",
+      "pending": "这一页导入旧的 .pth 与 .pth.tar，显示模型类型、参数量、shape、哈希与兼容状态，导出标准模型包或 ONNX，并拒绝架构不匹配的权重。"
+    },
+    "tasks": {
+      "title": "任务",
+      "pending": "这一页显示排队、运行、完成、失败与取消的任务历史。一个 GPU adapter 同时只运行一个训练或推理任务，应用退出前训练任务先停止并保存。"
+    }
+  },
+  "task": {
+    "status": {
+      "queued": "排队中",
+      "running": "运行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "stage": {
+      "queued": "排队",
+      "preparing": "准备",
+      "extracting_audio": "提取音频",
+      "extracting_frames": "抽帧",
+      "detecting_faces": "人脸检测",
+      "extracting_features": "特征提取",
+      "training": "训练",
+      "importing": "导入",
+      "exporting": "导出",
+      "rendering": "渲染",
+      "completed": "完成",
+      "failed": "失败",
+      "cancelled": "取消"
+    },
+    "kind": {
+      "probe_media": "探测素材",
+      "normalize_media": "标准化素材",
+      "validate_project": "校验项目",
+      "lock_asset_package": "锁定素材包",
+      "extract_frames": "抽帧",
+      "extract_features": "提取特征",
+      "train": "训练",
+      "render": "生成视频",
+      "inspect_model": "检查模型",
+      "import_legacy_model": "导入旧模型",
+      "export_model_package": "导出模型包",
+      "export_onnx": "导出 ONNX",
+      "migrate_legacy_features": "迁移旧特征"
+    },
+    "recovery": {
+      "retry": "重试一次",
+      "resume_from_checkpoint": "从最近的检查点继续",
+      "free_disk_space": "清理磁盘空间后重试",
+      "select_different_adapter": "换一个显卡设备",
+      "exclude_bad_frames": "排除异常帧后重试",
+      "reimport_model": "重新导入模型",
+      "not_recoverable": "无法自动恢复，请查看技术详情"
+    }
+  },
+  "tasks": {
+    "submit": "校验项目",
+    "blocked": {
+      "no_project": "还没有选择项目目录，去素材页选一个",
+      "no_worker": "未找到 worker 可执行文件，请检查底部状态栏显示的探测位置",
+      "busy": "已有任务在运行，同一时间只运行一个任务"
+    },
+    "incomplete": {
+      "title": "未完成任务",
+      "description": "上次退出时这些任务还没有结束。恢复会把它放回排队状态，清理会把它标记为取消；两种处理都只改任务历史，不会重新执行命令。",
+      "resume": "恢复",
+      "discard": "清理",
+      "updated": "最后更新",
+      "unknown_kind": "命令未记录"
+    },
+    "list": {
+      "title": "本次会话的任务"
+    },
+    "empty": {
+      "title": "还没有任务",
+      "description": "点上面的「校验项目」提交第一个任务，进度、阶段与失败原因都会显示在这里。"
+    },
+    "cancel": "取消",
+    "cancel_hint": "再点一次会强制结束 worker 进程",
+    "attempts": "worker 进程",
+    "detail": "技术详情",
+    "error_code": "错误码",
+    "recovery": "建议",
+    "crash_log": "崩溃日志",
+    "failure": {
+      "crashed": "worker 进程意外退出，没有报告失败原因",
+      "unavailable": "无法启动 worker，重试不会有帮助",
+      "rejected": "worker 拒绝了这个命令，展开技术详情看它缺什么",
+      "unsupported": "这次启动的 worker 没有这个命令，通常是媒体工具链或模型目录没有配置，配好后重启应用"
+    },
+    "notes": {
+      "title": "提示"
+    },
+    "note": {
+      "scan_failed": "读取任务历史失败，未完成任务列表可能不完整",
+      "log_failed": "崩溃日志写入失败",
+      "journal_failed": "任务历史写入失败，任务结果不受影响",
+      "manifest_failed": "项目清单写入失败，任务历史不会记录这次任务",
+      "task_id_failed": "生成任务编号失败，本次提交没有发出",
+      "submit_failed": "监督线程启动失败，本次提交没有发出",
+      "resolve_failed": "处理未完成任务失败，任务历史没有改动"
+    }
+  },
+  "assets": {
+    "project": {
+      "label": "项目目录",
+      "unset": "还没有选择项目目录",
+      "pick": "选择项目目录"
+    },
+    "refresh": "刷新",
+    "video": {
+      "label": "人物视频",
+      "unset": "还没有选择人物视频",
+      "pick": "选择人物视频"
+    },
+    "step": {
+      "normalize": "标准化素材",
+      "extract_frames": "抽帧与关键点",
+      "extract_features": "提取特征",
+      "lock": "锁定素材包"
+    },
+    "hint": {
+      "normalize": "把选中的视频转成 25fps 视频与 16k 单声道音频，后面每一步都读这两个文件",
+      "extract_frames": "逐帧导出图片、检测人脸关键点，并写出质量报告",
+      "extract_features": "用 FeatherHuBERT 把音频编码成特征文件",
+      "lock": "校验帧数、特征与模型哈希，通过后把素材包写成已锁定版本"
+    },
+    "state": {
+      "ready": "可以开始",
+      "done": "已完成",
+      "locked": "已锁定"
+    },
+    "blocked": {
+      "no_source": "先选一个人物视频",
+      "no_video": "缺少 25fps 视频，先做标准化",
+      "no_audio": "缺少 16k 单声道音频，先做标准化",
+      "no_features": "缺少特征文件或质量报告，先做抽帧与提取特征",
+      "locked": "素材包已锁定，换一个项目目录才能重做"
+    },
+    "package": {
+      "title": "素材包",
+      "state": "状态",
+      "fps": "帧率",
+      "sample_rate": "采样率",
+      "channels": "声道",
+      "frames": "帧数",
+      "resolution": "分辨率",
+      "duration": "时长（秒）",
+      "tokens": "特征 token",
+      "landmark_model": "关键点模型",
+      "feature_model": "特征模型",
+      "preparing": "准备中",
+      "locked": "已锁定"
+    },
+    "failure": {
+      "hint": "详情见任务页"
+    },
+    "notes": {
+      "title": "提示"
+    },
+    "note": {
+      "pick_failed": "打开文件选择器失败",
+      "absolute_failed": "无法把项目目录转成绝对路径，worker 可能会拒绝这次提交",
+      "manifest_failed": "读取素材包失败"
+    }
+  },
+  "training": {
+    "form": {
+      "title": "训练参数",
+      "preset": "预设",
+      "variant": "模型",
+      "epochs": "epoch 目标",
+      "epochs_hint": "范围 1–10000。这是训到第几个 epoch 为止，不是再训多少个。Python 参考实现里基础版默认 200，两个增强版默认 60。",
+      "batch_size": "批大小（batch_size）",
+      "batch_size_hint": "每次更新使用的样本数。数值越大，占用的内存或显存越多。",
+      "batch_size_resume": "续训所需批大小",
+      "resume": "续训",
+      "resume_hint": "从最新检查点继续。目标 epoch 要大于检查点已完成的 epoch，否则一步都不会跑。"
+    },
+    "preset": {
+      "fast": "快速",
+      "fast_hint": "整幅 L1 加 0.01 倍 VGG19 conv3_3 感知损失",
+      "mouth": "嘴部增强",
+      "mouth_hint": "在快速的基础上，嘴部区域再加 4.0 倍 L1",
+      "temporal": "时序稳定",
+      "temporal_hint": "在嘴部增强的基础上，相邻帧差异加 0.5 倍、嘴部帧间差异加 4.0 倍"
+    },
+    "variant": {
+      "original": "原始 UNet",
+      "mobileone": "MobileOne UNet（轻量）"
+    },
+    "device": {
+      "label": "设备",
+      "cpu": "CPU（ndarray 后端）· 本版本不使用 GPU"
+    },
+    "output": {
+      "label": "保存到"
+    },
+    "submit": "开始训练",
+    "blocked": {
+      "not_locked": "素材包还没锁定，先去素材页锁定",
+      "no_checkpoint": "还没有可续训的检查点，去掉续训就能从新权重开始",
+      "epoch_reached": "检查点已经训到这个 epoch，把目标改大才有事可做",
+      "batch_size_mismatch": "批大小与检查点不一致，请改为输入框下方提示的值后继续训练"
+    },
+    "warn": {
+      "fresh_over_checkpoint": "不续训会从新权重开始、step 从头编号：同名检查点会被换掉，step 号更大的旧检查点仍留在原地，所以「最新检查点」可能还是上一轮的"
+    },
+    "live": {
+      "title": "训练中",
+      "position": "当前位置",
+      "steps": "本轮步骤"
+    },
+    "metrics": {
+      "title": "指标",
+      "empty": "还没有训练过，训练一次后这里显示 worker 写下的指标",
+      "source": "取自",
+      "mode": "模式",
+      "total_loss": "总 loss",
+      "full_loss": "整幅 loss",
+      "perceptual_loss": "感知 loss",
+      "mouth_loss": "嘴部 loss",
+      "temporal_loss": "帧间 loss",
+      "temporal_mouth_loss": "嘴部帧间 loss",
+      "samples_seen": "累计样本使用次数",
+      "samples_per_second": "每秒样本数",
+      "remaining": "预计剩余（秒）",
+      "gpu_memory": "显存（字节）",
+      "gpu_memory_none": "无显存数据",
+      "mode_baseline": "快速",
+      "mode_mouth": "嘴部增强",
+      "mode_temporal": "时序稳定"
+    },
+    "checkpoint": {
+      "title": "检查点",
+      "empty": "还没有检查点",
+      "latest": "检查点累计步数",
+      "epoch": "已完成 epoch",
+      "count": "检查点个数",
+      "preview_count": "预览份数"
+    },
+    "config": {
+      "title": "已保存的训练参数",
+      "empty": "训练一次后显示 worker 实际使用的参数",
+      "batch_size": "批大小",
+      "learning_rate": "学习率",
+      "total_epochs": "epoch 目标",
+      "temporal_stride": "帧间步长",
+      "mouth_weight": "嘴部权重",
+      "temporal_weight": "帧间权重",
+      "temporal_mouth_weight": "嘴部帧间权重",
+      "perceptual_weight": "感知权重",
+      "random_seed": "随机种子"
+    },
+    "failure": {
+      "hint": "详情见任务页"
+    },
+    "notes": {
+      "title": "提示"
+    },
+    "note": {
+      "metrics_failed": "读取训练指标失败",
+      "state_failed": "读取检查点训练状态失败"
+    }
+  },
+  "generate": {
+    "form": {
+      "title": "生成视频"
+    },
+    "checkpoint": {
+      "label": "检查点",
+      "latest": "最新",
+      "picked": "已选择",
+      "step": "step",
+      "epoch": "epoch",
+      "mode": "模式",
+      "pick": "选择检查点…",
+      "use_latest": "使用最新",
+      "unreadable": "读不出训练状态；仍然可以提交，能不能用由 worker 判断",
+      "none": "还没有检查点，先在训练页训练一次"
+    },
+    "audio": {
+      "label": "音轨",
+      "project": "项目自带",
+      "picked": "已选择",
+      "pick": "选择音轨…",
+      "note": "口型来自素材包锁定的特征；换音轨只换声音，不改变口型",
+      "missing": "缺少 assets/audio_16k_mono.wav"
+    },
+    "preview": {
+      "label": "预览",
+      "hint": "只渲染前若干帧，用来先看效果",
+      "frames": "帧",
+      "seconds": "约 N 秒",
+      "full": "渲染整段"
+    },
+    "output": {
+      "label": "输出",
+      "pick": "另存为…"
+    },
+    "submit": "开始生成",
+    "blocked": {
+      "not_locked": "需要先锁定素材包",
+      "no_checkpoint": "需要先训练出一个检查点",
+      "no_audio": "需要一条音轨"
+    },
+    "format": {
+      "title": "只读格式",
+      "resolution": "分辨率",
+      "fps": "帧率",
+      "video_codec": "视频编码器",
+      "audio_codec": "音频编码器",
+      "quality": "质量",
+      "quality_default": "编码器默认"
+    },
+    "live": {
+      "title": "生成进度",
+      "position": "当前帧"
+    },
+    "renders": {
+      "title": "生成产物",
+      "empty": "还没有生成过",
+      "play": "播放",
+      "reveal": "打开目录",
+      "count": "产物数量"
+    },
+    "failure": {
+      "hint": "详情见任务页"
+    },
+    "notes": {
+      "title": "提示"
+    },
+    "note": {
+      "checkpoint_failed": "读取手选检查点失败",
+      "output_dir_failed": "创建输出目录失败",
+      "pick_failed": "打开文件对话框失败"
+    }
+  }
+}

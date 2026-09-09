@@ -1,0 +1,19 @@
+[package]
+name = "feathertalk-client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+feathertalk-domain = { path = "../feathertalk-domain" }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[[bin]]
+name = "feathertalk-fake-worker"
+path = "tests/support/fake_worker.rs"

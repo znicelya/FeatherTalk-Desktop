@@ -1,0 +1,4 @@
+# Golden fixtures are generated once with Python 3.10.16 on CPU.
+--extra-index-url https://download.pytorch.org/whl/cu118
+numpy==1.23.5
+torch==2.1.2+cu118

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "component": "torchvision VGG19 IMAGENET1K_V1 pretrained weights, conv3_3 features",
+      "license_id": "NOASSERTION",
+      "source_url": "https://download.pytorch.org/models/vgg19-dcbb9e9d.pth",
+      "notice": "Converted from the official torchvision VGG19 checkpoint to the conv3_3 feature extractor used by FeatherTalk perceptual loss. The source SHA-256 is recorded in manifest.json. This provenance record does not assert a model-weight license or redistribution approval."
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+use feathertalk_client::ComputeOptions;
+use feathertalk_domain::{
+    AdapterInfo, AdapterKind, Backend, Capabilities, PROTOCOL_VERSION, ReadyFrame, TaskKind,
+};
+
+fn adapter(id: &str, backend: Backend, kind: AdapterKind, certified: bool) -> AdapterInfo {
+    AdapterInfo {
+        id: id.into(),
+        name: id.into(),
+        backend,
+        kind,
+        certified,
+        vram_bytes: None,
+    }
+}
+
+fn ready() -> ReadyFrame {
+    ReadyFrame {
+        protocol_version: PROTOCOL_VERSION,
+        worker_version: "test".into(),
+        backends: vec![Backend::Cpu, Backend::Wgpu],
+        adapters: vec![
+            adapter("experimental", Backend::Wgpu, AdapterKind::Discrete, false),
+            adapter("software", Backend::Wgpu, AdapterKind::Cpu, true),
+            adapter("wgpu-first", Backend::Wgpu, AdapterKind::Discrete, true),
+            adapter("cpu-0", Backend::Cpu, AdapterKind::Cpu, true),
+            adapter("wgpu-second", Backend::Wgpu, AdapterKind::Integrated, true),
+        ],
+        supported_commands: vec![TaskKind::Train, TaskKind::Render, TaskKind::ExtractFeatures],
+        capabilities: Capabilities {
+            training: true,
+            wgpu_training: true,
+            onnx_validation: false,
+            ffmpeg: true,
+        },
+    }
+}
+
+#[test]
+fn defaults_select_cpu_even_when_a_gpu_is_advertised_first() {
+    let frame = ready();
+    assert_eq!(
+        ComputeOptions::default()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "cpu-0"
+    );
+}
+
+#[test]
+fn wgpu_auto_selection_uses_the_first_certified_hardware_adapter() {
+    let frame = ready();
+    let options = ComputeOptions::new(Backend::Wgpu, None).unwrap();
+    assert_eq!(options.resolve_adapter(&frame).unwrap().id, "wgpu-first");
+}
+
+#[test]
+fn a_previously_valid_explicit_device_is_revalidated_after_a_restart() {
+    let mut frame = ready();
+    let options = ComputeOptions::new(Backend::Wgpu, Some("wgpu-first".into())).unwrap();
+    assert!(options.resolve_adapter(&frame).is_ok());
+    frame.adapters.retain(|device| device.id != "wgpu-first");
+    let error = options.resolve_adapter(&frame).unwrap_err().to_string();
+    assert!(error.contains("wgpu-first"), "{error}");
+}
+
+#[test]
+fn explicit_uncertified_software_and_unadvertised_devices_are_rejected() {
+    let frame = ready();
+    for id in ["experimental", "software", "missing"] {
+        let options = ComputeOptions::new(Backend::Wgpu, Some(id.into())).unwrap();
+        assert!(options.resolve_adapter(&frame).is_err(), "{id}");
+    }
+    let mut frame = ready();
+    frame.backends.retain(|backend| *backend != Backend::Wgpu);
+    assert!(
+        ComputeOptions::new(Backend::Wgpu, None)
+            .unwrap()
+            .resolve_adapter(&frame)
+            .is_err()
+    );
+}
+
+#[test]
+fn task_eligibility_checks_the_advertised_command_and_wgpu_training_capability() {
+    let mut frame = ready();
+    let options = ComputeOptions::new(Backend::Wgpu, None).unwrap();
+    assert!(options.validate_for(TaskKind::Train, &frame).is_ok());
+    frame.capabilities.wgpu_training = false;
+    assert!(options.validate_for(TaskKind::Train, &frame).is_err());
+    assert!(options.validate_for(TaskKind::Render, &frame).is_ok());
+    assert!(
+        options
+            .validate_for(TaskKind::ExtractFrames, &frame)
+            .is_err()
+    );
+}
+
+#[test]
+fn environment_parsing_defaults_to_cpu_and_keeps_invalid_values_as_errors() {
+    let cpu = ComputeOptions::from_environment_values(None, None).unwrap();
+    assert_eq!(cpu.backend, Backend::Cpu);
+    assert!(cpu.adapter.is_none());
+    for backend in ["", "   ", "cuda", "WGPU"] {
+        assert!(ComputeOptions::from_environment_values(Some(backend), None).is_err());
+    }
+    assert!(ComputeOptions::from_environment_values(None, Some("wgpu-first")).is_err());
+    let options = ComputeOptions::from_environment_values(Some(" wgpu "), Some("  ")).unwrap();
+    assert_eq!(options.backend, Backend::Wgpu);
+    assert!(options.adapter.is_none());
+}
+
+#[test]
+fn absent_cli_options_emit_no_override_and_explicit_backend_clears_the_adapter() {
+    assert!(ComputeOptions::from_flags(None, None).unwrap().is_none());
+    let options = ComputeOptions::from_flags(Some(Backend::Cpu), None)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        options.env_overrides(),
+        vec![
+            ("FEATHERTALK_WORKER_BACKEND".into(), "cpu".into()),
+            ("FEATHERTALK_WORKER_ADAPTER".into(), "".into()),
+        ]
+    );
+}
+
+#[test]
+fn cli_adapter_inference_does_not_change_environment_default_semantics() {
+    for (id, backend) in [(" cpu-0 ", Backend::Cpu), ("wgpu-first", Backend::Wgpu)] {
+        let options = ComputeOptions::from_flags(None, Some(id)).unwrap().unwrap();
+        assert_eq!(options.backend, backend);
+        assert_eq!(options.adapter.as_deref(), Some(id.trim()));
+    }
+    assert!(ComputeOptions::from_flags(Some(Backend::Cpu), Some("wgpu-first")).is_err());
+    assert!(ComputeOptions::from_flags(Some(Backend::Wgpu), Some("cpu-0")).is_err());
+}

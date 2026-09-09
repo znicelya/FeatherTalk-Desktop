@@ -1,0 +1,57 @@
+[package]
+name = "feathertalk-app"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "Apache-2.0"
+default-run = "feathertalk-app"
+
+# The desktop crate is its own workspace. gpui pulls in several hundred crates
+# that the model stack never touches, and the root workspace runs
+# `cargo test --workspace --all-targets` on every slice; keeping the window
+# layer out of that graph keeps the gate fast. `rust/tools/scrfd-import` is the
+# same arrangement.
+[workspace]
+
+[lib]
+name = "feathertalk_app"
+path = "src/lib.rs"
+
+[[bin]]
+name = "feathertalk-app"
+path = "src/main.rs"
+
+[[bin]]
+name = "feathertalk-app-fake-worker"
+path = "tests/support/fake_worker.rs"
+
+[features]
+ui-tests = ["gpui/test-support"]
+
+[dependencies]
+# `yororen_ui 0.3.0` requires `gpui-ce ^0.3`, and crates.io has yanked every
+# published `0.3.x`, so a fresh resolve of this requirement fails. Yanking only
+# blocks new selections, never a locked one, so the committed `Cargo.lock` is
+# what makes this build reproducible: do not run `cargo update` in this crate.
+# The upstream `gpui` crate is a different package and must not be used.
+gpui = { package = "gpui-ce", version = "=0.3.3" }
+yororen_ui = "=0.3.0"
+feathertalk-client = { path = "../feathertalk-client" }
+feathertalk-domain = { path = "../feathertalk-domain" }
+# The types and bounded reads for `assets/assets.json`. `feathertalk-supervisor`
+# already depends on it, so the lock file gains one dependency edge and no
+# packages.
+feathertalk-project = { path = "../feathertalk-project" }
+feathertalk-supervisor = { path = "../feathertalk-supervisor" }
+# The channel between a supervision thread and the window: `send_blocking` on the
+# thread's side, `recv().await` on the foreground executor's, one channel type.
+async-channel = "=1.9.0"
+# The narrow structs for `outputs/metrics/step-*.json` and a checkpoint's
+# `training-state.json`. `feathertalk-project` already derives with it, so the
+# lock file gains one dependency edge and no packages.
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+thiserror = "=2.0.20"
+
+[dev-dependencies]
+tempfile = "=3.27.0"

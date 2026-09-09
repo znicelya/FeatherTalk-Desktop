@@ -1,0 +1,28 @@
+[package]
+name = "feathertalk-parity"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["wgpu"]
+wgpu = ["feathertalk-models/wgpu"]
+metal = ["feathertalk-models/metal"]
+vulkan = ["feathertalk-models/vulkan"]
+
+[dependencies]
+burn.workspace = true
+cap-std.workspace = true
+clap.workspace = true
+feathertalk-models = { path = "../feathertalk-models" }
+feathertalk-weights = { path = "../feathertalk-weights" }
+hex.workspace = true
+ndarray.workspace = true
+ndarray-npy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+zip.workspace = true

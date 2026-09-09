@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "model_kind": "scrfd_2.5g_kps",
+  "architecture_version": 1,
+  "source": {
+    "format": "onnx",
+    "file_name": "scrfd_2.5g_kps.onnx",
+    "file_bytes": 3291017,
+    "sha256": "32d20c77b9e2dc1d07e94c2ab9d25bdd5cd05eddbe0b46e7b38e7a1eca22e99a",
+    "opset": 12,
+    "input_name": "images",
+    "output_names": [
+      "out0",
+      "out1",
+      "out2",
+      "out3",
+      "out4",
+      "out5",
+      "out6",
+      "out7",
+      "out8"
+    ]
+  },
+  "generator": {
+    "burn": "0.21.0",
+    "burn_onnx": "0.21.0",
+    "burn_store": "0.21.0",
+    "simplify": true,
+    "load_strategy": "none"
+  },
+  "input": {
+    "dtype": "float32",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "scale": 0.0078125,
+    "mean": [
+      127.5,
+      127.5,
+      127.5
+    ],
+    "swap_rb": true
+  },
+  "levels": [
+    {
+      "stride": 8,
+      "anchors": 12800,
+      "score": {
+        "onnx_name": "out0",
+        "source_shape": [
+          1,
+          12800,
+          1
+        ],
+        "public_shape": [
+          1,
+          12800
+        ]
+      },
+      "bbox": {
+        "onnx_name": "out3",
+        "source_shape": [
+          1,
+          12800,
+          4
+        ],
+        "public_shape": [
+          1,
+          12800,
+          4
+        ]
+      },
+      "keypoints": {
+        "onnx_name": "out6",
+        "source_shape": [
+          1,
+          12800,
+          10
+        ],
+        "public_shape": [
+          1,
+          12800,
+          10
+        ]
+      }
+    },
+    {
+      "stride": 16,
+      "anchors": 3200,
+      "score": {
+        "onnx_name": "out1",
+        "source_shape": [
+          1,
+          3200,
+          1
+        ],
+        "public_shape": [
+          1,
+          3200
+        ]
+      },
+      "bbox": {
+        "onnx_name": "out4",
+        "source_shape": [
+          1,
+          3200,
+          4
+        ],
+        "public_shape": [
+          1,
+          3200,
+          4
+        ]
+      },
+      "keypoints": {
+        "onnx_name": "out7",
+        "source_shape": [
+          1,
+          3200,
+          10
+        ],
+        "public_shape": [
+          1,
+          3200,
+          10
+        ]
+      }
+    },
+    {
+      "stride": 32,
+      "anchors": 800,
+      "score": {
+        "onnx_name": "out2",
+        "source_shape": [
+          1,
+          800,
+          1
+        ],
+        "public_shape": [
+          1,
+          800
+        ]
+      },
+      "bbox": {
+        "onnx_name": "out5",
+        "source_shape": [
+          1,
+          800,
+          4
+        ],
+        "public_shape": [
+          1,
+          800,
+          4
+        ]
+      },
+      "keypoints": {
+        "onnx_name": "out8",
+        "source_shape": [
+          1,
+          800,
+          10
+        ],
+        "public_shape": [
+          1,
+          800,
+          10
+        ]
+      }
+    }
+  ],
+  "generated_source": {
+    "file_name": "scrfd_2_5g.rs",
+    "file_bytes": 39148,
+    "sha256": "548cf1b531fa466415301a2cb06f2c321583e8a252605c411a03d2ba715159a9"
+  },
+  "weights": {
+    "format": "safetensors",
+    "file_name": "model.safetensors",
+    "file_bytes": 3281436,
+    "sha256": "433a520b5121b39325219460c5a5782d9169312e581f57694f4cca55064f4c64"
+  },
+  "license": {
+    "license_id": "NOASSERTION",
+    "redistribution_approved": false,
+    "evidence": "repository does not provide a verifiable model-weight license"
+  }
+}

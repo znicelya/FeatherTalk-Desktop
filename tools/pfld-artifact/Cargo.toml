@@ -1,0 +1,17 @@
+[package]
+name = "feathertalk-pfld-artifact"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn.workspace = true
+feathertalk-models = { path = "../../crates/feathertalk-models" }
+feathertalk-pfld = { path = "../../crates/feathertalk-pfld" }
+feathertalk-weights = { path = "../../crates/feathertalk-weights" }
+hex.workspace = true
+serde_json.workspace = true
+safetensors.workspace = true
+sha2.workspace = true
+tempfile.workspace = true

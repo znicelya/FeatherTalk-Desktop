@@ -1,0 +1,19 @@
+[package]
+name = "feathertalk-training-run"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn.workspace = true
+feathertalk-models = { path = "../feathertalk-models", default-features = false }
+feathertalk-training = { path = "../feathertalk-training" }
+feathertalk-training-data = { path = "../feathertalk-training-data" }
+
+[dev-dependencies]
+feathertalk-audio = { path = "../feathertalk-audio" }
+feathertalk-inference = { path = "../feathertalk-inference" }
+feathertalk-preprocess = { path = "../feathertalk-preprocess" }
+feathertalk-project = { path = "../feathertalk-project" }
+tempfile.workspace = true

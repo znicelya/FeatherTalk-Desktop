@@ -1,0 +1,171 @@
+{
+  "case": "opencv_cpu_v1",
+  "files": {
+    "area_int_2x2_dst.npy": {
+      "bytes": 176,
+      "dtype": "uint8",
+      "sha256": "23ea6175d510237727553d04256cd2e6c1726faef943612562c67e1dacf19828",
+      "shape": [
+        4,
+        4,
+        3
+      ]
+    },
+    "area_int_2x2_src.npy": {
+      "bytes": 320,
+      "dtype": "uint8",
+      "sha256": "4e86252b614c5b66798dec84fb1c8b3e72297cd9de05257ddab3c573bd22aabc",
+      "shape": [
+        8,
+        8,
+        3
+      ]
+    },
+    "area_int_4x4_dst.npy": {
+      "bytes": 140,
+      "dtype": "uint8",
+      "sha256": "dead80a930767f7b44eff3d20e27e4b6dbd6bea2cfc63ed16cc801546ebcea80",
+      "shape": [
+        2,
+        2,
+        3
+      ]
+    },
+    "area_int_4x4_src.npy": {
+      "bytes": 320,
+      "dtype": "uint8",
+      "sha256": "4e86252b614c5b66798dec84fb1c8b3e72297cd9de05257ddab3c573bd22aabc",
+      "shape": [
+        8,
+        8,
+        3
+      ]
+    },
+    "area_shrink_dst.npy": {
+      "bytes": 233,
+      "dtype": "uint8",
+      "sha256": "bf39823a9905ee4d7b747fc3ee855a6e9709459ef50215c19f80a86fd173214c",
+      "shape": [
+        5,
+        7,
+        3
+      ]
+    },
+    "area_shrink_src.npy": {
+      "bytes": 479,
+      "dtype": "uint8",
+      "sha256": "d02268ed219f393ce696250a47a29667673d3b0f4aa6813d8585fd1c5aa04028",
+      "shape": [
+        9,
+        13,
+        3
+      ]
+    },
+    "area_upscale_dst.npy": {
+      "bytes": 320,
+      "dtype": "uint8",
+      "sha256": "e6fb49afec6b492f3e083476a763dd98db6601766adeb260495c7df408b8380b",
+      "shape": [
+        8,
+        8,
+        3
+      ]
+    },
+    "area_upscale_src.npy": {
+      "bytes": 203,
+      "dtype": "uint8",
+      "sha256": "3add395645a0a4602b7f2552c5bbd900895a576e9787e68168b5f73ac0e50dbf",
+      "shape": [
+        5,
+        5,
+        3
+      ]
+    },
+    "gray_dst.npy": {
+      "bytes": 4224,
+      "dtype": "uint8",
+      "sha256": "59eb05fde5256eb595e1588a32a94eb7d62c2e5ea6447d1e34851774b44ffa81",
+      "shape": [
+        64,
+        64
+      ]
+    },
+    "gray_src.npy": {
+      "bytes": 12416,
+      "dtype": "uint8",
+      "sha256": "dba8f1de61cbadcf53372365b463198be870a5d33ce8c5a9fe5ea99a3d881ff1",
+      "shape": [
+        64,
+        64,
+        3
+      ]
+    },
+    "laplacian_response.npy": {
+      "bytes": 32896,
+      "dtype": "float64",
+      "sha256": "f52440c7f8f8bec32c494af6f866d24744f9a2f84a62b2fa0da4d1d351642747",
+      "shape": [
+        64,
+        64
+      ]
+    },
+    "linear_shrink_dst.npy": {
+      "bytes": 110720,
+      "dtype": "uint8",
+      "sha256": "b98e079706a40caf1f8b8d9393dd3bfd2d86a789988bfbb486b45771b153b178",
+      "shape": [
+        192,
+        192,
+        3
+      ]
+    },
+    "linear_shrink_src.npy": {
+      "bytes": 120128,
+      "dtype": "uint8",
+      "sha256": "02f437d7b8c6c58b3d03d62be51979ad4684bec4ddd3536b6bbb1b4f747ee724",
+      "shape": [
+        200,
+        200,
+        3
+      ]
+    },
+    "linear_upscale_dst.npy": {
+      "bytes": 110720,
+      "dtype": "uint8",
+      "sha256": "2105ca7d9eb1316ab7b081eff5e5f72b84c596777bea4de764312116714936aa",
+      "shape": [
+        192,
+        192,
+        3
+      ]
+    },
+    "linear_upscale_src.npy": {
+      "bytes": 8729,
+      "dtype": "uint8",
+      "sha256": "1875aff8c0a75f1714b96bba6d77437589c2b398a6920675d0ef9bf4b380d9eb",
+      "shape": [
+        47,
+        61,
+        3
+      ]
+    }
+  },
+  "generator": {
+    "backend": "opencv",
+    "numpy_version": "2.4.6",
+    "opencl": false,
+    "opencv_version": "5.0.0",
+    "python_version": "3.11",
+    "target": "cpu",
+    "threads": 1
+  },
+  "scalars": {
+    "laplacian_variance": 8444.039110600948
+  },
+  "schema_version": 1,
+  "source": {
+    "kind": "synthetic",
+    "pattern": "bgr_u8_channel_affine_v1",
+    "pattern_edge": 640
+  }
+}

@@ -1,0 +1,39 @@
+[package]
+name = "feathertalk-worker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn = { workspace = true, features = ["cubecl"] }
+burn-fusion = { version = "=0.21.0", default-features = false, features = ["std"] }
+feathertalk-audio = { path = "../feathertalk-audio" }
+feathertalk-domain = { path = "../feathertalk-domain" }
+feathertalk-export = { path = "../feathertalk-export" }
+feathertalk-frame-adapters = { path = "../feathertalk-frame-adapters" }
+feathertalk-frame-pipeline = { path = "../feathertalk-frame-pipeline" }
+feathertalk-inference = { path = "../feathertalk-inference" }
+feathertalk-media = { path = "../feathertalk-media" }
+feathertalk-models = { path = "../feathertalk-models" }
+feathertalk-pfld = { path = "../feathertalk-pfld" }
+feathertalk-project = { path = "../feathertalk-project" }
+feathertalk-training = { path = "../feathertalk-training" }
+feathertalk-training-data = { path = "../feathertalk-training-data" }
+feathertalk-training-run = { path = "../feathertalk-training-run" }
+feathertalk-weights = { path = "../feathertalk-weights" }
+hex = { workspace = true }
+ndarray = { workspace = true }
+ndarray-npy = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+wgpu = { version = "=29.0.4", default-features = false, features = ["std", "dx12", "metal", "vulkan", "wgsl"] }
+
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+ash = { version = "=0.38.0", default-features = false }
+
+[dev-dependencies]
+cubek = { version = "=0.2.0", default-features = false, features = ["std", "stdlib", "matmul"] }
+tempfile = { workspace = true }

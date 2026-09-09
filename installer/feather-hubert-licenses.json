@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "component": "FeatherHuBERT checkpoint feather_hubert_188_latest_99.pth",
+      "license_id": "NOASSERTION",
+      "source_url": "https://github.com/anliyuan/FeatherTalk",
+      "notice": "Converted from the checkpoint supplied with the FeatherTalk project. Its source SHA-256 is recorded in manifest.json. This provenance record does not assert a model-weight license or redistribution approval."
+    }
+  ]
+}

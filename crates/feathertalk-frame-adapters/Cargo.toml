@@ -1,0 +1,28 @@
+[package]
+name = "feathertalk-frame-adapters"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+metal = ["feathertalk-scrfd/metal"]
+vulkan = ["feathertalk-scrfd/vulkan"]
+
+[dependencies]
+burn.workspace = true
+feathertalk-face = { path = "../feathertalk-face" }
+feathertalk-frame-pipeline = { path = "../feathertalk-frame-pipeline" }
+feathertalk-image = { path = "../feathertalk-image" }
+feathertalk-pfld = { path = "../feathertalk-pfld" }
+feathertalk-scrfd = { path = "../feathertalk-scrfd" }
+
+[dev-dependencies]
+feathertalk-models = { path = "../feathertalk-models" }
+hex.workspace = true
+ndarray.workspace = true
+ndarray-npy.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile.workspace = true

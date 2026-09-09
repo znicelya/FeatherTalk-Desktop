@@ -1,0 +1,121 @@
+{
+  "case": "opencv_cpu_v1",
+  "files": {
+    "input.npy": {
+      "bytes": 4915328,
+      "dtype": "float32",
+      "sha256": "3d1bcdaf3874b28af337d5b596902143b59655a1bf8411c034b1aab1162f04db",
+      "shape": [
+        1,
+        3,
+        640,
+        640
+      ]
+    },
+    "out0.npy": {
+      "bytes": 51328,
+      "dtype": "float32",
+      "sha256": "7f7f3e4a683989d1e288db9deeb1ed49acd7b2e9f076ab72cefafa8fc6b92bcd",
+      "shape": [
+        1,
+        12800,
+        1
+      ]
+    },
+    "out1.npy": {
+      "bytes": 12928,
+      "dtype": "float32",
+      "sha256": "dcab65b5d4affbfacd1ad6cd21f306000b97cdbcb558a40fa8d42192b89376bd",
+      "shape": [
+        1,
+        3200,
+        1
+      ]
+    },
+    "out2.npy": {
+      "bytes": 3328,
+      "dtype": "float32",
+      "sha256": "6e376d31db9f88a7b93aaca48adfeb3d428709ffe6ac65e587e0d674be47ca6f",
+      "shape": [
+        1,
+        800,
+        1
+      ]
+    },
+    "out3.npy": {
+      "bytes": 204928,
+      "dtype": "float32",
+      "sha256": "5cd59269b9adbe18007c5e0c78883de0cf035a02ddc637136c208d57ab508544",
+      "shape": [
+        1,
+        12800,
+        4
+      ]
+    },
+    "out4.npy": {
+      "bytes": 51328,
+      "dtype": "float32",
+      "sha256": "748933a5ea5b7bd1aeb11233a2743f97962f235103f220eb5af8ed033eb016ef",
+      "shape": [
+        1,
+        3200,
+        4
+      ]
+    },
+    "out5.npy": {
+      "bytes": 12928,
+      "dtype": "float32",
+      "sha256": "e96305631e364afaeb7186513d1592177693ef19bf89e6c923175d185163212d",
+      "shape": [
+        1,
+        800,
+        4
+      ]
+    },
+    "out6.npy": {
+      "bytes": 512128,
+      "dtype": "float32",
+      "sha256": "49ffbabada707dbe141f19ff3c5e973265bb97292bde31e4f049f6f003f18b1c",
+      "shape": [
+        1,
+        12800,
+        10
+      ]
+    },
+    "out7.npy": {
+      "bytes": 128128,
+      "dtype": "float32",
+      "sha256": "59a185bcb763b88a33bc6f1f1a20f977d7ec8318d7d792b4b2e4538bc482ad68",
+      "shape": [
+        1,
+        3200,
+        10
+      ]
+    },
+    "out8.npy": {
+      "bytes": 32128,
+      "dtype": "float32",
+      "sha256": "6d16e2bfa4f6fb68a7de059b99ac7e97157842a4523e1a1a299bb404c723534a",
+      "shape": [
+        1,
+        800,
+        10
+      ]
+    }
+  },
+  "generator": {
+    "backend": "opencv",
+    "numpy_version": "2.2.6",
+    "opencl": false,
+    "opencv_version": "4.12.0",
+    "python_version": "3.11",
+    "target": "cpu",
+    "threads": 1
+  },
+  "schema_version": 1,
+  "source": {
+    "file_bytes": 3291017,
+    "file_name": "scrfd_2.5g_kps.onnx",
+    "sha256": "32d20c77b9e2dc1d07e94c2ab9d25bdd5cd05eddbe0b46e7b38e7a1eca22e99a"
+  }
+}

@@ -1,0 +1,193 @@
+use feathertalk_app::assets::Step;
+use feathertalk_app::catalog;
+use feathertalk_app::navigation::Page;
+use feathertalk_app::tasks::{
+    CRASHED_KEY, REJECTED_KEY, UNAVAILABLE_KEY, UNSUPPORTED_KEY, kind_key, recovery_key, stage_key,
+    status_key,
+};
+use feathertalk_app::training::{
+    ALL_MODES, ALL_VARIANTS, mode_hint_key, mode_label_key, variant_label_key,
+};
+use feathertalk_domain::{Recovery, TaskKind, TaskStage, TaskStatus};
+
+/// `Recovery` has no `ALL`, so the list is spelled out here; a new variant makes
+/// this test fail rather than leaking a key onto the screen.
+const RECOVERIES: [Recovery; 7] = [
+    Recovery::Retry,
+    Recovery::ResumeFromCheckpoint,
+    Recovery::FreeDiskSpace,
+    Recovery::SelectDifferentAdapter,
+    Recovery::ExcludeBadFrames,
+    Recovery::ReimportModel,
+    Recovery::NotRecoverable,
+];
+
+#[test]
+fn the_bundled_catalog_parses() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    assert_eq!(catalog::LOCALE_TAG, "zh-CN");
+    assert_eq!(translations.get("shell.title"), Some("FeatherTalk 工作台"));
+}
+
+#[test]
+fn every_navigation_key_resolves_to_chinese_copy() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for page in Page::ALL {
+        for key in [page.label_key(), page.title_key(), page.pending_key()] {
+            let value = translations.get(key).unwrap_or_default();
+            assert!(!value.is_empty(), "{key} has no copy");
+            assert!(
+                value.chars().any(|character| character >= '\u{4e00}'),
+                "{key} is not Chinese copy: {value}"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_shell_key_resolves() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for key in catalog::SHELL_KEYS {
+        assert!(
+            !translations.get(key).unwrap_or_default().is_empty(),
+            "{key} has no copy"
+        );
+    }
+}
+
+#[test]
+fn every_generate_page_key_resolves() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for key in catalog::GENERATE_PAGE_KEYS {
+        assert!(
+            !translations.get(key).unwrap_or_default().is_empty(),
+            "{key} has no copy"
+        );
+    }
+}
+
+#[test]
+fn the_catalog_holds_objects_and_non_empty_strings_only() {
+    let value: serde_json::Value =
+        serde_json::from_str(catalog::RAW).expect("the bundled catalog is valid JSON");
+    let mut stack = vec![&value];
+    while let Some(current) = stack.pop() {
+        match current {
+            serde_json::Value::Object(map) => stack.extend(map.values()),
+            serde_json::Value::String(text) => {
+                assert!(!text.trim().is_empty(), "the catalog holds an empty string")
+            }
+            other => panic!("the catalog holds objects and strings only: {other}"),
+        }
+    }
+}
+
+#[test]
+fn every_protocol_enum_key_resolves_to_chinese_copy() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    let mut keys = Vec::new();
+    for status in TaskStatus::ALL {
+        keys.push(status_key(status));
+    }
+    for stage in TaskStage::ALL_UNIT_SAMPLES {
+        keys.push(stage_key(&stage));
+    }
+    for kind in TaskKind::ALL {
+        keys.push(kind_key(kind));
+    }
+    for recovery in RECOVERIES {
+        keys.push(recovery_key(recovery));
+    }
+    for key in keys {
+        let value = translations.get(key).unwrap_or_default();
+        assert!(!value.is_empty(), "{key} has no copy");
+        assert!(
+            value.chars().any(|character| character >= '\u{4e00}'),
+            "{key} is not Chinese copy: {value}"
+        );
+    }
+}
+
+#[test]
+fn every_task_page_key_resolves() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for key in catalog::TASKS_PAGE_KEYS {
+        assert!(
+            !translations.get(key).unwrap_or_default().is_empty(),
+            "{key} has no copy"
+        );
+    }
+}
+
+#[test]
+fn the_shells_own_failure_summaries_are_task_page_keys() {
+    // The two keys `tasks.rs` spells out have to be in the checked table, or a
+    // typo in either one shows up on screen instead of in a test.
+    assert!(catalog::TASKS_PAGE_KEYS.contains(&CRASHED_KEY));
+    assert!(catalog::TASKS_PAGE_KEYS.contains(&UNAVAILABLE_KEY));
+    assert!(catalog::TASKS_PAGE_KEYS.contains(&REJECTED_KEY));
+    assert!(catalog::TASKS_PAGE_KEYS.contains(&UNSUPPORTED_KEY));
+}
+
+#[test]
+fn every_asset_page_key_resolves() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for key in catalog::ASSETS_PAGE_KEYS {
+        assert!(
+            !translations.get(key).unwrap_or_default().is_empty(),
+            "{key} has no copy"
+        );
+    }
+}
+
+#[test]
+fn every_asset_step_has_a_name_and_a_sentence() {
+    // Walking `Step::ALL` rather than listing the keys again: a fifth step fails
+    // this test instead of rendering a raw key.
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for step in Step::ALL {
+        for key in [step.label_key(), step.hint_key()] {
+            let value = translations.get(key).unwrap_or_default();
+            assert!(!value.is_empty(), "{key} has no copy");
+            assert!(
+                value.chars().any(|character| character >= '\u{4e00}'),
+                "{key} is not Chinese copy: {value}"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_training_page_key_resolves() {
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    for key in catalog::TRAINING_PAGE_KEYS {
+        assert!(
+            !translations.get(key).unwrap_or_default().is_empty(),
+            "{key} has no copy"
+        );
+    }
+}
+
+#[test]
+fn every_mode_and_variant_is_named() {
+    // The three presets and the two variants come from the protocol's enums, so a
+    // fourth mode upstream fails here instead of waiting for somebody to remember
+    // a second list.
+    let translations = catalog::translations().expect("the bundled catalog is a JSON object");
+    let mut keys = Vec::new();
+    for mode in ALL_MODES {
+        keys.push(mode_label_key(mode));
+        keys.push(mode_hint_key(mode));
+    }
+    for variant in ALL_VARIANTS {
+        keys.push(variant_label_key(variant));
+    }
+    for key in keys {
+        let value = translations.get(key).unwrap_or_default();
+        assert!(!value.is_empty(), "{key} has no copy");
+        assert!(
+            value.chars().any(|character| character >= '\u{4e00}'),
+            "{key} is not Chinese copy: {value}"
+        );
+    }
+}

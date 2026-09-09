@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="FeatherTalk" Manufacturer="FeatherTalk"
+           Version="$(var.ProductVersion)" Language="2052" Codepage="936"
+           UpgradeCode="EFC2A059-DB63-4C4E-93C7-177360BDE4E1"
+           Scope="perMachine" InstallerVersion="500" Compressed="yes">
+    <SummaryInformation Description="FeatherTalk Windows x64 installer" />
+    <MajorUpgrade DowngradeErrorMessage="已安装更高版本的 [ProductName]。"
+                  AllowSameVersionUpgrades="yes"
+                  Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Launch Condition="Installed OR VersionNT64"
+            Message="FeatherTalk 需要 64 位 Windows。" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/anliyuan/FeatherTalk" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="FeatherTalk">
+        <Component Id="DesktopApplication" Guid="*">
+          <File Id="FeatherTalkApp" Source="$(var.SourceDir)\feathertalk-app.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder"
+                      Name="FeatherTalk" Advertise="yes" WorkingDirectory="INSTALLFOLDER" />
+          </File>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Complete" Title="FeatherTalk" Level="1">
+      <ComponentRef Id="DesktopApplication" />
+      <ComponentGroupRef Id="PayloadFiles" />
+    </Feature>
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+  </Package>
+</Wix>

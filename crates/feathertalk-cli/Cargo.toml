@@ -1,0 +1,31 @@
+[package]
+name = "feathertalk-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "feathertalk_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "feathertalk"
+path = "src/main.rs"
+
+# The client's fake worker, rebuilt under this crate so the CLI tests have a
+# worker to talk to without depending on a sibling crate's test targets.
+[[bin]]
+name = "feathertalk-cli-fake-worker"
+path = "tests/support/fake_worker_bin.rs"
+
+[dependencies]
+clap = { workspace = true }
+ctrlc = { workspace = true }
+feathertalk-client = { path = "../feathertalk-client" }
+feathertalk-domain = { path = "../feathertalk-domain" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

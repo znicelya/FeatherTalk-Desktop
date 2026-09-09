@@ -1,0 +1,81 @@
+{
+  "ui": {
+    "brand": { "subtitle": "数字人创作工作台" },
+    "nav": { "workflow": "工作流程", "manage": "管理" },
+    "local_workspace": "本地工作空间 · FeatherTalk 0.1",
+    "project": { "current": "当前项目", "unset": "开始一个新项目", "change": "选择项目" },
+    "settings": {
+      "title": "设置",
+      "description": "管理外观与计算设备，查看本地服务状态。",
+      "back": "返回工作台"
+    },
+    "theme": {
+      "title": "外观",
+      "description": "选择适合当前环境的界面主题。",
+      "light": "浅色模式",
+      "dark": "深色模式"
+    },
+    "compute": {
+      "description": "为后续任务选择计算设备；正在运行的任务保持原来的选择。",
+      "selected": "已选择",
+      "available": "可用",
+      "unavailable": "暂不可用",
+      "pending": "检测设备中…",
+      "configure": "配置计算设备",
+      "cpu_hint": "使用处理器执行任务",
+      "gpu_hint": "WGPU 硬件加速"
+    },
+    "service": {
+      "title": "本地计算服务",
+      "description": "服务路径与诊断信息用于检查本机配置。",
+      "connecting": "正在连接计算服务",
+      "ready": "计算服务就绪",
+      "unavailable": "计算服务待配置",
+      "copy": "复制服务信息",
+      "refresh_hint": "配置媒体工具或模型目录后，点击上方“刷新设备”重新检测。"
+    },
+    "tasks": {
+      "description": "查看当前项目本次打开后的任务进度、结果与运行记录。",
+      "all": "全部",
+      "active": "进行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "no_match": "没有符合筛选条件的任务",
+      "no_match_hint": "切换到“全部”查看当前项目的任务。",
+      "details": "查看详情",
+      "hide_details": "收起详情",
+      "result": "任务结果",
+      "copy_result": "复制结果",
+      "copy_error": "复制诊断信息",
+      "identifier": "任务编号",
+      "cancel_requested": "正在停止…",
+      "force_cancel": "强制结束",
+      "force_cancel_hint": "停止请求已发送。强制结束可能丢失尚未保存的进度。",
+      "cancel_hint": "停止后保留已经写出的结果。",
+      "force_requested": "正在结束进程…",
+      "finished": "任务已完成",
+      "empty_description": "在素材、训练、生成或模型工具页开始操作，进度和结果会显示在这里。"
+    }
+  },
+  "compute": {
+    "unsupported": "此功能所需的工具或模型尚未配置，请到设置中检查并刷新设备",
+    "blocked": "所选设备暂不能运行此任务，请在设置中检查设备或刷新"
+  },
+  "nav": { "assets": "素材准备", "training": "模型训练", "generate": "视频生成", "models": "模型工具", "tasks": "任务记录" },
+  "page": {
+    "assets": { "title": "素材准备" },
+    "training": { "title": "模型训练" },
+    "generate": { "title": "视频生成" },
+    "models": { "title": "模型工具" },
+    "tasks": { "title": "任务记录" }
+  },
+  "tasks": {
+    "blocked": { "no_project": "请先选择一个项目目录", "no_worker": "本地计算服务不可用，请前往设置检查配置" },
+    "empty": { "description": "在素材、训练、生成或模型工具页开始操作，进度与结果会记录在这里。" },
+    "list": { "title": "任务列表" },
+    "incomplete": { "resume": "标记为待处理" },
+    "failure": { "unsupported": "当前服务尚未提供此功能。请配置所需工具或模型，再到设置中刷新设备。" }
+  },
+  "training": { "device": { "cpu": "CPU" } }
+}

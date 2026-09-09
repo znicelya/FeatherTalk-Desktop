@@ -1,0 +1,18 @@
+[package]
+name = "feathertalk-training-data"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+burn.workspace = true
+feathertalk-audio = { path = "../feathertalk-audio" }
+feathertalk-inference = { path = "../feathertalk-inference" }
+feathertalk-preprocess = { path = "../feathertalk-preprocess" }
+feathertalk-project = { path = "../feathertalk-project" }
+feathertalk-training = { path = "../feathertalk-training" }
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

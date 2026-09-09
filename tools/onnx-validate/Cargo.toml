@@ -1,0 +1,25 @@
+[package]
+name = "feathertalk-onnx-validate"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+ort-runtime = ["dep:ndarray", "dep:ndarray-npy", "dep:ort"]
+
+[dependencies]
+clap.workspace = true
+feathertalk-export = { path = "../../crates/feathertalk-export" }
+hex.workspace = true
+ndarray = { workspace = true, optional = true }
+ndarray-npy = { workspace = true, optional = true }
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "ndarray", "load-dynamic", "api-17"], optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+prost.workspace = true
+tempfile.workspace = true

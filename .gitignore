@@ -1,0 +1,5 @@
+/target/
+# CubeCL creates autotune caches relative to each integration test crate.
+/crates/*/target/autotune/
+/dist/
+/.cache/parity/
