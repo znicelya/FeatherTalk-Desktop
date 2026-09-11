@@ -108,9 +108,9 @@
   "tasks": {
     "submit": "Submit",
     "blocked": {
-      "no_project": "No project",
-      "no_worker": "No worker",
-      "busy": "Busy"
+      "no_project": "Choose a project directory on the Assets page before submitting a task.",
+      "no_worker": "The worker executable was not found. Check the detected path shown in the status bar.",
+      "busy": "A task is already running; only one task can run at a time."
     },
     "incomplete": {
       "title": "Incomplete tasks",

@@ -435,3 +435,109 @@ fn english_catalog_has_contextual_paths_and_no_generic_placeholders() {
         }
     }
 }
+
+#[test]
+fn english_catalog_has_actionable_model_errors_and_task_gates() {
+    let base: serde_json::Value =
+        serde_json::from_str(include_str!("../locales/en/base.json")).expect("base JSON");
+    let models: serde_json::Value =
+        serde_json::from_str(include_str!("../locales/en/models.json")).expect("models JSON");
+
+    let model_errors = [
+        (
+            "models.error.destination_absolute",
+            "Please choose the complete output path again.",
+        ),
+        (
+            "models.error.destination_inside_source",
+            "Save the output outside the source model directory to preserve the source model's complete directory structure.",
+        ),
+        (
+            "models.error.destination_name",
+            "Choose a specific new directory or file; the disk root cannot be used.",
+        ),
+        (
+            "models.error.legacy_extension",
+            "Choose a legacy weights file with a .pth or .pth.tar extension.",
+        ),
+        (
+            "models.error.features_extension",
+            "Choose a legacy features file with a lowercase .npy extension.",
+        ),
+        (
+            "models.error.destination_exists",
+            "The output location already exists. Choose a different output location and try again.",
+        ),
+        (
+            "models.error.destination_unavailable",
+            "The output location cannot be accessed. Check the path and permissions.",
+        ),
+        (
+            "models.error.destination_parent",
+            "The output location's parent must be an existing directory. Choose another location.",
+        ),
+        (
+            "models.error.picker",
+            "The file picker could not complete. Please try again.",
+        ),
+        (
+            "models.error.details",
+            "Review the error details below for more information.",
+        ),
+    ];
+    for (key, expected) in model_errors {
+        assert_eq!(models[key], expected, "actionable model error copy");
+    }
+
+    let task_gates = [
+        (
+            "no_project",
+            "Choose a project directory on the Assets page before submitting a task.",
+        ),
+        (
+            "no_worker",
+            "The worker executable was not found. Check the detected path shown in the status bar.",
+        ),
+        (
+            "busy",
+            "A task is already running; only one task can run at a time.",
+        ),
+    ];
+    for (key, expected) in task_gates {
+        assert_eq!(base["tasks"]["blocked"][key], expected, "task gate copy");
+    }
+
+    let forbidden_model_values = [
+        "Destination absolute",
+        "Destination inside source",
+        "Destination name",
+        "Legacy extension",
+        "Features extension",
+        "Destination exists",
+        "Destination unavailable",
+        "Destination parent",
+        "Picker",
+        "Details",
+    ];
+    for value in model_errors.iter().map(|(key, _)| &models[*key]) {
+        assert!(
+            !forbidden_model_values
+                .iter()
+                .any(|forbidden| value == forbidden),
+            "terse model error copy is forbidden: {value}"
+        );
+    }
+
+    let forbidden_task_gate_values = ["No project", "No worker", "Busy"];
+    for value in task_gates
+        .iter()
+        .map(|(key, _)| &base["tasks"]["blocked"][*key])
+    {
+        assert!(
+            !forbidden_task_gate_values
+                .iter()
+                .any(|forbidden| value == forbidden),
+            "terse task gate copy is forbidden: {value}"
+        );
+    }
+}
