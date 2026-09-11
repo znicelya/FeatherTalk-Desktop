@@ -3,6 +3,22 @@
 use feathertalk_domain::{Progress, TaskStatus};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AppLocale {
+    #[default]
+    ZhCn,
+    En,
+}
+
+impl AppLocale {
+    pub const fn tag(self) -> &'static str {
+        match self {
+            Self::ZhCn => "zh-CN",
+            Self::En => "en",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TaskFilter {
     #[default]
     All,
@@ -44,6 +60,7 @@ impl TaskFilter {
 
 #[derive(Debug, Default)]
 pub struct UiState {
+    pub locale: AppLocale,
     pub settings_open: bool,
     pub dark: bool,
     pub asset_details: bool,

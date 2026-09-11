@@ -1,7 +1,7 @@
 //! The FeatherTalk desktop entry point.
 //!
 //! Bootstrap only, in one fixed order: renderer and theme, the text-input keymap,
-//! the Chinese catalog, the global state, then the window. Rendering a themed
+//! the app catalog, the global state, then the window. Rendering a themed
 //! component before `renderer::install` or reading a global before it is set are
 //! the two mistakes this order exists to prevent.
 
@@ -20,7 +20,7 @@ use gpui::{
     App, AppContext, Application, Bounds, TitlebarOptions, WindowBounds, WindowOptions, px, size,
 };
 use yororen_ui::i18n::Translate;
-use yororen_ui::{locale, renderer};
+use yororen_ui::renderer;
 
 fn main() {
     let launch = launch_options();
@@ -31,7 +31,7 @@ fn main() {
         // Idempotent, and the asset, training and generate pages all need it.
         yororen_ui::headless::text_input::init(cx);
         install_keyboard_navigation(cx);
-        install_catalog(cx);
+        catalog::install(cx, feathertalk_app::ui::AppLocale::default());
         let state = AppState::new(cx, launch);
         cx.set_global(state);
         compute_control::refresh(cx);
@@ -88,24 +88,6 @@ fn launch_options() -> LaunchOptions {
         Err(error) => {
             eprintln!("feathertalk-app: {error}");
             LaunchOptions::default()
-        }
-    }
-}
-
-/// Install the Chinese copy, layering the app catalog over the framework's.
-///
-/// A malformed catalog is a build-time bug in a checked-in file, so the shell
-/// keeps the framework copy and reports the detail instead of taking the process
-/// down. `install_locale` only panics on a tag it does not ship, and the tag here
-/// is the crate's own constant.
-fn install_catalog(cx: &mut App) {
-    match catalog::translations(catalog::LOCALE_TAG) {
-        Ok(translations) => {
-            locale::install_with_translations(cx, catalog::LOCALE_TAG, translations);
-        }
-        Err(error) => {
-            eprintln!("feathertalk-app: {error}");
-            locale::install_locale(cx, catalog::LOCALE_TAG);
         }
     }
 }

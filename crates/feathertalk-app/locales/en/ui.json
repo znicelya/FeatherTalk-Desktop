@@ -18,6 +18,12 @@
       "description": "Manage appearance and compute devices, and inspect local service status.",
       "back": "Back"
     },
+    "language": {
+      "title": "Language",
+      "description": "Choose the interface language.",
+      "zh_cn": "中文",
+      "en": "English"
+    },
     "theme": {
       "title": "Appearance",
       "description": "Choose the interface theme for your current environment.",

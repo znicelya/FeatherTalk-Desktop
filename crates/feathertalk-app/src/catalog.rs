@@ -3,8 +3,11 @@
 //! User-visible strings live in bundled language catalogs and page fragments.
 //! The fragments merge over the base catalog before the shell reads any key.
 
+use gpui::App;
 use thiserror::Error;
 use yororen_ui::i18n::{LoadError, TranslationMap, parse_translation_value};
+
+use crate::ui::AppLocale;
 
 /// The default locale used by the shell at startup.
 pub const LOCALE_TAG: &str = "zh-CN";
@@ -291,4 +294,20 @@ pub fn translations(locale_tag: &str) -> Result<TranslationMap, CatalogError> {
         translations.merge(parse_translation_value(serde_json::from_str(raw)?)?);
     }
     Ok(translations)
+}
+
+/// Install the selected app catalog over the framework's locale copy.
+///
+/// A malformed bundled catalog is reported and falls back to the framework's
+/// Chinese locale so a copy problem cannot prevent the shell from starting.
+pub fn install(cx: &mut App, locale: AppLocale) {
+    match translations(locale.tag()) {
+        Ok(translations) => {
+            yororen_ui::locale::install_with_translations(cx, locale.tag(), translations);
+        }
+        Err(error) => {
+            eprintln!("feathertalk-app: {error}");
+            yororen_ui::locale::install_locale(cx, LOCALE_TAG);
+        }
+    }
 }

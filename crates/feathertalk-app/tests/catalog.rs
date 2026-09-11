@@ -33,6 +33,19 @@ fn english_and_unknown_locale_selection_are_distinct() {
 }
 
 #[test]
+fn english_catalog_contains_language_settings_copy() {
+    let english = catalog::translations("en").expect("the English catalog is valid");
+    for key in [
+        "ui.language.title",
+        "ui.language.description",
+        "ui.language.zh_cn",
+        "ui.language.en",
+    ] {
+        assert!(!english.get(key).unwrap_or_default().is_empty(), "{key}");
+    }
+}
+
+#[test]
 fn the_bundled_catalog_parses() {
     let translations =
         catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");

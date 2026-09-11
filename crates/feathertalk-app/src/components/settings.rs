@@ -10,6 +10,7 @@ use crate::components::{
     ui::{muted, page_frame, path_field, section},
 };
 use crate::state::AppState;
+use crate::ui::AppLocale;
 use crate::worker_status::{WorkerStatus, source_key};
 
 pub fn set_theme(dark: bool, cx: &mut App) {
@@ -22,10 +23,21 @@ pub fn set_theme(dark: bool, cx: &mut App) {
     cx.refresh_windows();
 }
 
+pub fn set_locale(locale: AppLocale, cx: &mut App) {
+    let ui = cx.global::<AppState>().ui.clone();
+    ui.update(cx, |ui, cx| {
+        ui.locale = locale;
+        cx.notify();
+    });
+    crate::catalog::install(cx, locale);
+    cx.refresh_windows();
+}
+
 pub fn settings_page(cx: &mut App) -> Div {
     let state = cx.global::<AppState>();
     let ui = state.ui.clone();
     let dark = ui.read(cx).dark;
+    let locale = ui.read(cx).locale;
     let worker = state.worker.read(cx).clone();
     let back_ui = ui.clone();
     let back = button("settings-back", cx)
@@ -61,6 +73,34 @@ pub fn settings_page(cx: &mut App) -> Div {
         cx,
     )
     .child(choices);
+    let mut language_choices = div().flex().gap_2();
+    for (value, id, key) in [
+        (
+            AppLocale::ZhCn,
+            "settings-language-zh-cn",
+            "ui.language.zh_cn",
+        ),
+        (AppLocale::En, "settings-language-en", "ui.language.en"),
+    ] {
+        language_choices = language_choices.child(
+            button(id, cx)
+                .caption(cx.t(key))
+                .variant(if locale == value {
+                    ActionVariantKind::Primary
+                } else {
+                    ActionVariantKind::Neutral
+                })
+                .on_click(move |_event, _window, cx| set_locale(value, cx))
+                .render(cx),
+        );
+    }
+    let language = section(
+        "settings-language",
+        cx.t("ui.language.title"),
+        cx.t("ui.language.description"),
+        cx,
+    )
+    .child(language_choices);
     let compute = section(
         "settings-compute",
         cx.t("compute.label"),
@@ -117,6 +157,7 @@ pub fn settings_page(cx: &mut App) -> Div {
             .gap_5()
             .child(div().child(back))
             .child(appearance)
+            .child(language)
             .child(compute)
             .child(service),
         cx,
