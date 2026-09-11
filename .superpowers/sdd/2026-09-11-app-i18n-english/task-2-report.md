@@ -22,3 +22,6 @@ catalog.rs already selected the four English fragments in the assigned starting 
 ## Concerns
 
 The existing Chinese catalog files in this worktree are displayed as mojibake by some PowerShell/Python readers, but they remain unchanged and the catalog tests parse them successfully. English values preserve technical terms such as ONNX, FeatherHuBERT, worker, epoch, and step.
+
+## Review fixes
+Replaced all remaining placeholder labels/descriptions/hints/empty values with contextual English copy and corrected MobileOne, FeatherHuBERT, and UNet technical-name casing. Re-ran cargo fmt and cargo test --test catalog: 14 passed.
