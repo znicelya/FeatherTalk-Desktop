@@ -1,4 +1,4 @@
-//! The worker child process and the version 2 protocol.
+//! The worker child process and the shared versioned protocol.
 
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader};

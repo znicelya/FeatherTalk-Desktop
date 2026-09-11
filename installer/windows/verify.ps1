@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'models.ps1')
 $MsiPath = (Resolve-Path -LiteralPath $MsiPath).Path
-$rustRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$rustRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 $manifestPath = [IO.Path]::ChangeExtension($MsiPath, 'payload.json')
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if (!$manifest.PSObject.Properties['models'] -or $manifest.models.Count -ne 4) {

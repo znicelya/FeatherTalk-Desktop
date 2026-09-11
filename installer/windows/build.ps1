@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$FfmpegDirectory,
+    [string]$SourceRepositoryDirectory,
     [string]$VCRuntimeDirectory,
     [string]$ScrfdModelDirectory,
     [string]$PfldModelDirectory,
@@ -20,8 +21,16 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or ![Environmen
     throw 'Build the installer in a 64-bit PowerShell process on Windows.'
 }
 
-$rustRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $rustRoot '..'))
+$rustRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$repositoryRoot = if ($SourceRepositoryDirectory) {
+    (Resolve-Path -LiteralPath $SourceRepositoryDirectory).Path
+} else {
+    [IO.Path]::GetFullPath((Join-Path $rustRoot '..'))
+}
+$licensePath = Join-Path $repositoryRoot 'LICENSE'
+if (!(Test-Path -LiteralPath $licensePath -PathType Leaf)) {
+    throw "Project LICENSE not found at $licensePath. Pass -SourceRepositoryDirectory with the original FeatherTalk repository."
+}
 $utf8 = [Text.UTF8Encoding]::new($false)
 $cargo = (Get-Command cargo -CommandType Application).Source
 $dotnet = (Get-Command dotnet -CommandType Application).Source
@@ -240,7 +249,7 @@ foreach ($definition in $modelDefinitions) {
 }
 Write-Host 'Bundled SCRFD, PFLD, FeatherHuBERT, and VGG19 packages passed provenance and weight checks.'
 
-Copy-Item -LiteralPath (Join-Path $repositoryRoot 'LICENSE') -Destination (Join-Path $stage 'LICENSE.txt')
+Copy-Item -LiteralPath $licensePath -Destination (Join-Path $stage 'LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $ffmpegRoot 'LICENSE') -Destination (Join-Path $stage 'FFmpeg-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $ffmpegRoot 'README.txt') -Destination (Join-Path $stage 'FFmpeg-README.txt')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $stage 'README.txt')
@@ -277,7 +286,7 @@ model weights.
 '@
 [IO.File]::WriteAllText((Join-Path $stage 'THIRD-PARTY-NOTICES.txt'), $notices, $utf8)
 
-$license = [IO.File]::ReadAllText((Join-Path $repositoryRoot 'LICENSE'))
+$license = [IO.File]::ReadAllText($licensePath)
 $rtf = '{\rtf1\ansi\deff0{\fonttbl{\f0 Segoe UI;}}\f0\fs18 ' +
     $license.Replace('\', '\\').Replace('{', '\{').Replace('}', '\}').Replace("`r", '').Replace("`n", "\par`n") + '}'
 $licenseRtf = Join-Path $buildDirectory 'License.rtf'

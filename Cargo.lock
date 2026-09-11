@@ -2591,6 +2591,8 @@ name = "feathertalk-models"
 version = "0.1.0"
 dependencies = [
  "burn",
+ "burn-cuda",
+ "cudarc",
  "feathertalk-audio",
  "serde",
  "thiserror 2.0.20",
@@ -2800,6 +2802,7 @@ dependencies = [
  "burn",
  "burn-fusion",
  "cubek",
+ "cudarc",
  "feathertalk-audio",
  "feathertalk-domain",
  "feathertalk-export",

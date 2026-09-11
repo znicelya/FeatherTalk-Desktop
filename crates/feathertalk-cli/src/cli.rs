@@ -17,11 +17,11 @@ pub struct Cli {
     #[arg(long, global = true, value_name = "PATH")]
     pub worker: Option<PathBuf>,
 
-    /// 计算后端，默认使用工作进程环境配置或 CPU
+    /// 计算后端，默认自动选择 CUDA、wgpu 或 CPU
     #[arg(long, global = true, value_enum)]
     pub backend: Option<BackendArg>,
 
-    /// capabilities 中的设备 ID，未指定后端时除 cpu-0 外推断为 wgpu
+    /// capabilities 中的设备 ID，根据 cuda- 前缀或 cpu-0 推断后端，其余为 wgpu
     #[arg(long, global = true, value_name = "ID")]
     pub adapter: Option<String>,
 
@@ -43,15 +43,19 @@ pub struct Cli {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum BackendArg {
+    Auto,
     Cpu,
     Wgpu,
+    Cuda,
 }
 
 impl From<BackendArg> for feathertalk_domain::Backend {
     fn from(value: BackendArg) -> Self {
         match value {
+            BackendArg::Auto => Self::Auto,
             BackendArg::Cpu => Self::Cpu,
             BackendArg::Wgpu => Self::Wgpu,
+            BackendArg::Cuda => Self::Cuda,
         }
     }
 }

@@ -77,7 +77,7 @@ fn malformed_and_unknown_frames_are_refused() {
         "   ",
         "not json",
         r#"{"frame":"greetings","data":{}}"#,
-        r#"{"frame":"shutdown","data":{"protocol_version":2,"extra":true}}"#,
+        r#"{"frame":"shutdown","data":{"protocol_version":3,"extra":true}}"#,
     ] {
         assert!(
             matches!(
@@ -91,10 +91,10 @@ fn malformed_and_unknown_frames_are_refused() {
 
 #[test]
 fn client_and_server_frames_reject_unknown_outer_fields() {
-    let client = r#"{"frame":"shutdown","data":{"protocol_version":2},"extra":true}"#;
+    let client = r#"{"frame":"shutdown","data":{"protocol_version":3},"extra":true}"#;
     assert!(serde_json::from_str::<ClientFrame>(client).is_err());
 
-    let server = r#"{"frame":"rejected","data":{"protocol_version":2,"reason":"no"},"extra":true}"#;
+    let server = r#"{"frame":"rejected","data":{"protocol_version":3,"reason":"no"},"extra":true}"#;
     assert!(serde_json::from_str::<ServerFrame>(server).is_err());
 }
 

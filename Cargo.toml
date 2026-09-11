@@ -44,6 +44,10 @@ base64 = "0.22"
 burn = { version = "=0.21.0", default-features = false, features = ["std", "autodiff", "ndarray", "vulkan", "fusion", "autotune", "store"] }
 burn-store = { version = "=0.21.0", default-features = false, features = ["std", "pytorch", "safetensors"] }
 burn-wgpu = { version = "=0.21.0", default-features = false, features = ["vulkan", "fusion", "autotune"] }
+burn-cuda = { version = "=0.21.0", default-features = false, features = ["std", "fusion", "autotune"] }
+# Use fixed generated bindings: detecting an installed 11.x toolkit at build
+# time omits tensor-map types required by CubeCL. Libraries remain runtime-loaded.
+cudarc = { version = "=0.19.9", default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12080"] }
 cap-std = "3.4.5"
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "=3.4.5"

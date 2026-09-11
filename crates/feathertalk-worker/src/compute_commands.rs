@@ -10,9 +10,9 @@ use feathertalk_media::{CancellationToken, ProcessRunner};
 use feathertalk_models::backend::{CpuBackend, GpuBackend};
 
 use crate::{
-    CommandOutcome, FeatureModel, FrameModels, GpuFailure, TaskReporter, WgpuContext,
-    WorkerBackend, WorkerConfig, execute_extract_features, execute_extract_frames,
-    execute_render_on, execute_train_on, package_task_error, pipeline_task_error,
+    CommandOutcome, FeatureModel, FrameModels, GpuContext, GpuFailure, TaskReporter, WorkerBackend,
+    WorkerConfig, execute_extract_features, execute_extract_frames, execute_render_on,
+    execute_train_on, package_task_error, pipeline_task_error,
 };
 use crate::{commands::unsupported, error_map::panic_task_error, reporter::TrackedReporter};
 
@@ -47,52 +47,100 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
             None,
         ),
         Backend::Wgpu => {
-            let tracked = TrackedReporter::new(reporter);
-            tracked.report(TaskStage::Preparing, None);
             let context = match config.compute().open_wgpu(&adapter.id) {
                 Ok(context) => context,
-                Err(error) => return CommandOutcome::Failed(error.task_error(tracked.stage())),
-            };
-            if let Err(error) = context.check() {
-                return CommandOutcome::Failed(error.task_error(tracked.stage()));
-            }
-            let guarded = ComputeReporter {
-                inner: &tracked,
-                context: &context,
-            };
-            let outcome = catch_unwind(AssertUnwindSafe(|| {
-                execute_on::<GpuBackend, R>(
-                    request,
-                    config,
-                    token,
-                    &guarded,
-                    runner,
-                    &context.device,
-                    Some(&context),
-                )
-            }));
-            // Successful commands checked before publishing their artifacts.
-            // A device loss after that commit cannot invalidate CPU data that
-            // was already read back and published successfully.
-            if !matches!(&outcome, Ok(CommandOutcome::Completed(_))) {
-                // Drain failures on this job's stream, including after unwind,
-                // so typed native faults override secondary model failures.
-                if let Err(error) = context.check() {
-                    return CommandOutcome::Failed(error.task_error(tracked.stage()));
+                Err(error) => {
+                    return CommandOutcome::Failed(error.task_error(TaskStage::Preparing));
                 }
-            }
-            match outcome {
-                Ok(outcome) => with_device_metadata(
-                    outcome,
-                    &adapter,
-                    GpuBackend::EXECUTION_NAME,
-                    Some(context.graphics_api()),
-                ),
-                Err(payload) => {
-                    CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage()))
-                }
-            }
+            };
+            let device = context.device.clone();
+            execute_gpu::<GpuBackend, R>(
+                request,
+                config,
+                token,
+                reporter,
+                runner,
+                &adapter,
+                &device,
+                GpuContext::Wgpu(context),
+            )
         }
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        Backend::Cuda => {
+            let context = match config.compute().open_cuda(&adapter.id) {
+                Ok(context) => context,
+                Err(error) => {
+                    return CommandOutcome::Failed(error.task_error(TaskStage::Preparing));
+                }
+            };
+            let device = context.device.clone();
+            execute_gpu::<feathertalk_models::backend::CudaBackend, R>(
+                request,
+                config,
+                token,
+                reporter,
+                runner,
+                &adapter,
+                &device,
+                GpuContext::Cuda(context),
+            )
+        }
+        _ => CommandOutcome::Failed(
+            GpuFailure::Unavailable(format!(
+                "Backend {:?} cannot execute on this platform",
+                adapter.backend
+            ))
+            .task_error(TaskStage::Preparing),
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_gpu<B: WorkerBackend, R: ProcessRunner + ?Sized>(
+    request: &Request,
+    config: &WorkerConfig,
+    token: &CancellationToken,
+    reporter: &dyn TaskReporter,
+    runner: &R,
+    adapter: &AdapterInfo,
+    device: &Device<B>,
+    context: GpuContext,
+) -> CommandOutcome {
+    let tracked = TrackedReporter::new(reporter);
+    tracked.report(TaskStage::Preparing, None);
+    if let Err(error) = context.check() {
+        return CommandOutcome::Failed(error.task_error(tracked.stage()));
+    }
+    let guarded = ComputeReporter {
+        inner: &tracked,
+        context: &context,
+    };
+    let outcome = catch_unwind(AssertUnwindSafe(|| {
+        execute_on::<B, R>(
+            request,
+            config,
+            token,
+            &guarded,
+            runner,
+            device,
+            Some(&context),
+        )
+    }));
+    // Successful commands checked before publishing. Do not replay a task on
+    // another backend after it has modified training state or published data.
+    if !matches!(&outcome, Ok(CommandOutcome::Completed(_)))
+        && let Err(error) = context.check()
+    {
+        return CommandOutcome::Failed(error.task_error(tracked.stage()));
+    }
+    match outcome {
+        Ok(outcome) => with_device_metadata(
+            outcome,
+            adapter,
+            B::EXECUTION_NAME,
+            Some(context.graphics_api()),
+        ),
+        Err(payload) => CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage())),
     }
 }
 
@@ -103,7 +151,7 @@ fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
     reporter: &dyn TaskReporter,
     runner: &R,
     device: &Device<B>,
-    context: Option<&WgpuContext>,
+    context: Option<&GpuContext>,
 ) -> CommandOutcome {
     if token.is_cancelled() {
         return CommandOutcome::Cancelled;
@@ -173,7 +221,7 @@ fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
 /// public CPU command helpers independent of a native graphics context.
 struct ComputeReporter<'a> {
     inner: &'a TrackedReporter<'a>,
-    context: &'a WgpuContext,
+    context: &'a GpuContext,
 }
 
 impl TaskReporter for ComputeReporter<'_> {

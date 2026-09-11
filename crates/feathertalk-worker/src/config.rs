@@ -222,7 +222,7 @@ impl WorkerConfig {
             training_rejection,
             compute: ComputeRegistry::cpu_only(),
             compute_choice: Ok(ComputeChoice {
-                backend: Backend::Cpu,
+                backend: Backend::Auto,
                 adapter_id: None,
             }),
         }
@@ -237,9 +237,13 @@ impl WorkerConfig {
 
     pub fn with_compute_selection(mut self, backend: Option<&str>, adapter: Option<&str>) -> Self {
         self.compute_choice = match backend.map(str::trim) {
-            None | Some("cpu") => Ok(Backend::Cpu),
+            None | Some("auto") => Ok(Backend::Auto),
+            Some("cpu") => Ok(Backend::Cpu),
             Some("wgpu") => Ok(Backend::Wgpu),
-            Some(value) => Err(format!("{ENV_BACKEND} must be cpu or wgpu, got {value:?}")),
+            Some("cuda") => Ok(Backend::Cuda),
+            Some(value) => Err(format!(
+                "{ENV_BACKEND} must be auto, cpu, wgpu or cuda, got {value:?}"
+            )),
         }
         .map(|backend| ComputeChoice {
             backend,
@@ -260,6 +264,11 @@ impl WorkerConfig {
         self.compute
             .resolve(choice.backend, choice.adapter_id.as_deref())
             .map_err(|reason| format!("{ENV_BACKEND}/{ENV_ADAPTER}: {reason}"))
+    }
+
+    pub(crate) fn cuda_device_index(&self) -> Result<Option<usize>, String> {
+        let adapter = self.compute_adapter()?;
+        Ok(self.compute.cuda_device_index(&adapter.id))
     }
 
     pub(crate) fn adapter_for(&self, kind: TaskKind) -> Result<AdapterInfo, String> {
@@ -310,7 +319,11 @@ impl WorkerConfig {
 pub(crate) fn uses_compute(kind: TaskKind) -> bool {
     matches!(
         kind,
-        TaskKind::Train | TaskKind::Render | TaskKind::ExtractFrames | TaskKind::ExtractFeatures
+        TaskKind::Train
+            | TaskKind::Render
+            | TaskKind::ExtractFrames
+            | TaskKind::ExtractFeatures
+            | TaskKind::NormalizeMedia
     )
 }
 

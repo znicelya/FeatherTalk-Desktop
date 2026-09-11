@@ -1,6 +1,6 @@
 //! Compute configuration shared by the CLI and desktop, without model dependencies.
 
-use feathertalk_domain::{AdapterInfo, AdapterKind, Backend, ReadyFrame, TaskKind};
+use feathertalk_domain::{AdapterInfo, Backend, ReadyFrame, TaskKind};
 use thiserror::Error;
 
 pub const ENV_WORKER_BACKEND: &str = "FEATHERTALK_WORKER_BACKEND";
@@ -15,7 +15,7 @@ pub struct ComputeOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ComputeError {
-    #[error("invalid {ENV_WORKER_BACKEND} value {0:?}; expected cpu or wgpu")]
+    #[error("invalid {ENV_WORKER_BACKEND} value {0:?}; expected auto, cpu, wgpu or cuda")]
     InvalidBackend(String),
     #[error("{0} is not valid Unicode")]
     InvalidEnvironment(&'static str),
@@ -46,7 +46,7 @@ pub enum ComputeError {
 impl Default for ComputeOptions {
     fn default() -> Self {
         Self {
-            backend: Backend::Cpu,
+            backend: Backend::Auto,
             adapter: None,
         }
     }
@@ -62,14 +62,17 @@ impl ComputeOptions {
             (Backend::Cpu, Some(id)) if id != "cpu-0" => {
                 return Err(ComputeError::CpuAdapter(id.to_owned()));
             }
-            (Backend::Wgpu, Some("cpu-0")) => return Err(ComputeError::WgpuCpuAdapter),
+            (Backend::Wgpu | Backend::Cuda, Some("cpu-0")) => {
+                return Err(ComputeError::WgpuCpuAdapter);
+            }
             _ => {}
         }
         Ok(Self { backend, adapter })
     }
 
     /// `None` means no flags: retain the worker's inherited environment exactly.
-    /// Adapter-only flags infer WGPU except for the reserved CPU identity.
+    /// Adapter-only flags infer CUDA from its stable ID prefix, otherwise WGPU
+    /// except for the reserved CPU identity.
     pub fn from_flags(
         backend: Option<Backend>,
         adapter: Option<&str>,
@@ -79,21 +82,24 @@ impl ComputeOptions {
         }
         let backend = backend.unwrap_or_else(|| match adapter.map(str::trim) {
             Some("cpu-0" | "") | None => Backend::Cpu,
+            Some(id) if id.starts_with("cuda-") => Backend::Cuda,
             Some(_) => Backend::Wgpu,
         });
         Self::new(backend, adapter.map(str::to_owned)).map(Some)
     }
 
-    /// Match the worker's environment semantics: absent backend means CPU,
+    /// Match the worker's environment semantics: absent backend means automatic,
     /// while an empty or unknown backend is an error. Adapter-only environment
-    /// configuration does not infer a backend.
+    /// configuration resolves the exact ID among advertised backends.
     pub fn from_environment_values(
         backend: Option<&str>,
         adapter: Option<&str>,
     ) -> Result<Self, ComputeError> {
         let backend = match backend.map(str::trim) {
-            None | Some("cpu") => Backend::Cpu,
+            None | Some("auto") => Backend::Auto,
+            Some("cpu") => Backend::Cpu,
             Some("wgpu") => Backend::Wgpu,
+            Some("cuda") => Backend::Cuda,
             Some(value) => return Err(ComputeError::InvalidBackend(value.into())),
         };
         Self::new(backend, adapter.map(str::to_owned))
@@ -146,13 +152,13 @@ impl ComputeOptions {
         ]
     }
 
-    /// Revalidate on every fresh handshake. No missing or ineligible device
-    /// falls back to a different backend or adapter.
+    /// Revalidate on every fresh handshake. Automatic choices prefer CUDA,
+    /// wgpu, then CPU; an explicit device ID never switches to another device.
     pub fn resolve_adapter<'a>(
         &self,
         ready: &'a ReadyFrame,
     ) -> Result<&'a AdapterInfo, ComputeError> {
-        if !ready.backends.contains(&self.backend) {
+        if self.backend != Backend::Auto && !ready.backends.contains(&self.backend) {
             return Err(ComputeError::BackendUnavailable(self.backend));
         }
         let selected = match self.adapter.as_deref() {
@@ -164,19 +170,26 @@ impl ComputeOptions {
             None => ready
                 .adapters
                 .iter()
-                .find(|adapter| {
-                    adapter.backend == self.backend
+                .filter(|adapter| {
+                    (self.backend == Backend::Auto || adapter.backend == self.backend)
+                        && ready.backends.contains(&adapter.backend)
                         && adapter_is_eligible(adapter)
-                        && (self.backend != Backend::Cpu || adapter.id == "cpu-0")
+                })
+                .min_by(|left, right| {
+                    (left.backend.selection_priority(), &left.id)
+                        .cmp(&(right.backend.selection_priority(), &right.id))
                 })
                 .ok_or(ComputeError::NoAdapter(self.backend))?,
         };
-        if selected.backend != self.backend {
+        if self.backend != Backend::Auto && selected.backend != self.backend {
             return Err(ComputeError::BackendMismatch {
                 adapter: selected.id.clone(),
                 actual: selected.backend,
                 requested: self.backend,
             });
+        }
+        if !ready.backends.contains(&selected.backend) {
+            return Err(ComputeError::BackendUnavailable(selected.backend));
         }
         if !adapter_is_eligible(selected) {
             return Err(ComputeError::UnavailableAdapter(selected.id.clone()));
@@ -191,10 +204,10 @@ impl ComputeOptions {
         if !uses_compute_selection(kind) {
             return Ok(());
         }
-        self.resolve_adapter(ready)?;
+        let selected = self.resolve_adapter(ready)?;
         if kind == TaskKind::Train
             && (!ready.capabilities.training
-                || (self.backend == Backend::Wgpu && !ready.capabilities.wgpu_training))
+                || (selected.backend == Backend::Wgpu && !ready.capabilities.wgpu_training))
         {
             return Err(ComputeError::TrainingUnavailable(self.backend));
         }
@@ -203,23 +216,25 @@ impl ComputeOptions {
 }
 
 pub fn adapter_is_eligible(adapter: &AdapterInfo) -> bool {
-    adapter.certified
-        && match adapter.backend {
-            Backend::Cpu => adapter.kind == AdapterKind::Cpu && adapter.id == "cpu-0",
-            Backend::Wgpu => adapter.kind != AdapterKind::Cpu,
-        }
+    adapter.is_selectable()
 }
 
 pub fn backend_name(backend: Backend) -> &'static str {
     match backend {
+        Backend::Auto => "auto",
         Backend::Cpu => "cpu",
         Backend::Wgpu => "wgpu",
+        Backend::Cuda => "cuda",
     }
 }
 
 pub fn uses_compute_selection(kind: TaskKind) -> bool {
     matches!(
         kind,
-        TaskKind::Train | TaskKind::Render | TaskKind::ExtractFrames | TaskKind::ExtractFeatures
+        TaskKind::Train
+            | TaskKind::Render
+            | TaskKind::ExtractFrames
+            | TaskKind::ExtractFeatures
+            | TaskKind::NormalizeMedia
     )
 }

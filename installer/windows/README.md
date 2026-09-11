@@ -2,8 +2,10 @@
 
 安装包适用于 Windows 10/11 x64，包含 FeatherTalk 工作台、后台 worker、命令行工具、
 FFmpeg/FFprobe、四个模型包和 Microsoft Visual C++ 运行库。使用程序无需安装 Rust、Python、
-.NET 或 WiX。Windows GPU 计算使用 Vulkan / SPIR-V，需要兼容的显卡与 Vulkan 驱动，
-支持范围见项目的 `docs/wgpu-support.md`。从旧 DX12 版本升级后，在“计算设备”中刷新并重新选择显卡。
+.NET 或 WiX。Windows 上检测到 NVIDIA 显卡及可用的 CUDA Toolkit 12.x 或更新版本时，
+模型计算优先使用 `burn-cuda`，抽帧和视频标准化使用 FFmpeg CUDA 硬件解码。
+CUDA 是可选组件，安装包不包含 Toolkit；未安装或检测失败时自动使用现有 Vulkan / SPIR-V 后端，
+没有可用 GPU 时使用 CPU。显式选择设备会保留该选择；可在“计算设备”中刷新设备列表。
 
 ## 安装和使用
 
@@ -25,6 +27,12 @@ FFmpeg/FFprobe、四个模型包和 Microsoft Visual C++ 运行库。使用程�
 
 worker 优先使用 `FEATHERTALK_WORKER_FFMPEG` 和 `FEATHERTALK_WORKER_FFPROBE` 的显式
 配置；没有配置时自动使用安装目录内的工具。安装程序不修改 PATH 或全局环境变量。
+
+启用 CUDA 需自行安装 NVIDIA 驱动及 CUDA Toolkit，设置 `CUDA_PATH` 为 Toolkit 根目录，
+并确保其 `bin` 目录在启动程序的 `PATH` 中。检测会检查 NVRTC、头文件和实际内核运行；
+`capabilities` 中出现 `cuda` 设备即表示可用。CUDA 11.x 不满足当前 Burn 要求。
+CLI 支持 `--backend auto|cpu|wgpu|cuda`（默认 `auto`）和 `--adapter <ID>`。
+详情及当前会话的配置示例见项目 [README](../../README.md#nvidia-cuda-加速)。
 
 四个模型已转换为 Rust 可加载的 `manifest.json` 与 `model.safetensors`，
 随程序安装到以下位置；FeatherHuBERT 和 VGG19 另带 `LICENSES.json`：
@@ -50,13 +58,13 @@ VGG19 使用当前训练所需的 `conv3_3` 特征提取器，转换后的权重
 
 构建机器需要 Windows x64、Rust 1.94/MSVC C++ Build Tools、.NET 8 运行时，以及带
 `LICENSE` 和 `README.txt` 的 FFmpeg Windows 发行目录。脚本从 NuGet 下载固定的
-WiX Toolset 5.0.2 与 UI 扩展，并校验 SHA-256；缓存保存在 `rust/target/wix-tools`。
+WiX Toolset 5.0.2 与 UI 扩展，并校验 SHA-256；缓存保存在 `target/wix-tools`。
 不要求安装 .NET SDK 或全局 WiX。
 
 在仓库根目录运行：
 
 ```powershell
-powershell -NoProfile -File .\rust\installer\build.ps1 -FfmpegDirectory 'D:\environment\ffmpeg'
+powershell -NoProfile -File .\installer\windows\build.ps1 -FfmpegDirectory 'D:\environment\ffmpeg' -SourceRepositoryDirectory '..\FeatherTalk'
 ```
 
 不传 `-FfmpegDirectory` 时会定位 PATH 中的 FFmpeg。`-VCRuntimeDirectory` 可指定
@@ -65,15 +73,19 @@ powershell -NoProfile -File .\rust\installer\build.ps1 -FfmpegDirectory 'D:\envi
 仅调整 WiX 文件时可用 `-SkipBuild` 复用默认 `target/release` 目录中的原生构建，
 使用自定义编译 target 时请执行完整构建。
 
-模型打包默认复用 `rust/crates/feathertalk-scrfd/artifacts/scrfd_2_5g` 和
-`rust/crates/feathertalk-pfld/artifacts/pfld_ghost_one` 的转换结果，并从
-`demo/kanghui_training_video_featherhubert_188_latest/feather_hubert_188_latest_99.pth`
+独立桌面仓库通过 `-SourceRepositoryDirectory` 指定原始 FeatherTalk 仓库的位置，
+用于读取项目 `LICENSE` 和默认的 FeatherHuBERT 检查点；上面的示例假定两个仓库为同级目录。
+不传该参数时沿用旧布局，查找当前 Rust workspace 的上级目录。
+
+模型打包默认复用 `crates/feathertalk-scrfd/artifacts/scrfd_2_5g` 和
+`crates/feathertalk-pfld/artifacts/pfld_ghost_one` 的转换结果，并从
+源仓库内的 `demo/kanghui_training_video_featherhubert_188_latest/feather_hubert_188_latest_99.pth`
 通过刚构建的 Rust worker 转换 FeatherHuBERT。转换输入保存在独立构建目录，
-不写入原始模型目录。VGG19 默认读取 `rust/target/installer/models/vgg19` 的转换包。
+不写入原始模型目录。VGG19 默认读取 `target/installer/models/vgg19` 的转换包。
 `-ScrfdModelDirectory`、`-PfldModelDirectory`、`-HubertModelDirectory`、
 `-Vgg19ModelDirectory` 可指定已有转换包；每个包均核对原始模型身份与权重哈希。
 
-如缺少 SCRFD/PFLD 转换结果，可先在 `rust` 目录运行：
+如缺少 SCRFD/PFLD 转换结果，可先在仓库根目录运行：
 
 ```powershell
 cargo run --locked --manifest-path tools/scrfd-import/Cargo.toml --bin generate -- --repo-root .. --destination target/installer/scrfd-conversion
@@ -85,12 +97,12 @@ cargo run --locked --release -p feathertalk-pfld-artifact -- target/installer/pf
 `pfld-conversion`，使用相对于当前目录的路径或绝对路径。
 
 首次准备 VGG19 时，使用[官方 torchvision 权重](https://download.pytorch.org/models/vgg19-dcbb9e9d.pth)，
-在 `rust` 目录运行以下命令，将 `$vggCheckpoint` 改为本地权重的实际路径：
+在仓库根目录运行以下命令，将 `$vggCheckpoint` 改为本地权重的实际路径：
 
 ```powershell
 $vggCheckpoint = 'C:\models\vgg19-dcbb9e9d.pth'
 New-Item -ItemType Directory -Path target/installer/models -Force | Out-Null
-cargo run --release --locked -p feathertalk-vgg19-package -- --source $vggCheckpoint --licenses installer/vgg19-licenses.json --destination target/installer/models/vgg19
+cargo run --release --locked -p feathertalk-vgg19-package -- --source $vggCheckpoint --licenses installer/windows/vgg19-licenses.json --destination target/installer/models/vgg19
 ```
 
 转换器只导出感知损失所需的 14 个张量，并重新加载验证。安装包构建时检查原始
@@ -99,19 +111,19 @@ cargo run --release --locked -p feathertalk-vgg19-package -- --source $vggCheckp
 脚本只打包 `feathertalk-app.exe`、`feathertalk-worker.exe`、`feathertalk.exe` 三个
 产品程序，以及运行依赖、转换后的基础模型和说明；原始模型、测试用 worker、
 Cargo 缓存、PDB 和源码不进入 MSI。
-版本号从两个 Cargo workspace 读取并检查一致性。输出位于 `rust/dist`：
+版本号从两个 Cargo workspace 读取并检查一致性。输出位于 `dist`：
 
 - `FeatherTalk-<version>-x64.msi`
 - 同名 `.msi.sha256` 校验文件
 - `FeatherTalk-<version>-x64.payload.json` 相对路径文件清单、哈希及模型来源
 
-每次构建使用独立暂存目录，位于 `rust/target/installer`。默认生成未签名的 MSI；
+每次构建使用独立暂存目录，位于 `target/installer`。默认生成未签名的 MSI；
 正式发布时可使用项目自己的代码签名证书签名。
 
 ## 验证 MSI
 
 ```powershell
-powershell -NoProfile -File .\rust\installer\verify.ps1 -MsiPath .\rust\dist\FeatherTalk-0.1.0-x64.msi
+powershell -NoProfile -File .\installer\windows\verify.ps1 -MsiPath .\dist\FeatherTalk-0.1.0-x64.msi
 ```
 
 验证器检查 MSI 属性、同版本替换与防降级规则、开始菜单入口和文件清单，然后执行管理员映像提取，
@@ -119,7 +131,7 @@ powershell -NoProfile -File .\rust\installer\verify.ps1 -MsiPath .\rust\dist\Fea
 worker 与媒体处理，并使用包内模型在 CPU 上执行一帧人脸/关键点检测及一秒音频
 特征提取，再使用随包 VGG19 完成一个训练步骤并保存检查点。
 人脸测试使用仓库内 `demo_frame_v1/frame.jpg` 测试素材。
-提取过程不注册产品安装，验证输出保存在 `rust/target/installer`。
+提取过程不注册产品安装，验证输出保存在 `target/installer`。
 
 FeatherTalk 使用 Apache-2.0。随包 FFmpeg 的许可证和源码版本见
 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`；其他运行依赖说明见 `THIRD-PARTY-NOTICES.txt`。

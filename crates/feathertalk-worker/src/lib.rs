@@ -43,7 +43,7 @@ mod training;
 
 pub use adapters::{AdapterLockError, AdapterLocks};
 pub use commands::{CommandOutcome, execute, execute_with_runner};
-pub use compute::{ComputeRegistry, GpuFailure, WgpuContext};
+pub use compute::{ComputeRegistry, GpuContext, GpuFailure, WgpuContext};
 pub use config::{
     DEFAULT_MEDIA_TIMEOUT_MS, ENV_ADAPTER, ENV_BACKEND, ENV_FFMPEG, ENV_FFPROBE, ENV_HUBERT_DIR,
     ENV_MEDIA_TIMEOUT_MS, ENV_PFLD_DIR, ENV_SCRFD_DIR, ENV_VGG19_DIR, FeatureToolchain,

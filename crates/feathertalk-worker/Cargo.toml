@@ -33,6 +33,7 @@ wgpu = { version = "=29.0.4", default-features = false, features = ["std", "dx12
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 ash = { version = "=0.38.0", default-features = false }
+cudarc.workspace = true
 
 [dev-dependencies]
 cubek = { version = "=0.2.0", default-features = false, features = ["std", "stdlib", "matmul"] }

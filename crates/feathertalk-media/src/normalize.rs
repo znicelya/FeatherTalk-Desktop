@@ -72,11 +72,40 @@ pub fn normalize_media_observed<R: ProcessRunner + ?Sized>(
     let mut audio_temp = TempOutput::create(layout.output_dir(), "audio", "wav")?;
 
     observer(NormalizePhase::NormalizingVideo);
-    run_tool(
+    let video_result = run_tool(
         runner,
         &video_normalization_command(toolchain, input.source(), video_temp.path()),
         toolchain,
-    )?;
+    );
+    match video_result {
+        Err(error @ MediaError::ToolFailed { .. }) if toolchain.cuda_device().is_some() => {
+            use std::io::Write;
+            let _ = writeln!(
+                std::io::stderr().lock(),
+                "FeatherTalk: CUDA video decoding failed; retrying software decoding: {error}"
+            );
+            // Retry inside staging. Never let a truncated CUDA output survive
+            // a software retry, and never retry cancellation or a timeout.
+            match fs::remove_file(video_temp.path()) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(source) => {
+                    return Err(MediaError::Io {
+                        operation: "remove_cuda_video",
+                        path: video_temp.path().to_owned(),
+                        source,
+                    });
+                }
+            }
+            let software = toolchain.clone().with_cuda_device(None);
+            run_tool(
+                runner,
+                &video_normalization_command(&software, input.source(), video_temp.path()),
+                &software,
+            )?;
+        }
+        other => other?,
+    }
 
     observer(NormalizePhase::NormalizingAudio);
     run_tool(

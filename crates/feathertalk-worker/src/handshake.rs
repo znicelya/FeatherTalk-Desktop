@@ -67,11 +67,10 @@ pub fn supported_commands(config: &WorkerConfig) -> Vec<TaskKind> {
 pub fn ready_frame(config: &WorkerConfig) -> ReadyFrame {
     let adapters = config.compute().adapters().to_vec();
     let mut backends = vec![Backend::Cpu];
-    if adapters
-        .iter()
-        .any(|adapter| adapter.backend == Backend::Wgpu)
-    {
-        backends.push(Backend::Wgpu);
+    for backend in [Backend::Wgpu, Backend::Cuda] {
+        if adapters.iter().any(|adapter| adapter.backend == backend) {
+            backends.push(backend);
+        }
     }
     let wgpu_training = config.training().is_some()
         && adapters

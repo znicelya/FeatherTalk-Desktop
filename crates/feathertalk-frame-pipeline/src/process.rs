@@ -48,6 +48,7 @@ pub trait ProcessRunner: Send + Sync {
 pub struct FrameExtractor {
     ffmpeg: PathBuf,
     timeout: Duration,
+    cuda_device: Option<usize>,
 }
 
 impl FrameExtractor {
@@ -64,7 +65,11 @@ impl FrameExtractor {
                 message: "must be within 1 second and 24 hours".into(),
             });
         }
-        Ok(Self { ffmpeg, timeout })
+        Ok(Self {
+            ffmpeg,
+            timeout,
+            cuda_device: None,
+        })
     }
 
     pub fn ffmpeg(&self) -> &Path {
@@ -72,6 +77,15 @@ impl FrameExtractor {
     }
     pub fn timeout(&self) -> Duration {
         self.timeout
+    }
+
+    pub fn with_cuda_device(mut self, device: Option<usize>) -> Self {
+        self.cuda_device = device;
+        self
+    }
+
+    pub fn cuda_device(&self) -> Option<usize> {
+        self.cuda_device
     }
 }
 

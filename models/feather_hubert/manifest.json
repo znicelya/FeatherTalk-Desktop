@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "model_type": "feather_hubert",
+  "architecture_version": "feather-hubert-burn-v1",
+  "configuration": {
+    "kind": "feather_hubert",
+    "channels": 256,
+    "expansion": 2,
+    "num_blocks": 8,
+    "output_dim": 1024,
+    "dropout": 0.0
+  },
+  "inputs": [
+    {
+      "name": "waveform",
+      "shape": [
+        1,
+        -1
+      ],
+      "dtype": "f32"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "hidden",
+      "shape": [
+        1,
+        -1,
+        1024
+      ],
+      "dtype": "f32"
+    }
+  ],
+  "training": {
+    "mode": "inference",
+    "mouth_weight": 0.0,
+    "temporal_weight": 0.0,
+    "temporal_mouth_weight": 0.0,
+    "perceptual_weight": 0.0
+  },
+  "source": {
+    "format": "pytorch-pickle-restricted",
+    "identifier": "feathertalk-feather-hubert",
+    "version": "feather_hubert_188_latest_99",
+    "file_name": "feather_hubert_188_latest_99.pth",
+    "sha256": "58df96af118d75d7f69da441e1f3960096f28dda637a4e8f4265f108d27aeb52",
+    "url": null
+  },
+  "created_at": "2026-09-08T16:26:08.9791568Z",
+  "minimum_app_version": "0.1.0",
+  "tensors": {
+    "tensor_count": 65,
+    "total_elements": 3364096,
+    "entries": [
+      {
+        "name": "encoder.0.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.0.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.0.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.0.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.0.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.1.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.1.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.1.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.1.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.1.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.2.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.2.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.2.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.2.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.2.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.3.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.3.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.3.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.3.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.3.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.4.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.4.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.4.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.4.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.4.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.5.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.5.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.5.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.5.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.5.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.6.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.6.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.6.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.6.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.6.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.7.dw_conv.weight",
+        "shape": [
+          512,
+          1,
+          5
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.7.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.7.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.7.pw_expand.weight",
+        "shape": [
+          512,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "encoder.7.pw_project.weight",
+        "shape": [
+          256,
+          512,
+          1
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "final_norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "final_norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.0.conv.weight",
+        "shape": [
+          64,
+          1,
+          10
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.0.norm.beta",
+        "shape": [
+          64
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.0.norm.gamma",
+        "shape": [
+          64
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.1.conv.weight",
+        "shape": [
+          128,
+          64,
+          3
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.1.norm.beta",
+        "shape": [
+          128
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.1.norm.gamma",
+        "shape": [
+          128
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.2.conv.weight",
+        "shape": [
+          256,
+          128,
+          3
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.2.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.2.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.3.conv.weight",
+        "shape": [
+          384,
+          256,
+          3
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.3.norm.beta",
+        "shape": [
+          384
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.3.norm.gamma",
+        "shape": [
+          384
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.4.conv.weight",
+        "shape": [
+          256,
+          384,
+          3
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.4.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.4.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.5.conv.weight",
+        "shape": [
+          256,
+          256,
+          2
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.5.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.5.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.6.conv.weight",
+        "shape": [
+          256,
+          256,
+          2
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.6.norm.beta",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "frontend.layers.6.norm.gamma",
+        "shape": [
+          256
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "proj.bias",
+        "shape": [
+          1024
+        ],
+        "dtype": "f32"
+      },
+      {
+        "name": "proj.weight",
+        "shape": [
+          1024,
+          256,
+          1
+        ],
+        "dtype": "f32"
+      }
+    ]
+  },
+  "model": {
+    "file_name": "model.safetensors",
+    "bytes": 13462512,
+    "sha256": "660a4d63d19c0078a4b2e6d98f7b8b145ac8b3e5c299f861c30e17339f15ce55"
+  },
+  "licenses": {
+    "file_name": "LICENSES.json",
+    "bytes": 462,
+    "sha256": "e7fdc21e1af721aa628b833ccda7240068e29121fca0791b545d2afbf1c7133b"
+  },
+  "optimizer": null,
+  "training_state": null
+}

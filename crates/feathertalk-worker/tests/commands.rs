@@ -45,7 +45,6 @@ fn bare_config() -> WorkerConfig {
 
 #[test]
 fn every_compute_command_refuses_an_unavailable_gpu_before_touching_inputs() {
-    let config = bare_config().with_compute_selection(Some("wgpu"), Some("missing-gpu"));
     let root = std::env::current_dir().unwrap();
     let requests = [
         Request::Train(TrainParams {
@@ -71,22 +70,29 @@ fn every_compute_command_refuses_an_unavailable_gpu_before_touching_inputs() {
             project_dir: root.clone(),
             audio: root.join("missing.wav"),
         }),
+        Request::NormalizeMedia(NormalizeMediaParams {
+            input: root.join("missing.mp4"),
+            output_dir: root.join("unused-media"),
+        }),
     ];
     let runner = FakeRunner::new(vec![]);
-    for request in requests {
-        let outcome = execute_with_runner(
-            &request,
-            &config,
-            &CancellationToken::new(),
-            &NoReporter,
-            &runner,
-        );
-        let CommandOutcome::Failed(error) = outcome else {
-            panic!("an unavailable GPU cannot execute {request:?}");
-        };
-        assert_eq!(error.recovery, Recovery::SelectDifferentAdapter);
-        assert!(error.detail.contains("missing-gpu"), "{error:?}");
-        assert_eq!(error.stage, TaskStage::Preparing);
+    for backend in ["wgpu", "cuda"] {
+        let config = media_config().with_compute_selection(Some(backend), Some("missing-gpu"));
+        for request in &requests {
+            let outcome = execute_with_runner(
+                &request,
+                &config,
+                &CancellationToken::new(),
+                &NoReporter,
+                &runner,
+            );
+            let CommandOutcome::Failed(error) = outcome else {
+                panic!("an unavailable GPU cannot execute {request:?}");
+            };
+            assert_eq!(error.recovery, Recovery::SelectDifferentAdapter);
+            assert!(error.detail.contains("missing-gpu"), "{error:?}");
+            assert_eq!(error.stage, TaskStage::Preparing);
+        }
     }
     assert_eq!(runner.call_count(), 0);
 }

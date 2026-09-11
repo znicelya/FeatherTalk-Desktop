@@ -44,6 +44,7 @@ impl FakeRunner {
 #[derive(Debug, Clone, Copy)]
 enum StagedWrite {
     Bytes(&'static [u8]),
+    FreshBytes(&'static [u8]),
     Missing,
     Sparse(u64),
 }
@@ -57,6 +58,13 @@ impl ProcessRunner for FakeRunner {
             let path = Path::new(command.arguments().last().unwrap());
             match self.staged_writes.lock().unwrap().pop_front().unwrap() {
                 StagedWrite::Bytes(bytes) => fs::write(path, bytes).unwrap(),
+                StagedWrite::FreshBytes(bytes) => {
+                    assert!(
+                        !path.exists(),
+                        "partial CUDA output survived into the software retry"
+                    );
+                    fs::write(path, bytes).unwrap();
+                }
                 StagedWrite::Missing => fs::remove_file(path).unwrap(),
                 StagedWrite::Sparse(bytes) => OpenOptions::new()
                     .write(true)
@@ -189,6 +197,76 @@ fn successful_normalization_verifies_outputs_and_hashes() {
     assert_eq!(fs::read(layout.video_path()).unwrap(), b"normalized-video");
     assert_eq!(fs::read(layout.audio_path()).unwrap(), b"normalized-audio");
     assert_eq!(runner.commands.lock().unwrap().len(), 5);
+}
+
+#[test]
+fn cuda_normalization_retries_software_before_publishing() {
+    let (root, input, spec) = setup();
+    let runner = FakeRunner::with_staged_writes(
+        vec![
+            Ok(ProcessOutput::new(Some(0), source_probe(), vec![])),
+            Ok(ProcessOutput::new(
+                Some(1),
+                vec![],
+                b"CUDA unavailable".to_vec(),
+            )),
+            Ok(ProcessOutput::new(Some(0), vec![], vec![])),
+            Ok(ProcessOutput::new(Some(0), vec![], vec![])),
+            Ok(ProcessOutput::new(Some(0), video_probe(), vec![])),
+            Ok(ProcessOutput::new(Some(0), audio_probe(), vec![])),
+        ],
+        vec![
+            StagedWrite::Bytes(b"partial"),
+            StagedWrite::FreshBytes(b"software video"),
+            StagedWrite::Bytes(b"audio"),
+        ],
+    );
+    let result = normalize_media_with_runner(
+        &input,
+        &spec,
+        &tools(root.path()).with_cuda_device(Some(2)),
+        &runner,
+    )
+    .unwrap();
+    assert_eq!(
+        fs::read(result.layout().video_path()).unwrap(),
+        b"software video"
+    );
+    let commands = runner.commands.lock().unwrap();
+    assert_eq!(commands.len(), 6);
+    let args = commands[1].arguments();
+    let gpu = args
+        .iter()
+        .position(|arg| arg == "-hwaccel_device")
+        .unwrap();
+    assert_eq!(args[gpu + 1], "2");
+    assert!(gpu < args.iter().position(|arg| arg == "-i").unwrap());
+    assert!(!commands[2].arguments().iter().any(|arg| arg == "-hwaccel"));
+    assert!(!commands[3].arguments().iter().any(|arg| arg == "-hwaccel"));
+}
+
+#[test]
+fn cancelled_cuda_normalization_does_not_retry_or_publish() {
+    let (root, input, spec) = setup();
+    let layout = validate_normalization(&input, &spec).unwrap();
+    seed_old_outputs(&layout);
+    let runner = FakeRunner::new(vec![
+        Ok(ProcessOutput::new(Some(0), source_probe(), vec![])),
+        Err(MediaError::ToolCancelled {
+            operation: "normalize_video",
+        }),
+    ]);
+    assert!(matches!(
+        normalize_media_with_runner(
+            &input,
+            &spec,
+            &tools(root.path()).with_cuda_device(Some(0)),
+            &runner
+        ),
+        Err(MediaError::ToolCancelled { .. })
+    ));
+    assert_eq!(runner.commands.lock().unwrap().len(), 2);
+    assert_old_outputs_and_no_staging(&layout, layout.output_dir());
 }
 
 #[test]

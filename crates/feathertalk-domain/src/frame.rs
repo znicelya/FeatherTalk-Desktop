@@ -7,8 +7,23 @@ use crate::{DomainError, Event, Request, TaskId, TaskKind, check_protocol_versio
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Backend {
+    /// A selection policy, never an advertised execution backend.
+    Auto,
     Cpu,
     Wgpu,
+    Cuda,
+}
+
+impl Backend {
+    /// Lower values are preferred for automatic compute selection.
+    pub fn selection_priority(self) -> u8 {
+        match self {
+            Self::Cuda => 0,
+            Self::Wgpu => 1,
+            Self::Cpu => 2,
+            Self::Auto => 3,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,6 +48,19 @@ pub struct AdapterInfo {
     /// is promised for the certified set alone.
     pub certified: bool,
     pub vram_bytes: Option<u64>,
+}
+
+impl AdapterInfo {
+    pub fn is_selectable(&self) -> bool {
+        self.certified
+            && match self.backend {
+                Backend::Auto => false,
+                Backend::Cpu => self.kind == AdapterKind::Cpu && self.id == "cpu-0",
+                Backend::Wgpu | Backend::Cuda => {
+                    matches!(self.kind, AdapterKind::Discrete | AdapterKind::Integrated)
+                }
+            }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,6 +93,17 @@ impl ReadyFrame {
             return Err(DomainError::InvalidField {
                 field: "backends",
                 reason: "a worker must report at least one backend".into(),
+            });
+        }
+        if self.backends.contains(&Backend::Auto)
+            || self
+                .adapters
+                .iter()
+                .any(|adapter| adapter.backend == Backend::Auto)
+        {
+            return Err(DomainError::InvalidField {
+                field: "backends",
+                reason: "auto is a selection policy, not an execution backend".into(),
             });
         }
         let mut seen = BTreeSet::new();

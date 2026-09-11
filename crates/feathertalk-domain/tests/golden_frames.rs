@@ -6,12 +6,12 @@ use feathertalk_domain::{
     TaskStage, decode_line, encode_line,
 };
 
-const START_PROBE: &str = r#"{"frame":"start","data":{"protocol_version":2,"task_id":"1787900000000-0000000a","request":{"command":"probe_media","params":{"input":"a.mov"}}}}"#;
+const START_PROBE: &str = r#"{"frame":"start","data":{"protocol_version":3,"task_id":"1787900000000-0000000a","request":{"command":"probe_media","params":{"input":"a.mov"}}}}"#;
 
 const CANCEL: &str =
-    r#"{"frame":"cancel","data":{"protocol_version":2,"task_id":"1787900000000-0000000a"}}"#;
+    r#"{"frame":"cancel","data":{"protocol_version":3,"task_id":"1787900000000-0000000a"}}"#;
 
-const SHUTDOWN: &str = r#"{"frame":"shutdown","data":{"protocol_version":2}}"#;
+const SHUTDOWN: &str = r#"{"frame":"shutdown","data":{"protocol_version":3}}"#;
 
 fn task_id() -> TaskId {
     TaskId::parse("1787900000000-0000000a").unwrap()
@@ -47,11 +47,11 @@ fn golden_client_lines_still_decode() {
     }
 }
 
-const TRAINING_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":2,"task_id":"1787900000000-0000000a","emitted_at":"2026-08-28T09:00:00Z","stage":{"stage":"training","data":{"epoch":3,"step":1200,"loss":0.0425}},"progress":{"completed":1200,"total":4000},"metrics":{"samples_per_second":12.5,"eta_seconds":90.0,"vram_bytes":3221225472},"error":null,"result":null}}"#;
+const TRAINING_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":3,"task_id":"1787900000000-0000000a","emitted_at":"2026-08-28T09:00:00Z","stage":{"stage":"training","data":{"epoch":3,"step":1200,"loss":0.0425}},"progress":{"completed":1200,"total":4000},"metrics":{"samples_per_second":12.5,"eta_seconds":90.0,"vram_bytes":3221225472},"error":null,"result":null}}"#;
 
-const FAILED_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":2,"task_id":"1787900000000-0000000a","emitted_at":"2026-08-28T09:00:00Z","stage":{"stage":"failed","data":{"code":"DISK_SPACE_LOW","message":"磁盘空间不足"}},"progress":null,"metrics":{"samples_per_second":null,"eta_seconds":null,"vram_bytes":null},"error":{"code":"DISK_SPACE_LOW","summary":"磁盘空间不足","detail":"needed 4 GiB","stage":{"stage":"exporting"},"recovery":"free_disk_space"},"result":null}}"#;
+const FAILED_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":3,"task_id":"1787900000000-0000000a","emitted_at":"2026-08-28T09:00:00Z","stage":{"stage":"failed","data":{"code":"DISK_SPACE_LOW","message":"磁盘空间不足"}},"progress":null,"metrics":{"samples_per_second":null,"eta_seconds":null,"vram_bytes":null},"error":{"code":"DISK_SPACE_LOW","summary":"磁盘空间不足","detail":"needed 4 GiB","stage":{"stage":"exporting"},"recovery":"free_disk_space"},"result":null}}"#;
 
-const COMPLETED_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":2,"task_id":"1787900000000-0000000a","emitted_at":"2026-09-01T09:00:00Z","stage":{"stage":"completed"},"progress":null,"metrics":{"samples_per_second":null,"eta_seconds":null,"vram_bytes":null},"error":null,"result":{"format_name":"mov,mp4"}}}"#;
+const COMPLETED_EVENT: &str = r#"{"frame":"event","data":{"protocol_version":3,"task_id":"1787900000000-0000000a","emitted_at":"2026-09-01T09:00:00Z","stage":{"stage":"completed"},"progress":null,"metrics":{"samples_per_second":null,"eta_seconds":null,"vram_bytes":null},"error":null,"result":{"format_name":"mov,mp4"}}}"#;
 
 #[test]
 fn a_completed_event_carries_its_command_result() {

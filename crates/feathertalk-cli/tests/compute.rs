@@ -31,20 +31,28 @@ fn result(output: Output) -> serde_json::Value {
 }
 
 #[test]
-fn compute_flags_are_global_and_reach_all_four_compute_commands() {
-    for task in [
-        vec!["train", "p", "--epochs", "1"],
-        vec!["render", "p", "checkpoint", "audio.wav", "out.mp4"],
-        vec!["extract-frames", "p", "video.mp4"],
-        vec!["extract-features", "p", "audio.wav"],
-    ] {
-        let mut args = vec!["--backend", "wgpu"];
-        args.extend(task);
-        args.extend(["--adapter", "wgpu-test-0"]);
-        assert_eq!(
-            result(run(&args, None, None)),
-            serde_json::json!({"backend": "wgpu", "adapter": "wgpu-test-0"})
-        );
+fn compute_flags_are_global_and_reach_all_compute_commands() {
+    for backend in ["wgpu", "cuda", "auto"] {
+        for task in [
+            vec!["train", "p", "--epochs", "1"],
+            vec!["render", "p", "checkpoint", "audio.wav", "out.mp4"],
+            vec!["extract-frames", "p", "video.mp4"],
+            vec!["extract-features", "p", "audio.wav"],
+            vec!["normalize-media", "input.mov", "assets"],
+        ] {
+            let adapter = if backend == "cuda" {
+                "cuda-test-0"
+            } else {
+                "wgpu-test-0"
+            };
+            let mut args = vec!["--backend", backend];
+            args.extend(task);
+            args.extend(["--adapter", adapter]);
+            assert_eq!(
+                result(run(&args, None, None)),
+                serde_json::json!({"backend": backend, "adapter": adapter})
+            );
+        }
     }
 }
 
@@ -66,7 +74,11 @@ fn choosing_a_backend_clears_an_inherited_adapter() {
 
 #[test]
 fn an_adapter_without_a_backend_infers_its_compute_backend() {
-    for (adapter, backend) in [("cpu-0", "cpu"), ("wgpu-test-0", "wgpu")] {
+    for (adapter, backend) in [
+        ("cpu-0", "cpu"),
+        ("wgpu-test-0", "wgpu"),
+        ("cuda-test-0", "cuda"),
+    ] {
         assert_eq!(
             result(run(
                 &["--adapter", adapter, "extract-features", "p", "audio.wav"],
@@ -149,9 +161,13 @@ fn unknown_uncertified_and_software_adapters_do_not_start_a_task() {
 
 #[test]
 fn clap_rejects_an_unknown_backend_with_the_session_error_exit_code() {
-    let output = run(&["--backend", "cuda", "capabilities"], None, None);
+    let output = run(
+        &["--backend", "unknown-backend", "capabilities"],
+        None,
+        None,
+    );
     assert_eq!(output.status.code(), Some(3));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("cuda"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("unknown-backend"));
 }
 
 #[test]

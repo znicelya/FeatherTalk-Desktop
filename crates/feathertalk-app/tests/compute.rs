@@ -97,8 +97,8 @@ fn model_tools_remain_available_with_an_invalid_compute_selection() {
 }
 
 #[test]
-fn initial_cpu_selection_is_independent_of_adapter_order() {
-    let mut state = state(None, None);
+fn explicit_cpu_selection_is_independent_of_adapter_order() {
+    let mut state = state(Some("cpu"), None);
     assert!(state.environment_for(TaskKind::Render).is_err());
     state.finish_discovery(Ok(ready()));
     assert_eq!(state.selected_adapter().unwrap().id, "cpu-0");
@@ -180,7 +180,7 @@ fn advertised_arc_and_radeon_devices_are_selectable_for_every_compute_command() 
         frame.validate().unwrap();
         let mut state = state(None, None);
         state.finish_discovery(Ok(frame.clone()));
-        assert_eq!(state.selected_adapter().unwrap().id, "cpu-0");
+        assert_eq!(state.selected_adapter().unwrap().id, id);
         assert!(state.can_select(id), "cannot select {name}");
         state.select(id).unwrap();
         for command in [
@@ -259,7 +259,7 @@ fn invalid_environment_is_visible_until_the_user_selects_a_valid_device() {
 
 #[test]
 fn experimental_and_software_devices_are_visible_but_cannot_be_selected() {
-    let mut state = state(None, None);
+    let mut state = state(Some("cpu"), None);
     state.finish_discovery(Ok(ready()));
     for id in ["experimental", "software"] {
         assert!(state.adapters().iter().any(|device| device.id == id));
@@ -300,11 +300,7 @@ fn failed_discovery_allows_a_later_refresh_without_resetting_selection() {
 #[test]
 fn other_operations_use_cpu_even_with_an_invalid_gpu_configuration() {
     let state = state(Some("wgpu"), Some("missing"));
-    for kind in [
-        TaskKind::ValidateProject,
-        TaskKind::NormalizeMedia,
-        TaskKind::LockAssetPackage,
-    ] {
+    for kind in [TaskKind::ValidateProject, TaskKind::LockAssetPackage] {
         assert!(state.blocked_key(kind).is_none());
         assert_eq!(
             state.environment_for(kind).unwrap(),
@@ -314,6 +310,42 @@ fn other_operations_use_cpu_even_with_an_invalid_gpu_configuration() {
             ]
         );
     }
+}
+
+#[test]
+fn automatic_cuda_choice_can_fall_back_on_refresh_without_becoming_pinned() {
+    let mut state = state(None, None);
+    let mut frame = ready();
+    frame.backends.push(Backend::Cuda);
+    frame.adapters.push(AdapterInfo {
+        id: "cuda-test-0".into(),
+        name: "NVIDIA GPU (CUDA)".into(),
+        backend: Backend::Cuda,
+        kind: AdapterKind::Discrete,
+        certified: true,
+        vram_bytes: Some(6 * 1024 * 1024 * 1024),
+    });
+    state.finish_discovery(Ok(frame));
+    assert_eq!(state.selected_adapter().unwrap().id, "cuda-test-0");
+    assert_eq!(state.requested().unwrap().backend, Backend::Auto);
+    state.select("cpu-0").unwrap();
+    assert_eq!(state.selected_adapter().unwrap().backend, Backend::Cpu);
+    state.select_automatic();
+    assert_eq!(state.selected_adapter().unwrap().backend, Backend::Cuda);
+    assert!(state.requested().unwrap().adapter.is_none());
+    assert!(state.requested().unwrap().adapter.is_none());
+    state.begin_discovery();
+    state.finish_discovery(Ok(ready()));
+    assert_eq!(state.selected_adapter().unwrap().id, "wgpu-first");
+    let mut cpu_only = ready();
+    cpu_only.backends = vec![Backend::Cpu];
+    cpu_only
+        .adapters
+        .retain(|adapter| adapter.backend == Backend::Cpu);
+    state.begin_discovery();
+    state.finish_discovery(Ok(cpu_only));
+    assert_eq!(state.selected_adapter().unwrap().id, "cpu-0");
+    assert!(state.environment_for(TaskKind::Render).is_ok());
 }
 
 #[test]

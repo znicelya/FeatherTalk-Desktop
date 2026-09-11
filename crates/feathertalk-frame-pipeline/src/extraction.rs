@@ -121,6 +121,7 @@ pub fn extract_frames_observed<R: ProcessRunner + ?Sized>(
     let mut frames = Vec::with_capacity(spec.frame_count() as usize);
     let pattern = frames_dir.join("%06d.jpg");
     let mut first_index = 0;
+    let mut active_extractor = extractor.clone();
     while first_index < spec.frame_count() {
         if observer.is_cancelled() {
             // Staging is disposable: a cancelled run leaves the previous
@@ -131,8 +132,16 @@ pub fn extract_frames_observed<R: ProcessRunner + ?Sized>(
             });
         }
         let count = FRAME_CHUNK.min(spec.frame_count() - first_index);
-        let command = frame_command(extractor, spec.video_path(), first_index, count, &pattern);
-        if let Err(error) = run_frame(runner, &command, extractor.timeout()) {
+        let result = extract_chunk(
+            &mut active_extractor,
+            runner,
+            observer,
+            spec.video_path(),
+            first_index,
+            count,
+            &pattern,
+        );
+        if let Err(error) = result {
             let _ = fs::remove_dir_all(&staging);
             return Err(error);
         }
@@ -159,6 +168,48 @@ pub fn extract_frames_observed<R: ProcessRunner + ?Sized>(
         frames,
         armed: true,
     })
+}
+
+fn extract_chunk<R: ProcessRunner + ?Sized>(
+    extractor: &mut FrameExtractor,
+    runner: &R,
+    observer: &dyn PipelineObserver,
+    source: &Path,
+    first: u64,
+    count: u64,
+    pattern: &Path,
+) -> Result<(), PipelineError> {
+    let command = frame_command(extractor, source, first, count, pattern);
+    match run_frame(runner, &command, extractor.timeout()) {
+        Err(error @ PipelineError::ToolFailed { .. }) if extractor.cuda_device().is_some() => {
+            if observer.is_cancelled() {
+                return Err(PipelineError::Cancelled {
+                    operation: "extract_frames",
+                });
+            }
+            use std::io::Write;
+            let _ = writeln!(
+                std::io::stderr().lock(),
+                "FeatherTalk: CUDA frame decoding failed; retrying software decoding: {error}"
+            );
+            let directory = pattern.parent().expect("staged frame pattern has a parent");
+            for index in first..first + count {
+                let path = directory.join(format!("{index:06}.jpg"));
+                match fs::remove_file(&path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(source) => return Err(io("remove_cuda_frame", &path, source)),
+                }
+            }
+            *extractor = extractor.clone().with_cuda_device(None);
+            run_frame(
+                runner,
+                &frame_command(extractor, source, first, count, pattern),
+                extractor.timeout(),
+            )
+        }
+        other => other,
+    }
 }
 
 fn run_frame<R: ProcessRunner + ?Sized>(

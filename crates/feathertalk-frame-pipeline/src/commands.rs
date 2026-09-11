@@ -61,6 +61,10 @@ pub fn frame_command(
     let timestamp = format_timestamp(first_index);
     let mut arguments = args(["-hide_banner", "-nostdin", "-y", "-v", "error", "-ss"]);
     arguments.push(timestamp);
+    if let Some(device) = extractor.cuda_device() {
+        arguments.extend(args(["-hwaccel", "cuda", "-hwaccel_device"]));
+        arguments.push(device.to_string().into());
+    }
     arguments.push("-i".into());
     arguments.push(source.as_os_str().to_owned());
     arguments.extend(args([

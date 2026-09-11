@@ -9,7 +9,7 @@ use feathertalk_media::{
 };
 
 use crate::{
-    CommandOutcome, TaskReporter, WorkerConfig,
+    CommandOutcome, GpuFailure, TaskReporter, WorkerConfig,
     admission::{check_project_dir, invalid_request},
     commands::{media_failure, unsupported},
     is_pipeline_cancellation, pipeline_task_error, quality_task_error, quality_to_json,
@@ -38,6 +38,14 @@ where
     M: feathertalk_media::ProcessRunner + ?Sized,
     F: feathertalk_frame_pipeline::ProcessRunner + ?Sized,
 {
+    let cuda_device = match config.cuda_device_index() {
+        Ok(device) => device,
+        Err(reason) => {
+            return CommandOutcome::Failed(
+                GpuFailure::Unavailable(reason).task_error(TaskStage::Preparing),
+            );
+        }
+    };
     let Some(media) = config.media() else {
         return CommandOutcome::Failed(unsupported(TaskKind::ExtractFrames));
     };
@@ -49,7 +57,7 @@ where
         Err(outcome) => return outcome,
     };
     let extractor = match FrameExtractor::new(media.ffmpeg().to_owned(), media.timeout()) {
-        Ok(extractor) => extractor,
+        Ok(extractor) => extractor.with_cuda_device(cuda_device),
         Err(error) => return pipeline_failure(&error),
     };
     let observer = FrameProgress { reporter, token };

@@ -61,7 +61,12 @@ pub fn video_normalization_command(
     source: &Path,
     output: &Path,
 ) -> CommandSpec {
-    let mut arguments = args(["-hide_banner", "-nostdin", "-y", "-v", "error", "-i"]);
+    let mut arguments = args(["-hide_banner", "-nostdin", "-y", "-v", "error"]);
+    if let Some(device) = toolchain.cuda_device() {
+        arguments.extend(args(["-hwaccel", "cuda", "-hwaccel_device"]));
+        arguments.push(device.to_string().into());
+    }
+    arguments.push("-i".into());
     arguments.extend([source.as_os_str().to_owned()]);
     arguments.extend(args([
         "-map",

@@ -69,7 +69,7 @@ fn a_future_protocol_version_is_reported_precisely() {
         matches!(
             error,
             ClientError::ProtocolVersion {
-                expected: 2,
+                expected: 3,
                 actual: 99
             }
         ),

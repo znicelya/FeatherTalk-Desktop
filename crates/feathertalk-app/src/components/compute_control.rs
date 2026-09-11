@@ -58,8 +58,23 @@ pub fn compute_control(cx: &mut App) -> Div {
     let compute = cx.global::<AppState>().compute.clone();
     let snapshot = compute.read(cx).clone();
     let selected = snapshot
+        .selected_adapter()
+        .ok()
+        .map(|adapter| adapter.id.as_str());
+    let automatic = snapshot
         .requested()
-        .and_then(|options| options.adapter.as_deref());
+        .is_some_and(|options| options.backend == Backend::Auto && options.adapter.is_none());
+    let automatic_entity = compute.clone();
+    let automatic_action = button("compute-automatic", cx)
+        .caption(cx.t("compute.automatic"))
+        .disabled(automatic)
+        .on_click(move |_event, _window, cx| {
+            automatic_entity.update(cx, |state, cx| {
+                state.select_automatic();
+                cx.notify();
+            });
+        })
+        .render(cx);
     let action = button("compute-refresh", cx)
         .caption(cx.t("compute.refresh"))
         .disabled(snapshot.is_refreshing())
@@ -143,7 +158,7 @@ pub fn compute_control(cx: &mut App) -> Div {
         .flex_col()
         .gap_4()
         .child(choices)
-        .child(div().child(action));
+        .child(div().flex().gap_3().child(automatic_action).child(action));
     if let Some(error) = snapshot.error() {
         view = view.child(
             div()

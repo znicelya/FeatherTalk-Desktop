@@ -11,7 +11,7 @@ use feathertalk_frame_adapters::{
 use feathertalk_frame_pipeline::{FaceDetector, FrameDecoder, LandmarkPredictor, PipelineError};
 use feathertalk_models::backend::CpuBackend;
 
-use crate::{ModelToolchain, WgpuContext};
+use crate::{GpuContext, ModelToolchain};
 
 /// Loading the GhostOne graph moves a 125 768-byte module struct through
 /// several frames, which overruns a default thread stack. The precedents are
@@ -45,7 +45,7 @@ impl<B: Backend> FrameModels<B> {
     pub(crate) fn load_checked(
         models: &ModelToolchain,
         device: Device<B>,
-        context: Option<WgpuContext>,
+        context: Option<GpuContext>,
     ) -> Result<Self, PipelineError> {
         let cache = Arc::new(FrameImageCache::new());
         let decoder = JpegFrameDecoder::new(Arc::clone(&cache));
@@ -88,7 +88,7 @@ fn load_predictor<B: Backend>(
     artifacts: PathBuf,
     cache: Arc<FrameImageCache>,
     device: Device<B>,
-    context: Option<WgpuContext>,
+    context: Option<GpuContext>,
 ) -> Result<Box<PfldLandmarkPredictor<B>>, PipelineError> {
     std::thread::Builder::new()
         .name("pfld-predictor-load".to_owned())

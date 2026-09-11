@@ -252,6 +252,7 @@ fn ready(commands: Vec<TaskKind>) -> ServerFrame {
 fn compute_ready() -> ServerFrame {
     let ServerFrame::Ready(mut frame) = ready(vec![
         TaskKind::ValidateProject,
+        TaskKind::NormalizeMedia,
         TaskKind::Train,
         TaskKind::Render,
         TaskKind::ExtractFrames,
@@ -260,6 +261,15 @@ fn compute_ready() -> ServerFrame {
         unreachable!()
     };
     frame.backends.push(Backend::Wgpu);
+    frame.backends.push(Backend::Cuda);
+    frame.adapters.push(AdapterInfo {
+        id: "cuda-test-0".into(),
+        name: "NVIDIA GPU (CUDA)".into(),
+        backend: Backend::Cuda,
+        kind: AdapterKind::Discrete,
+        certified: true,
+        vram_bytes: None,
+    });
     frame.capabilities.training = true;
     frame.capabilities.wgpu_training = true;
     for (id, kind, certified) in [

@@ -8,7 +8,7 @@ use feathertalk_media::{
 use feathertalk_project::validate_project_dir;
 
 use crate::{
-    TaskReporter, WorkerConfig, execute_export_model_package, execute_export_onnx,
+    GpuFailure, TaskReporter, WorkerConfig, execute_export_model_package, execute_export_onnx,
     execute_import_legacy_model, execute_inspect_model, execute_lock_asset_package,
     execute_migrate_legacy_features, export_task_error, is_media_cancellation,
     legacy_feature_task_error, legacy_task_error, media_task_error, normalize_to_json,
@@ -76,9 +76,18 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             }
         }
         Request::NormalizeMedia(params) => {
+            let cuda_device = match config.cuda_device_index() {
+                Ok(device) => device,
+                Err(reason) => {
+                    return CommandOutcome::Failed(
+                        GpuFailure::Unavailable(reason).task_error(TaskStage::Preparing),
+                    );
+                }
+            };
             let Some(toolchain) = config.media() else {
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
+            let toolchain = toolchain.clone().with_cuda_device(cuda_device);
             let input = match validate_input(&MediaInput {
                 source: params.input.clone(),
             }) {
@@ -94,7 +103,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
                 target_audio_channels: 1,
                 output_dir: params.output_dir.clone(),
             };
-            match normalize_media_observed(&input, &spec, toolchain, runner, &|phase| {
+            match normalize_media_observed(&input, &spec, &toolchain, runner, &|phase| {
                 report_phase(reporter, phase)
             }) {
                 Ok(normalized) => CommandOutcome::Completed(Some(normalize_to_json(&normalized))),

@@ -13,7 +13,7 @@ mod task_error;
 ///
 /// Version 2 added `supported_commands` to the handshake and `result` to
 /// completed events.
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 
 pub use codec::{MAX_FRAME_BYTES, check_protocol_version, decode_line, encode_line};
 pub use error::DomainError;

@@ -25,7 +25,7 @@ fn an_explicit_wgpu_request_without_a_gpu_does_not_fall_back_to_cpu() {
 
 #[test]
 fn invalid_compute_choices_are_retained_as_errors() {
-    for backend in ["", "auto", "WGPU", "dx12"] {
+    for backend in ["", "unknown", "WGPU", "dx12"] {
         let config =
             WorkerConfig::from_values(None, None, None).with_compute_selection(Some(backend), None);
         let error = config.compute_adapter().unwrap_err();

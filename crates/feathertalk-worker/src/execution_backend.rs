@@ -28,6 +28,15 @@ impl WorkerBackend for GpuBackend {
     }
 }
 
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+impl WorkerBackend for feathertalk_models::backend::CudaBackend {
+    const EXECUTION_NAME: &'static str = "cuda";
+
+    fn gpu_memory_bytes(device: &Device<Self>) -> Option<u64> {
+        crate::compute::cuda::memory_usage_bytes(device)
+    }
+}
+
 impl<B: WorkerBackend> WorkerBackend for Autodiff<B> {
     const EXECUTION_NAME: &'static str = B::EXECUTION_NAME;
 

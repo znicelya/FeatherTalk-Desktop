@@ -278,6 +278,8 @@ fn arc_and_radeon_selection_reaches_the_worker_and_training_handshake() {
             let registry = ComputeRegistry {
                 adapters,
                 native: BTreeMap::new(),
+                #[cfg(any(target_os = "windows", target_os = "linux"))]
+                cuda: BTreeMap::new(),
             };
             assert_eq!(registry.resolve(Backend::Wgpu, None).unwrap(), adapter);
             let config = crate::WorkerConfig::from_values_with_training(
@@ -290,13 +292,14 @@ fn arc_and_radeon_selection_reaches_the_worker_and_training_handshake() {
                 Some(directory.path().to_str().unwrap().to_owned()),
             )
             .with_compute_registry(registry);
-            assert_eq!(config.compute_adapter().unwrap().id, "cpu-0");
+            assert_eq!(config.compute_adapter().unwrap(), adapter);
             let config = config.with_compute_selection(Some("wgpu"), Some(&id));
             for task in [
                 TaskKind::Train,
                 TaskKind::Render,
                 TaskKind::ExtractFrames,
                 TaskKind::ExtractFeatures,
+                TaskKind::NormalizeMedia,
             ] {
                 assert_eq!(config.adapter_for(task).unwrap(), adapter);
             }
@@ -311,6 +314,71 @@ fn arc_and_radeon_selection_reaches_the_worker_and_training_handshake() {
             ready.validate().unwrap();
         }
     }
+}
+
+#[test]
+fn automatic_compute_uses_cuda_then_existing_gpu_then_cpu() {
+    let mut cuda = gpu("cuda-uuid-b", true, AdapterKind::Discrete);
+    cuda.backend = Backend::Cuda;
+    let mut adapters = vec![
+        crate::handshake::cpu_adapter(),
+        gpu("wgpu-a", true, AdapterKind::Discrete),
+        cuda,
+    ];
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "cuda-uuid-b"
+    );
+    adapters.reverse();
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "cuda-uuid-b"
+    );
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Wgpu, None).unwrap().id,
+        "wgpu-a"
+    );
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Cpu, None).unwrap().id,
+        "cpu-0"
+    );
+    assert!(resolve_adapter(&adapters, Backend::Cuda, Some("wgpu-a")).is_err());
+    adapters.retain(|adapter| adapter.backend != Backend::Cuda);
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "wgpu-a"
+    );
+    assert!(resolve_adapter(&adapters, Backend::Cuda, None).is_err());
+    adapters.retain(|adapter| adapter.backend == Backend::Cpu);
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "cpu-0"
+    );
+}
+
+#[test]
+fn duplicate_cuda_identities_preserve_a_valid_handshake_and_automatic_fallback() {
+    let mut cuda = gpu("cuda-uuid-shared", true, AdapterKind::Discrete);
+    cuda.backend = Backend::Cuda;
+    let mut registry = ComputeRegistry::cpu_only();
+    registry.adapters.extend([
+        gpu("wgpu-fallback", true, AdapterKind::Discrete),
+        cuda.clone(),
+        cuda,
+    ]);
+    registry.finish_discovery();
+    assert_eq!(
+        registry.resolve(Backend::Auto, None).unwrap().id,
+        "wgpu-fallback"
+    );
+    assert!(
+        registry
+            .resolve(Backend::Cuda, Some("cuda-uuid-shared"))
+            .is_err()
+    );
+    assert!(registry.resolve(Backend::Cuda, None).is_err());
+    let config = crate::WorkerConfig::from_values(None, None, None).with_compute_registry(registry);
+    crate::handshake::ready_frame(&config).validate().unwrap();
 }
 
 #[test]

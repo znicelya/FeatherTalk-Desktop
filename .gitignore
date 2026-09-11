@@ -3,3 +3,6 @@
 /crates/*/target/autotune/
 /dist/
 /.cache/parity/
+.codegraph
+__pycache__
+docs/reports

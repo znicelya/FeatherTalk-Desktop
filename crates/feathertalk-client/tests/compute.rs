@@ -37,14 +37,14 @@ fn ready() -> ReadyFrame {
 }
 
 #[test]
-fn defaults_select_cpu_even_when_a_gpu_is_advertised_first() {
+fn defaults_select_a_certified_gpu_before_cpu() {
     let frame = ready();
     assert_eq!(
         ComputeOptions::default()
             .resolve_adapter(&frame)
             .unwrap()
             .id,
-        "cpu-0"
+        "wgpu-first"
     );
 }
 
@@ -98,17 +98,112 @@ fn task_eligibility_checks_the_advertised_command_and_wgpu_training_capability()
 }
 
 #[test]
-fn environment_parsing_defaults_to_cpu_and_keeps_invalid_values_as_errors() {
+fn environment_parsing_defaults_to_auto_and_keeps_invalid_values_as_errors() {
     let cpu = ComputeOptions::from_environment_values(None, None).unwrap();
-    assert_eq!(cpu.backend, Backend::Cpu);
+    assert_eq!(serde_json::to_value(cpu.backend).unwrap(), "auto");
     assert!(cpu.adapter.is_none());
-    for backend in ["", "   ", "cuda", "WGPU"] {
+    for backend in ["", "   ", "unknown", "WGPU"] {
         assert!(ComputeOptions::from_environment_values(Some(backend), None).is_err());
     }
-    assert!(ComputeOptions::from_environment_values(None, Some("wgpu-first")).is_err());
+    assert!(ComputeOptions::from_environment_values(None, Some("wgpu-first")).is_ok());
     let options = ComputeOptions::from_environment_values(Some(" wgpu "), Some("  ")).unwrap();
     assert_eq!(options.backend, Backend::Wgpu);
     assert!(options.adapter.is_none());
+}
+
+#[test]
+fn automatic_selection_prefers_cuda_and_falls_back_after_a_fresh_handshake() {
+    let mut frame = ready();
+    let cuda: Backend = serde_json::from_str(r#""cuda""#).unwrap();
+    frame.backends.push(cuda);
+    frame
+        .adapters
+        .push(adapter("cuda-z", cuda, AdapterKind::Discrete, true));
+    frame
+        .adapters
+        .push(adapter("cuda-a", cuda, AdapterKind::Discrete, true));
+    frame.adapters.push(adapter(
+        "cuda-0-invalid",
+        cuda,
+        AdapterKind::Discrete,
+        false,
+    ));
+    let automatic = ComputeOptions::default();
+    for _ in 0..2 {
+        assert_eq!(automatic.resolve_adapter(&frame).unwrap().id, "cuda-a");
+        frame.adapters.reverse();
+    }
+    assert_eq!(
+        ComputeOptions::new(Backend::Cpu, None)
+            .unwrap()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "cpu-0"
+    );
+    assert_eq!(
+        ComputeOptions::new(Backend::Wgpu, None)
+            .unwrap()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "wgpu-first"
+    );
+    frame.backends.retain(|backend| *backend != cuda);
+    frame.adapters.retain(|device| device.backend != cuda);
+    assert_eq!(automatic.resolve_adapter(&frame).unwrap().id, "wgpu-first");
+    frame
+        .adapters
+        .retain(|device| device.backend == Backend::Cpu);
+    assert_eq!(automatic.resolve_adapter(&frame).unwrap().id, "cpu-0");
+    assert!(
+        ComputeOptions::new(cuda, None)
+            .unwrap()
+            .resolve_adapter(&frame)
+            .is_err()
+    );
+}
+
+#[test]
+fn automatic_training_validates_the_backend_it_actually_selects() {
+    let mut frame = ready();
+    frame.capabilities.wgpu_training = false;
+    assert!(
+        ComputeOptions::default()
+            .validate_for(TaskKind::Train, &frame)
+            .is_err()
+    );
+    let cuda: Backend = serde_json::from_str(r#""cuda""#).unwrap();
+    frame.backends.push(cuda);
+    frame
+        .adapters
+        .push(adapter("cuda-a", cuda, AdapterKind::Discrete, true));
+    assert!(
+        ComputeOptions::default()
+            .validate_for(TaskKind::Train, &frame)
+            .is_ok()
+    );
+    frame.capabilities.training = false;
+    assert!(
+        ComputeOptions::default()
+            .validate_for(TaskKind::Train, &frame)
+            .is_err()
+    );
+}
+
+#[test]
+fn cuda_flags_and_environment_preserve_the_requested_device() {
+    let options =
+        ComputeOptions::from_environment_values(Some(" cuda "), Some(" cuda-a ")).unwrap();
+    assert_eq!(options.env_overrides()[0].1, "cuda");
+    assert_eq!(options.adapter.as_deref(), Some("cuda-a"));
+    assert_eq!(
+        ComputeOptions::from_flags(None, Some("cuda-a"))
+            .unwrap()
+            .unwrap(),
+        options
+    );
+    assert!(ComputeOptions::from_environment_values(Some("cuda"), Some("cpu-0")).is_err());
 }
 
 #[test]

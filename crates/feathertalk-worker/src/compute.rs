@@ -1,8 +1,9 @@
 //! Native compute discovery and exact adapter registration for Burn.
 //!
-//! Discovery retains adapters without opening logical compute devices. IDs use
-//! native hardware identities where WGPU exposes them, with a stable model hash
-//! as a fallback. An ambiguous identity is never eligible for computation.
+//! WGPU discovery retains adapters for lazy initialization; CUDA discovery
+//! validates the runtime with a kernel before advertising a device. IDs use
+//! native hardware identities, with a stable model hash as WGPU's fallback.
+//! An ambiguous identity is never eligible for computation.
 
 use std::{
     any::Any,
@@ -27,6 +28,8 @@ use feathertalk_domain::{
 };
 use sha2::{Digest, Sha256};
 
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+pub(crate) mod cuda;
 mod native;
 
 /// Adapter metadata and the native handles that metadata identifies.
@@ -37,6 +40,8 @@ mod native;
 pub struct ComputeRegistry {
     adapters: Vec<AdapterInfo>,
     native: BTreeMap<String, Arc<NativeAdapter>>,
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    cuda: BTreeMap<String, cuda::CudaContext>,
 }
 
 impl ComputeRegistry {
@@ -44,13 +49,15 @@ impl ComputeRegistry {
         Self {
             adapters: vec![crate::handshake::cpu_adapter()],
             native: BTreeMap::new(),
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            cuda: BTreeMap::new(),
         }
     }
 
-    /// Enumerate Vulkan on Windows/Linux or Metal on macOS, once per GPU.
-    /// Driver/enumeration failures preserve the CPU adapter and go to stderr.
+    /// Enumerate Vulkan/Metal and independently probe CUDA on Windows/Linux.
+    /// Driver/enumeration failures preserve existing backends and go to stderr.
     pub fn discover() -> Self {
-        match catch_unwind(AssertUnwindSafe(Self::discover_native)) {
+        let mut registry = match catch_unwind(AssertUnwindSafe(Self::discover_native)) {
             Ok(Ok(registry)) => registry,
             Ok(Err(reason)) => {
                 diagnostic(format_args!("discovery: {reason}"));
@@ -60,7 +67,21 @@ impl ComputeRegistry {
                 diagnostic(format_args!("discovery failed: {}", panic_detail(payload)));
                 Self::cpu_only()
             }
+        };
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        for (adapter, context) in cuda::discover() {
+            registry.cuda.insert(adapter.id.clone(), context);
+            registry.adapters.push(adapter);
         }
+        registry.finish_discovery();
+        registry
+    }
+
+    fn finish_discovery(&mut self) {
+        // CUDA driver identities must be unambiguous too. An invalid identity
+        // must not break the handshake or replace an explicitly selected GPU.
+        disambiguate_ids(&mut self.adapters);
+        self.adapters.sort_by(|left, right| left.id.cmp(&right.id));
     }
 
     fn discover_native() -> Result<Self, String> {
@@ -107,17 +128,45 @@ impl ComputeRegistry {
             .collect();
         adapters.sort_by(|left, right| left.id.cmp(&right.id));
         adapters.insert(0, crate::handshake::cpu_adapter());
-        Ok(Self { adapters, native })
+        Ok(Self {
+            adapters,
+            native,
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            cuda: BTreeMap::new(),
+        })
     }
 
     pub fn adapters(&self) -> &[AdapterInfo] {
         &self.adapters
     }
 
-    /// Match an explicit ID exactly. Without a WGPU ID, select the certified
-    /// hardware adapter with the lexicographically smallest stable ID.
+    /// Match an explicit ID exactly. Automatic selection prefers CUDA, wgpu,
+    /// then CPU, with stable IDs breaking ties within each backend.
     pub fn resolve(&self, backend: Backend, id: Option<&str>) -> Result<AdapterInfo, String> {
         resolve_adapter(&self.adapters, backend, id)
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    pub fn open_cuda(&self, id: &str) -> Result<cuda::CudaContext, GpuFailure> {
+        self.resolve(Backend::Cuda, Some(id))
+            .map_err(GpuFailure::Unavailable)?;
+        let context = self.cuda.get(id).ok_or_else(|| {
+            GpuFailure::Unavailable(format!("CUDA adapter {id} has no retained device"))
+        })?;
+        context.check()?;
+        Ok(context.clone())
+    }
+
+    pub fn cuda_device_index(&self, id: &str) -> Option<usize> {
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        {
+            self.cuda.get(id).map(|context| context.device.index)
+        }
+        #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+        {
+            let _ = id;
+            None
+        }
     }
 
     /// Open and register the retained native handle once, without enumerating
@@ -253,6 +302,32 @@ pub struct WgpuContext {
     pub device: WgpuDevice,
     setup: WgpuSetup,
     faults: Arc<FaultState>,
+}
+
+/// Checks the actual GPU backend, including the PFLD model-loading stream.
+#[derive(Clone, Debug)]
+pub enum GpuContext {
+    Wgpu(WgpuContext),
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    Cuda(cuda::CudaContext),
+}
+
+impl GpuContext {
+    pub fn check(&self) -> Result<(), GpuFailure> {
+        match self {
+            Self::Wgpu(context) => context.check(),
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            Self::Cuda(context) => context.check(),
+        }
+    }
+
+    pub fn graphics_api(&self) -> &'static str {
+        match self {
+            Self::Wgpu(context) => context.graphics_api(),
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
+            Self::Cuda(_) => "cuda",
+        }
+    }
 }
 
 impl WgpuContext {
@@ -529,22 +604,17 @@ fn resolve_adapter(
             .ok_or_else(|| "CPU adapter cpu-0 is unavailable".into());
     }
     let selectable = |adapter: &&AdapterInfo| {
-        adapter.backend == Backend::Wgpu
-            && adapter.certified
-            && matches!(
-                adapter.kind,
-                AdapterKind::Discrete | AdapterKind::Integrated
-            )
+        (backend == Backend::Auto || adapter.backend == backend) && adapter.is_selectable()
     };
     match id {
         Some(id) => {
             let adapter = adapters
                 .iter()
                 .find(|adapter| adapter.id == id)
-                .ok_or_else(|| format!("Unknown WGPU adapter {id}"))?;
+                .ok_or_else(|| format!("Unknown {backend:?} adapter {id}"))?;
             if !selectable(&adapter) {
                 return Err(format!(
-                    "Adapter {id} is not a certified native WGPU hardware device"
+                    "Adapter {id} is not a certified {backend:?} hardware device"
                 ));
             }
             Ok(adapter.clone())
@@ -552,9 +622,12 @@ fn resolve_adapter(
         None => adapters
             .iter()
             .filter(selectable)
-            .min_by(|left, right| left.id.cmp(&right.id))
+            .min_by(|left, right| {
+                (left.backend.selection_priority(), &left.id)
+                    .cmp(&(right.backend.selection_priority(), &right.id))
+            })
             .cloned()
-            .ok_or_else(|| "No certified native WGPU hardware adapter is available".into()),
+            .ok_or_else(|| format!("No certified {backend:?} hardware adapter is available")),
     }
 }
 

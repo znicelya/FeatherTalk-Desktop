@@ -176,6 +176,97 @@ fn injected_timeout_is_preserved() {
 }
 
 #[test]
+fn cuda_decode_failure_retries_the_same_chunk_and_disables_cuda_for_the_tail() {
+    let (_root, spec, extractor) = setup(FRAME_CHUNK + 2);
+    let extractor = extractor.with_cuda_device(Some(2));
+    let runner = FakeRunner::new(
+        vec![
+            Ok(ProcessOutput::new(
+                Some(1),
+                vec![],
+                b"CUDA decoder unavailable".to_vec(),
+            )),
+            Ok(ProcessOutput::new(Some(0), vec![], vec![])),
+            Ok(ProcessOutput::new(Some(0), vec![], vec![])),
+        ],
+        WriteMode::Bytes,
+    );
+    let batch = extract_frames_with_runner(&spec, &extractor, &runner).unwrap();
+    assert_eq!(batch.frames().len() as u64, FRAME_CHUNK + 2);
+    let commands = runner.commands.lock().unwrap();
+    assert_eq!(commands.len(), 3);
+    assert_eq!(flag_value(&commands[0], "-hwaccel"), "cuda");
+    assert_eq!(flag_value(&commands[0], "-hwaccel_device"), "2");
+    let hardware_position = commands[0]
+        .arguments()
+        .iter()
+        .position(|arg| arg == "-hwaccel")
+        .unwrap();
+    let input_position = commands[0]
+        .arguments()
+        .iter()
+        .position(|arg| arg == "-i")
+        .unwrap();
+    assert!(hardware_position < input_position);
+    for command in &commands[1..] {
+        assert!(!command.arguments().iter().any(|arg| arg == "-hwaccel"));
+    }
+    assert_eq!(flag_number(&commands[1], "-start_number"), 0);
+    assert_eq!(flag_number(&commands[2], "-start_number"), FRAME_CHUNK);
+}
+
+#[test]
+fn cuda_timeout_is_not_retried_as_software() {
+    let (_root, spec, extractor) = setup(1);
+    let runner = FakeRunner::new(
+        vec![Err(PipelineError::ToolTimedOut {
+            operation: "extract_frames",
+            timeout_ms: 10,
+        })],
+        WriteMode::Missing,
+    );
+    assert!(matches!(
+        extract_frames_with_runner(&spec, &extractor.with_cuda_device(Some(0)), &runner),
+        Err(PipelineError::ToolTimedOut { .. })
+    ));
+    assert_eq!(runner.commands.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn stale_cuda_frames_cannot_fill_gaps_in_a_failed_software_retry() {
+    struct PartialRetry;
+    impl ProcessRunner for PartialRetry {
+        fn run(
+            &self,
+            command: &CommandSpec,
+            _timeout: Duration,
+        ) -> Result<ProcessOutput, PipelineError> {
+            let hardware = command.arguments().iter().any(|arg| arg == "-hwaccel");
+            let outputs = chunk_outputs(command);
+            if hardware {
+                for (_, path) in &outputs {
+                    fs::write(path, b"partial CUDA data").unwrap();
+                }
+                Ok(ProcessOutput::new(Some(1), vec![], vec![]))
+            } else {
+                assert!(
+                    outputs.iter().all(|(_, path)| !path.exists()),
+                    "failed CUDA output must be removed before retry"
+                );
+                fs::write(&outputs[0].1, b"software frame").unwrap();
+                Ok(ProcessOutput::new(Some(0), vec![], vec![]))
+            }
+        }
+    }
+    let (_root, spec, extractor) = setup(2);
+    assert!(matches!(
+        extract_frames_with_runner(&spec, &extractor.with_cuda_device(Some(0)), &PartialRetry),
+        Err(PipelineError::FrameMissing { .. })
+    ));
+    assert!(staging_dirs(spec.output_root()).is_empty());
+}
+
+#[test]
 fn frames_are_extracted_in_chunks_with_a_short_tail() {
     let (_root, spec, extractor) = setup(FRAME_CHUNK * 6 + 11);
     let runner = FakeRunner::new(ok_outputs(7), WriteMode::Bytes);

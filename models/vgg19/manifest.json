@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "model_kind": "vgg19-conv3-3",
+  "architecture_version": "torchvision-vgg19-conv3-3-v1",
+  "source": {
+    "framework": "torchvision",
+    "weight_id": "VGG19_Weights.IMAGENET1K_V1",
+    "url": "https://download.pytorch.org/models/vgg19-dcbb9e9d.pth",
+    "sha256": "dcbb9e9dad569fff7a846263a77324fc34978fea2bfb039c012d710e1776ae44"
+  },
+  "input": {
+    "channels": 3,
+    "color_order": "bgr",
+    "value_range": "0..1",
+    "normalization": "none"
+  },
+  "output_layer": "features.14",
+  "tensor_count": 14,
+  "total_elements": 1735488,
+  "model": {
+    "file_name": "model.safetensors",
+    "bytes": 6943160,
+    "sha256": "5be5a970824d7f406788a861463a4335478046da930e614a433c5f6ec96f0c90"
+  },
+  "licenses": {
+    "file_name": "LICENSES.json",
+    "bytes": 546,
+    "sha256": "84070928fc963312b6fa07bba46d6d649132e2563edb50038055bfcb8f7f7b6d"
+  }
+}

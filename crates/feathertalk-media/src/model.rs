@@ -43,6 +43,7 @@ pub struct MediaToolchain {
     ffmpeg: PathBuf,
     ffprobe: PathBuf,
     timeout: Duration,
+    cuda_device: Option<usize>,
 }
 
 impl MediaToolchain {
@@ -85,6 +86,7 @@ impl MediaToolchain {
             ffmpeg,
             ffprobe,
             timeout,
+            cuda_device: None,
         })
     }
 
@@ -98,6 +100,16 @@ impl MediaToolchain {
 
     pub fn timeout(&self) -> Duration {
         self.timeout
+    }
+
+    /// Prefer hardware decoding on this CUDA ordinal, with software retry.
+    pub fn with_cuda_device(mut self, device: Option<usize>) -> Self {
+        self.cuda_device = device;
+        self
+    }
+
+    pub fn cuda_device(&self) -> Option<usize> {
+        self.cuda_device
     }
 }
 

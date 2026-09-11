@@ -5,7 +5,7 @@ use feathertalk_client::{
     ComputeError, ComputeOptions, SessionOptions, WorkerLocator, WorkerSession,
     uses_compute_selection,
 };
-use feathertalk_domain::{AdapterInfo, ReadyFrame, TaskKind};
+use feathertalk_domain::{AdapterInfo, Backend, ReadyFrame, TaskKind};
 
 use crate::worker_status::WorkerStatus;
 
@@ -37,9 +37,10 @@ impl ComputeState {
         self.refreshing = false;
         match result {
             Ok(ready) => {
-                // Pin an automatic choice once it resolves. A later device loss
-                // must not silently move the user's tasks onto a different GPU.
+                // Pin explicitly requested backends once they resolve. Auto
+                // stays automatic so a refresh can select an available backend.
                 if let Ok(selection) = &mut self.selection
+                    && selection.backend != Backend::Auto
                     && selection.adapter.is_none()
                     && let Ok(adapter) = selection.resolve_adapter(&ready)
                 {
@@ -96,6 +97,10 @@ impl ComputeState {
         Ok(())
     }
 
+    pub fn select_automatic(&mut self) {
+        self.selection = Ok(ComputeOptions::default());
+    }
+
     fn options_for(&self, id: &str) -> Result<ComputeOptions, String> {
         let ready = self
             .ready
@@ -129,7 +134,11 @@ impl ComputeState {
 
     pub fn environment_for(&self, kind: TaskKind) -> Result<Vec<(String, String)>, String> {
         if !uses_compute_selection(kind) {
-            return Ok(ComputeOptions::default().env_overrides());
+            return Ok(ComputeOptions {
+                backend: Backend::Cpu,
+                adapter: None,
+            }
+            .env_overrides());
         }
         let selection = self.selection.as_ref().map_err(Clone::clone)?;
         let ready = self.ready.as_ref().ok_or_else(|| {
@@ -195,7 +204,11 @@ pub fn spawn_discovery(
                     match WorkerSession::spawn_with_env(
                         path,
                         options,
-                        &ComputeOptions::default().env_overrides(),
+                        &ComputeOptions {
+                            backend: Backend::Cpu,
+                            adapter: None,
+                        }
+                        .env_overrides(),
                     ) {
                         Ok(session) => {
                             let ready = session.ready().clone();

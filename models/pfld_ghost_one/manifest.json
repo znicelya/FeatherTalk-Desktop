@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "model_type": "pfld_ghost_one",
+  "architecture_version": "burn-pfld-inference-v1",
+  "source": {
+    "file_name": "checkpoint_epoch_335.pth.tar",
+    "sha256": "bada866661ad5fa1080a085f51fe9c016c69958c406951afa4afc7840f856de0"
+  },
+  "epoch": 335,
+  "input": {
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      192,
+      192
+    ],
+    "dtype": "f32"
+  },
+  "output": {
+    "name": "landmarks",
+    "shape": [
+      1,
+      220
+    ],
+    "dtype": "f32"
+  },
+  "model": {
+    "format": "safetensors",
+    "file_name": "model.safetensors",
+    "sha256": "e131dd764236fde54a27b2f7084906119f06c28b140bf127b459ec967e92915b",
+    "tensor_count": 1735,
+    "total_elements": 910902
+  },
+  "license": {
+    "spdx": "NOASSERTION",
+    "redistribution_approved": false
+  }
+}

@@ -16,3 +16,8 @@ feathertalk-audio = { path = "../feathertalk-audio" }
 burn.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+burn-cuda.workspace = true
+# Also fixes the CUDA binding feature when this crate is built without worker.
+cudarc.workspace = true
