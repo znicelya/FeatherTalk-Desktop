@@ -445,6 +445,18 @@ fn english_catalog_has_actionable_model_errors_and_task_gates() {
 
     let model_errors = [
         (
+            "models.error.no_source",
+            "Choose a source file or model directory before submitting this operation.",
+        ),
+        (
+            "models.error.no_destination",
+            "Choose an output location before submitting this operation.",
+        ),
+        (
+            "models.error.same_path",
+            "Choose a different output location; it cannot be the same as the source path.",
+        ),
+        (
             "models.error.destination_absolute",
             "Please choose the complete output path again.",
         ),
@@ -496,7 +508,7 @@ fn english_catalog_has_actionable_model_errors_and_task_gates() {
         ),
         (
             "no_worker",
-            "The worker executable was not found. Check the detected path shown in the status bar.",
+            "The local compute service is unavailable. Open Settings > Local compute service to configure it.",
         ),
         (
             "busy",
