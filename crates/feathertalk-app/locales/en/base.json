@@ -1,5 +1,391 @@
 {
   "shell": {
-    "title": "FeatherTalk Workbench"
+    "title": "FeatherTalk Workbench",
+    "subtitle": "Local training and generation without cloud dependencies",
+    "navigation": "Navigation",
+    "worker": {
+      "ready": "Ready",
+      "missing": "Missing",
+      "path": "Path",
+      "probed": "Probed",
+      "unset": "Unset",
+      "source": {
+        "cli": "Cli",
+        "env": "Env",
+        "sibling": "Sibling"
+      }
+    }
+  },
+  "compute": {
+    "label": "Compute device",
+    "refresh": "Refresh devices",
+    "automatic": "Automatic selection",
+    "discovering": "Detecting compute devices",
+    "unavailable": "Device information unavailable; refresh to try again",
+    "experimental": "Experimental device; unavailable for tasks",
+    "vram": "VRAM",
+    "vram_unavailable": "VRAM information unavailable",
+    "invalid": "Invalid compute device configuration",
+    "blocked": "The selected device cannot run this task; check configuration or refresh"
+  },
+  "nav": {
+    "assets": "Assets",
+    "training": "Training",
+    "generate": "Generate",
+    "models": "Models",
+    "tasks": "Tasks"
+  },
+  "page": {
+    "assets": {
+      "title": "Title",
+      "pending": "Pending"
+    },
+    "training": {
+      "title": "Title",
+      "pending": "Pending"
+    },
+    "generate": {
+      "title": "Title",
+      "pending": "Pending"
+    },
+    "models": {
+      "title": "Title",
+      "pending": "Pending"
+    },
+    "tasks": {
+      "title": "Title",
+      "pending": "Pending"
+    }
+  },
+  "task": {
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "stage": {
+      "queued": "Queued",
+      "preparing": "Preparing",
+      "extracting_audio": "Extracting audio",
+      "extracting_frames": "Extracting frames",
+      "detecting_faces": "Detecting faces",
+      "extracting_features": "Extracting features",
+      "training": "Training",
+      "importing": "Importing",
+      "exporting": "Exporting",
+      "rendering": "Rendering",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "kind": {
+      "probe_media": "Probe media",
+      "normalize_media": "Normalize media",
+      "validate_project": "Validate project",
+      "lock_asset_package": "Lock asset package",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "train": "Train",
+      "render": "Render",
+      "inspect_model": "Inspect model",
+      "import_legacy_model": "Import legacy model",
+      "export_model_package": "Export model package",
+      "export_onnx": "Export ONNX",
+      "migrate_legacy_features": "Migrate legacy features"
+    },
+    "recovery": {
+      "retry": "Retry",
+      "resume_from_checkpoint": "Resume from checkpoint",
+      "free_disk_space": "Free disk space",
+      "select_different_adapter": "Select different adapter",
+      "exclude_bad_frames": "Exclude bad frames",
+      "reimport_model": "Reimport model",
+      "not_recoverable": "Not recoverable"
+    }
+  },
+  "tasks": {
+    "submit": "Submit",
+    "blocked": {
+      "no_project": "No project",
+      "no_worker": "No worker",
+      "busy": "Busy"
+    },
+    "incomplete": {
+      "title": "Title",
+      "description": "Description",
+      "resume": "Resume",
+      "discard": "Discard",
+      "updated": "Updated",
+      "unknown_kind": "Unknown kind"
+    },
+    "list": {
+      "title": "Title"
+    },
+    "empty": {
+      "title": "Title",
+      "description": "Description"
+    },
+    "cancel": "Cancel",
+    "cancel_hint": "Cancel hint",
+    "attempts": "Attempts",
+    "detail": "Detail",
+    "error_code": "Error code",
+    "recovery": "Recovery",
+    "crash_log": "Crash log",
+    "failure": {
+      "crashed": "Crashed",
+      "unavailable": "Unavailable",
+      "rejected": "Rejected",
+      "unsupported": "Unsupported"
+    },
+    "notes": {
+      "title": "Title"
+    },
+    "note": {
+      "scan_failed": "Scan failed",
+      "log_failed": "Log failed",
+      "journal_failed": "Journal failed",
+      "manifest_failed": "Manifest failed",
+      "task_id_failed": "Task id failed",
+      "submit_failed": "Submit failed",
+      "resolve_failed": "Resolve failed"
+    }
+  },
+  "assets": {
+    "project": {
+      "label": "Label",
+      "unset": "Unset",
+      "pick": "Pick"
+    },
+    "refresh": "Refresh",
+    "video": {
+      "label": "Label",
+      "unset": "Unset",
+      "pick": "Pick"
+    },
+    "step": {
+      "normalize": "Normalize",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "lock": "Lock"
+    },
+    "hint": {
+      "normalize": "Normalize",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "lock": "Lock"
+    },
+    "state": {
+      "ready": "Ready",
+      "done": "Done",
+      "locked": "Locked"
+    },
+    "blocked": {
+      "no_source": "No source",
+      "no_video": "No video",
+      "no_audio": "No audio",
+      "no_features": "No features",
+      "locked": "Locked"
+    },
+    "package": {
+      "title": "Title",
+      "state": "State",
+      "fps": "FPS",
+      "sample_rate": "Sample rate",
+      "channels": "Channels",
+      "frames": "Frames",
+      "resolution": "Resolution",
+      "duration": "Duration",
+      "tokens": "Tokens",
+      "landmark_model": "Landmark model",
+      "feature_model": "Feature model",
+      "preparing": "Preparing",
+      "locked": "Locked"
+    },
+    "failure": {
+      "hint": "Hint"
+    },
+    "notes": {
+      "title": "Title"
+    },
+    "note": {
+      "pick_failed": "Pick failed",
+      "absolute_failed": "Absolute failed",
+      "manifest_failed": "Manifest failed"
+    }
+  },
+  "training": {
+    "form": {
+      "title": "Title",
+      "preset": "Preset",
+      "variant": "Variant",
+      "epochs": "Epochs",
+      "epochs_hint": "Epochs hint",
+      "batch_size": "Batch size",
+      "batch_size_hint": "Batch size hint",
+      "batch_size_resume": "Batch size resume",
+      "resume": "Resume",
+      "resume_hint": "Resume hint"
+    },
+    "preset": {
+      "fast": "Fast",
+      "fast_hint": "Fast hint",
+      "mouth": "Mouth",
+      "mouth_hint": "Mouth hint",
+      "temporal": "Temporal",
+      "temporal_hint": "Temporal hint"
+    },
+    "variant": {
+      "original": "Original",
+      "mobileone": "Mobileone"
+    },
+    "device": {
+      "label": "Label",
+      "cpu": "CPU"
+    },
+    "output": {
+      "label": "Label"
+    },
+    "submit": "Submit",
+    "blocked": {
+      "not_locked": "Not locked",
+      "no_checkpoint": "No checkpoint",
+      "epoch_reached": "Epoch reached",
+      "batch_size_mismatch": "Batch size mismatch"
+    },
+    "warn": {
+      "fresh_over_checkpoint": "Fresh over checkpoint"
+    },
+    "live": {
+      "title": "Title",
+      "position": "Position",
+      "steps": "Steps"
+    },
+    "metrics": {
+      "title": "Title",
+      "empty": "Empty",
+      "source": "Source",
+      "mode": "Mode",
+      "total_loss": "Total loss",
+      "full_loss": "Full loss",
+      "perceptual_loss": "Perceptual loss",
+      "mouth_loss": "Mouth loss",
+      "temporal_loss": "Temporal loss",
+      "temporal_mouth_loss": "Temporal mouth loss",
+      "samples_seen": "Samples seen",
+      "samples_per_second": "Samples per second",
+      "remaining": "Remaining",
+      "gpu_memory": "GPU memory",
+      "gpu_memory_none": "GPU memory none",
+      "mode_baseline": "Mode baseline",
+      "mode_mouth": "Mode mouth",
+      "mode_temporal": "Mode temporal"
+    },
+    "checkpoint": {
+      "title": "Title",
+      "empty": "Empty",
+      "latest": "Latest",
+      "epoch": "Epoch",
+      "count": "Count",
+      "preview_count": "Preview count"
+    },
+    "config": {
+      "title": "Title",
+      "empty": "Empty",
+      "batch_size": "Batch size",
+      "learning_rate": "Learning rate",
+      "total_epochs": "Total epochs",
+      "temporal_stride": "Temporal stride",
+      "mouth_weight": "Mouth weight",
+      "temporal_weight": "Temporal weight",
+      "temporal_mouth_weight": "Temporal mouth weight",
+      "perceptual_weight": "Perceptual weight",
+      "random_seed": "Random seed"
+    },
+    "failure": {
+      "hint": "Hint"
+    },
+    "notes": {
+      "title": "Title"
+    },
+    "note": {
+      "metrics_failed": "Metrics failed",
+      "state_failed": "State failed"
+    }
+  },
+  "generate": {
+    "form": {
+      "title": "Title"
+    },
+    "checkpoint": {
+      "label": "Label",
+      "latest": "Latest",
+      "picked": "Picked",
+      "step": "Step",
+      "epoch": "Epoch",
+      "mode": "Mode",
+      "pick": "Pick",
+      "use_latest": "Use latest",
+      "unreadable": "Unreadable",
+      "none": "None"
+    },
+    "audio": {
+      "label": "Label",
+      "project": "Project",
+      "picked": "Picked",
+      "pick": "Pick",
+      "note": "Note",
+      "missing": "Missing"
+    },
+    "preview": {
+      "label": "Label",
+      "hint": "Hint",
+      "frames": "Frames",
+      "seconds": "Seconds",
+      "full": "Full"
+    },
+    "output": {
+      "label": "Label",
+      "pick": "Pick"
+    },
+    "submit": "Submit",
+    "blocked": {
+      "not_locked": "Not locked",
+      "no_checkpoint": "No checkpoint",
+      "no_audio": "No audio"
+    },
+    "format": {
+      "title": "Title",
+      "resolution": "Resolution",
+      "fps": "FPS",
+      "video_codec": "Video codec",
+      "audio_codec": "Audio codec",
+      "quality": "Quality",
+      "quality_default": "Quality default"
+    },
+    "live": {
+      "title": "Title",
+      "position": "Position"
+    },
+    "renders": {
+      "title": "Title",
+      "empty": "Empty",
+      "play": "Play",
+      "reveal": "Reveal",
+      "count": "Count"
+    },
+    "failure": {
+      "hint": "Hint"
+    },
+    "notes": {
+      "title": "Title"
+    },
+    "note": {
+      "checkpoint_failed": "Checkpoint failed",
+      "output_dir_failed": "Output dir failed",
+      "pick_failed": "Pick failed"
+    }
   }
 }

@@ -1,1 +1,121 @@
-{}
+{
+  "ui": {
+    "brand": {
+      "subtitle": "Subtitle"
+    },
+    "nav": {
+      "workflow": "Workflow",
+      "manage": "Manage"
+    },
+    "local_workspace": "Local workspace",
+    "project": {
+      "current": "Current",
+      "unset": "Unset",
+      "change": "Change"
+    },
+    "settings": {
+      "title": "Title",
+      "description": "Description",
+      "back": "Back"
+    },
+    "theme": {
+      "title": "Title",
+      "description": "Description",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "compute": {
+      "description": "Description",
+      "selected": "Selected",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "pending": "Pending",
+      "configure": "Configure",
+      "cpu_hint": "CPU hint",
+      "gpu_hint": "GPU hint"
+    },
+    "service": {
+      "title": "Title",
+      "description": "Description",
+      "connecting": "Connecting",
+      "ready": "Ready",
+      "unavailable": "Unavailable",
+      "copy": "Copy",
+      "refresh_hint": "Refresh hint"
+    },
+    "tasks": {
+      "description": "Description",
+      "all": "All",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "no_match": "No match",
+      "no_match_hint": "No match hint",
+      "details": "Details",
+      "hide_details": "Hide details",
+      "result": "Result",
+      "copy_result": "Copy result",
+      "copy_error": "Copy error",
+      "identifier": "Identifier",
+      "cancel_requested": "Cancel requested",
+      "force_cancel": "Force cancel",
+      "force_cancel_hint": "Force cancel hint",
+      "cancel_hint": "Cancel hint",
+      "force_requested": "Force requested",
+      "finished": "Finished",
+      "empty_description": "Empty description"
+    }
+  },
+  "compute": {
+    "unsupported": "Unsupported",
+    "blocked": "The selected device cannot run this task; check configuration or refresh"
+  },
+  "nav": {
+    "assets": "Assets",
+    "training": "Training",
+    "generate": "Generate",
+    "models": "Models",
+    "tasks": "Tasks"
+  },
+  "page": {
+    "assets": {
+      "title": "Title"
+    },
+    "training": {
+      "title": "Title"
+    },
+    "generate": {
+      "title": "Title"
+    },
+    "models": {
+      "title": "Title"
+    },
+    "tasks": {
+      "title": "Title"
+    }
+  },
+  "tasks": {
+    "blocked": {
+      "no_project": "No project",
+      "no_worker": "No worker"
+    },
+    "empty": {
+      "description": "Description"
+    },
+    "list": {
+      "title": "Title"
+    },
+    "incomplete": {
+      "resume": "Resume"
+    },
+    "failure": {
+      "unsupported": "Unsupported"
+    }
+  },
+  "training": {
+    "device": {
+      "cpu": "CPU"
+    }
+  }
+}

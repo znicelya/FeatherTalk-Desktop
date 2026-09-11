@@ -215,3 +215,46 @@ fn every_mode_and_variant_is_named() {
         );
     }
 }
+
+#[test]
+fn every_locale_key_resolves() {
+    for locale in catalog::LOCALE_TAGS {
+        let translations = catalog::translations(locale).expect("locale catalog is valid");
+        let mut keys = Vec::new();
+        keys.extend(catalog::SHELL_KEYS);
+        keys.extend(catalog::TASKS_PAGE_KEYS);
+        keys.extend(catalog::ASSETS_PAGE_KEYS);
+        keys.extend(catalog::TRAINING_PAGE_KEYS);
+        keys.extend(catalog::GENERATE_PAGE_KEYS);
+        for page in Page::ALL {
+            keys.extend([page.label_key(), page.title_key(), page.pending_key()]);
+        }
+        for step in Step::ALL {
+            keys.extend([step.label_key(), step.hint_key()]);
+        }
+        for status in TaskStatus::ALL {
+            keys.push(status_key(status));
+        }
+        for stage in TaskStage::ALL_UNIT_SAMPLES {
+            keys.push(stage_key(&stage));
+        }
+        for kind in TaskKind::ALL {
+            keys.push(kind_key(kind));
+        }
+        for recovery in RECOVERIES {
+            keys.push(recovery_key(recovery));
+        }
+        for mode in ALL_MODES {
+            keys.extend([mode_label_key(mode), mode_hint_key(mode)]);
+        }
+        for variant in ALL_VARIANTS {
+            keys.push(variant_label_key(variant));
+        }
+        for key in keys {
+            assert!(
+                !translations.get(key).unwrap_or_default().trim().is_empty(),
+                "{locale}: {key} has no copy"
+            );
+        }
+    }
+}
