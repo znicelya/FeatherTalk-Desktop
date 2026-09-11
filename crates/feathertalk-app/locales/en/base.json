@@ -155,13 +155,13 @@
   },
   "assets": {
     "project": {
-      "label": "Select",
+      "label": "Project directory",
       "unset": "Unset",
       "pick": "Pick"
     },
     "refresh": "Refresh",
     "video": {
-      "label": "Select",
+      "label": "Source video",
       "unset": "Unset",
       "pick": "Pick"
     },
@@ -242,11 +242,11 @@
       "mobileone": "MobileOne"
     },
     "device": {
-      "label": "Select",
+      "label": "Compute device",
       "cpu": "CPU"
     },
     "output": {
-      "label": "Select"
+      "label": "Output directory"
     },
     "submit": "Submit",
     "blocked": {

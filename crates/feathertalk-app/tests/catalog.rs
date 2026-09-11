@@ -331,6 +331,18 @@ fn english_catalog_uses_distinct_page_and_model_labels() {
     for (page, expected) in page_titles {
         assert_eq!(base["page"][page]["title"], expected, "base page title");
     }
+    let contextual_labels = [
+        ("assets", "project", "Project directory"),
+        ("assets", "video", "Source video"),
+        ("training", "device", "Compute device"),
+        ("training", "output", "Output directory"),
+    ];
+    for (section, field, expected) in contextual_labels {
+        assert_eq!(
+            base[section][field]["label"], expected,
+            "contextual field label"
+        );
+    }
     let operations = [
         ("inspect", "Inspect Model"),
         ("import", "Import Legacy Model"),

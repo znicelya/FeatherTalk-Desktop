@@ -40,3 +40,9 @@ Scoped re-review: removed all remaining generic placeholders, added forbidden-pa
 
 - `cargo fmt --all -- --check` (from `crates/feathertalk-app`) — passed.
 - `cargo test --test catalog` (from `crates/feathertalk-app`) — passed: 17 tests, 0 failed.
+
+## Final label cleanup
+
+- Replaced the last generic `Select` labels with `Project directory`, `Source video`, `Compute device`, and `Output directory`.
+- Added catalog assertions covering all four contextual field labels.
+- Re-ran `cargo fmt --all` and `cargo test --test catalog`: 17 tests passed.
