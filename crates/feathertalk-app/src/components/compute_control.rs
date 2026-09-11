@@ -1,6 +1,6 @@
 //! The shared compute selector and its background refresh action.
 
-use crate::components::ui::muted;
+use crate::components::ui::{label_separator, muted};
 use crate::theme::color;
 use feathertalk_client::{SessionOptions, WorkerLocator, backend_name};
 use feathertalk_domain::{AdapterInfo, Backend};
@@ -167,7 +167,11 @@ pub fn compute_control(cx: &mut App) -> Div {
                 .bg(color(cx, "status.danger.bg"))
                 .text_size(px(12.))
                 .text_color(color(cx, "status.danger.fg"))
-                .child(format!("{}：{error}", cx.t("compute.invalid"))),
+                .child(format!(
+                    "{}{}{error}",
+                    cx.t("compute.invalid"),
+                    label_separator(cx),
+                )),
         );
     }
     view

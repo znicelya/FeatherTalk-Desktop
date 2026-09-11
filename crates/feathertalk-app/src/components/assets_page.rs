@@ -17,7 +17,9 @@ use crate::assets::{AssetSurvey, Step, StepState, facts, request, step_state};
 use crate::components::activity::{Activity, activity};
 use crate::components::facts::facts_list;
 use crate::components::tasks_page::{badge_variant, cancel_row, progress_bar};
-use crate::components::ui::{inline_muted, muted, page_frame, path_field, section};
+use crate::components::ui::{
+    inline_muted, label_separator, muted, page_frame, path_field, section,
+};
 use crate::facts::{Fact, FactValue};
 use crate::navigation::Page;
 use crate::picker::{pick_project_dir, pick_source_video};
@@ -713,13 +715,17 @@ fn notes_card(notes: &[Note], manifest_error: Option<&str>, cx: &App) -> Statefu
     );
     if let Some(detail) = manifest_error {
         content = content.child(muted(
-            format!("{}：{detail}", cx.t("assets.note.manifest_failed")),
+            format!(
+                "{}{}{detail}",
+                cx.t("assets.note.manifest_failed"),
+                label_separator(cx),
+            ),
             cx,
         ));
     }
     for (index, note) in notes.iter().enumerate() {
         let line = match &note.detail {
-            Some(detail) => format!("{}：{detail}", cx.t(note.key)),
+            Some(detail) => format!("{}{}{detail}", cx.t(note.key), label_separator(cx)),
             None => cx.t(note.key).to_string(),
         };
         content =
