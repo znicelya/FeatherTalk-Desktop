@@ -6,3 +6,4 @@
 .codegraph
 __pycache__
 docs/reports
+.worktrees/
