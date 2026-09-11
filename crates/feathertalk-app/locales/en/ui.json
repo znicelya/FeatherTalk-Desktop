@@ -14,18 +14,18 @@
       "change": "Change"
     },
     "settings": {
-      "title": "Title",
-      "description": "Description",
+      "title": "Settings",
+      "description": "Manage appearance and compute devices, and inspect local service status.",
       "back": "Back"
     },
     "theme": {
-      "title": "Title",
-      "description": "Description",
+      "title": "Appearance",
+      "description": "Choose the interface theme for your current environment.",
       "light": "Light",
       "dark": "Dark"
     },
     "compute": {
-      "description": "Description",
+      "description": "Choose a compute device for future tasks; running tasks keep their original selection.",
       "selected": "Selected",
       "available": "Available",
       "unavailable": "Unavailable",
@@ -35,8 +35,8 @@
       "gpu_hint": "GPU hint"
     },
     "service": {
-      "title": "Title",
-      "description": "Description",
+      "title": "Local compute service",
+      "description": "Service path and diagnostics used to inspect this machine configuration.",
       "connecting": "Connecting",
       "ready": "Ready",
       "unavailable": "Unavailable",
@@ -44,27 +44,27 @@
       "refresh_hint": "Refresh hint"
     },
     "tasks": {
-      "description": "Description",
+      "description": "View task progress, results, and run history for the current project session.",
       "all": "All",
       "active": "Active",
       "completed": "Completed",
       "failed": "Failed",
       "cancelled": "Cancelled",
-      "no_match": "No match",
+      "no_match": "No tasks match this filter",
       "no_match_hint": "No match hint",
-      "details": "Details",
+      "details": "View details",
       "hide_details": "Hide details",
-      "result": "Result",
+      "result": "Task result",
       "copy_result": "Copy result",
-      "copy_error": "Copy error",
+      "copy_error": "Copy diagnostics",
       "identifier": "Identifier",
-      "cancel_requested": "Cancel requested",
-      "force_cancel": "Force cancel",
+      "cancel_requested": "Stopping…",
+      "force_cancel": "Force stop",
       "force_cancel_hint": "Force cancel hint",
       "cancel_hint": "Cancel hint",
-      "force_requested": "Force requested",
+      "force_requested": "Ending process…",
       "finished": "Finished",
-      "empty_description": "Empty description"
+      "empty_description": "Start an operation on the Assets, Training, Generate, or Models page; progress and results will appear here."
     }
   },
   "compute": {
@@ -80,19 +80,19 @@
   },
   "page": {
     "assets": {
-      "title": "Title"
+      "title": "Section"
     },
     "training": {
-      "title": "Title"
+      "title": "Section"
     },
     "generate": {
-      "title": "Title"
+      "title": "Section"
     },
     "models": {
-      "title": "Title"
+      "title": "Section"
     },
     "tasks": {
-      "title": "Title"
+      "title": "Section"
     }
   },
   "tasks": {
@@ -101,10 +101,10 @@
       "no_worker": "No worker"
     },
     "empty": {
-      "description": "Description"
+      "description": "Additional information"
     },
     "list": {
-      "title": "Title"
+      "title": "Section"
     },
     "incomplete": {
       "resume": "Resume"

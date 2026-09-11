@@ -37,23 +37,23 @@
   },
   "page": {
     "assets": {
-      "title": "Title",
+      "title": "Section",
       "pending": "Pending"
     },
     "training": {
-      "title": "Title",
+      "title": "Section",
       "pending": "Pending"
     },
     "generate": {
-      "title": "Title",
+      "title": "Section",
       "pending": "Pending"
     },
     "models": {
-      "title": "Title",
+      "title": "Section",
       "pending": "Pending"
     },
     "tasks": {
-      "title": "Title",
+      "title": "Section",
       "pending": "Pending"
     }
   },
@@ -113,19 +113,19 @@
       "busy": "Busy"
     },
     "incomplete": {
-      "title": "Title",
-      "description": "Description",
+      "title": "Section",
+      "description": "Additional information",
       "resume": "Resume",
       "discard": "Discard",
       "updated": "Updated",
       "unknown_kind": "Unknown kind"
     },
     "list": {
-      "title": "Title"
+      "title": "Section"
     },
     "empty": {
-      "title": "Title",
-      "description": "Description"
+      "title": "Section",
+      "description": "Additional information"
     },
     "cancel": "Cancel",
     "cancel_hint": "Cancel hint",
@@ -141,7 +141,7 @@
       "unsupported": "Unsupported"
     },
     "notes": {
-      "title": "Title"
+      "title": "Section"
     },
     "note": {
       "scan_failed": "Scan failed",
@@ -155,13 +155,13 @@
   },
   "assets": {
     "project": {
-      "label": "Label",
+      "label": "Select an option",
       "unset": "Unset",
       "pick": "Pick"
     },
     "refresh": "Refresh",
     "video": {
-      "label": "Label",
+      "label": "Select an option",
       "unset": "Unset",
       "pick": "Pick"
     },
@@ -190,7 +190,7 @@
       "locked": "Locked"
     },
     "package": {
-      "title": "Title",
+      "title": "Section",
       "state": "State",
       "fps": "FPS",
       "sample_rate": "Sample rate",
@@ -205,10 +205,10 @@
       "locked": "Locked"
     },
     "failure": {
-      "hint": "Hint"
+      "hint": "Additional guidance"
     },
     "notes": {
-      "title": "Title"
+      "title": "Section"
     },
     "note": {
       "pick_failed": "Pick failed",
@@ -218,7 +218,7 @@
   },
   "training": {
     "form": {
-      "title": "Title",
+      "title": "Section",
       "preset": "Preset",
       "variant": "Variant",
       "epochs": "Epochs",
@@ -239,14 +239,14 @@
     },
     "variant": {
       "original": "Original",
-      "mobileone": "Mobileone"
+      "mobileone": "MobileOne"
     },
     "device": {
-      "label": "Label",
+      "label": "Select an option",
       "cpu": "CPU"
     },
     "output": {
-      "label": "Label"
+      "label": "Select an option"
     },
     "submit": "Submit",
     "blocked": {
@@ -259,13 +259,13 @@
       "fresh_over_checkpoint": "Fresh over checkpoint"
     },
     "live": {
-      "title": "Title",
+      "title": "Section",
       "position": "Position",
       "steps": "Steps"
     },
     "metrics": {
-      "title": "Title",
-      "empty": "Empty",
+      "title": "Section",
+      "empty": "No items",
       "source": "Source",
       "mode": "Mode",
       "total_loss": "Total loss",
@@ -284,16 +284,16 @@
       "mode_temporal": "Mode temporal"
     },
     "checkpoint": {
-      "title": "Title",
-      "empty": "Empty",
+      "title": "Section",
+      "empty": "No items",
       "latest": "Latest",
       "epoch": "Epoch",
       "count": "Count",
       "preview_count": "Preview count"
     },
     "config": {
-      "title": "Title",
-      "empty": "Empty",
+      "title": "Section",
+      "empty": "No items",
       "batch_size": "Batch size",
       "learning_rate": "Learning rate",
       "total_epochs": "Total epochs",
@@ -305,10 +305,10 @@
       "random_seed": "Random seed"
     },
     "failure": {
-      "hint": "Hint"
+      "hint": "Additional guidance"
     },
     "notes": {
-      "title": "Title"
+      "title": "Section"
     },
     "note": {
       "metrics_failed": "Metrics failed",
@@ -317,10 +317,10 @@
   },
   "generate": {
     "form": {
-      "title": "Title"
+      "title": "Section"
     },
     "checkpoint": {
-      "label": "Label",
+      "label": "Select an option",
       "latest": "Latest",
       "picked": "Picked",
       "step": "Step",
@@ -332,7 +332,7 @@
       "none": "None"
     },
     "audio": {
-      "label": "Label",
+      "label": "Select an option",
       "project": "Project",
       "picked": "Picked",
       "pick": "Pick",
@@ -340,14 +340,14 @@
       "missing": "Missing"
     },
     "preview": {
-      "label": "Label",
-      "hint": "Hint",
+      "label": "Select an option",
+      "hint": "Additional guidance",
       "frames": "Frames",
       "seconds": "Seconds",
       "full": "Full"
     },
     "output": {
-      "label": "Label",
+      "label": "Select an option",
       "pick": "Pick"
     },
     "submit": "Submit",
@@ -357,7 +357,7 @@
       "no_audio": "No audio"
     },
     "format": {
-      "title": "Title",
+      "title": "Section",
       "resolution": "Resolution",
       "fps": "FPS",
       "video_codec": "Video codec",
@@ -366,21 +366,21 @@
       "quality_default": "Quality default"
     },
     "live": {
-      "title": "Title",
+      "title": "Section",
       "position": "Position"
     },
     "renders": {
-      "title": "Title",
-      "empty": "Empty",
+      "title": "Section",
+      "empty": "No items",
       "play": "Play",
       "reveal": "Reveal",
       "count": "Count"
     },
     "failure": {
-      "hint": "Hint"
+      "hint": "Additional guidance"
     },
     "notes": {
-      "title": "Title"
+      "title": "Section"
     },
     "note": {
       "checkpoint_failed": "Checkpoint failed",
