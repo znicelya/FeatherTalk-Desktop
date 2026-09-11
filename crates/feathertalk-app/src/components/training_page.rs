@@ -20,7 +20,9 @@ use crate::components::compute_control::selected_summary;
 use crate::components::control_renderers::RadioControlExt;
 use crate::components::facts::facts_list;
 use crate::components::tasks_page::{badge_variant, cancel_row, progress_bar_with};
-use crate::components::ui::{inline_muted, muted, page_frame, path_field, section};
+use crate::components::ui::{
+    inline_muted, label_separator, muted, page_frame, path_field, section,
+};
 use crate::facts::{Fact, FactValue};
 use crate::navigation::Page;
 use crate::project::ProjectState;
@@ -360,7 +362,11 @@ fn batch_size_row(ctx: &FormContext<'_>, window: &mut Window, cx: &mut App) -> D
         && let Some(saved) = ctx.saved_batch_size
     {
         row = row.child(muted(
-            format!("{}：{saved}", cx.t("training.form.batch_size_resume")),
+            format!(
+                "{}{}{saved}",
+                cx.t("training.form.batch_size_resume"),
+                label_separator(cx),
+            ),
             cx,
         ));
     }
@@ -747,8 +753,9 @@ fn details_section(
     if training.preview_count > 0 {
         content = content.child(muted(
             format!(
-                "{}：{}",
+                "{}{}{}",
                 cx.t("workflow.training.preview_data"),
+                label_separator(cx),
                 training.preview_count,
             ),
             cx,
@@ -780,19 +787,27 @@ fn notes_card(notes: &[Note], training: &TrainingSurvey, cx: &App) -> Stateful<D
     );
     if let Some(detail) = &training.metrics_error {
         content = content.child(muted(
-            format!("{}：{detail}", cx.t("training.note.metrics_failed")),
+            format!(
+                "{}{}{detail}",
+                cx.t("training.note.metrics_failed"),
+                label_separator(cx),
+            ),
             cx,
         ));
     }
     if let Some(detail) = &training.state_error {
         content = content.child(muted(
-            format!("{}：{detail}", cx.t("training.note.state_failed")),
+            format!(
+                "{}{}{detail}",
+                cx.t("training.note.state_failed"),
+                label_separator(cx),
+            ),
             cx,
         ));
     }
     for (index, note) in notes.iter().enumerate() {
         let line = match &note.detail {
-            Some(detail) => format!("{}：{detail}", cx.t(note.key)),
+            Some(detail) => format!("{}{}{detail}", cx.t(note.key), label_separator(cx)),
             None => cx.t(note.key).to_string(),
         };
         content =

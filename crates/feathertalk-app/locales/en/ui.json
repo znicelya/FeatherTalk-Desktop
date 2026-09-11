@@ -1,0 +1,127 @@
+{
+  "ui": {
+    "brand": {
+      "subtitle": "Digital creator workspace"
+    },
+    "nav": {
+      "workflow": "Workflow",
+      "manage": "Manage"
+    },
+    "local_workspace": "Local workspace",
+    "project": {
+      "current": "Current",
+      "unset": "Unset",
+      "change": "Change"
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage appearance and compute devices, and inspect local service status.",
+      "back": "Back"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose the interface language.",
+      "zh_cn": "中文",
+      "en": "English"
+    },
+    "theme": {
+      "title": "Appearance",
+      "description": "Choose the interface theme for your current environment.",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "compute": {
+      "description": "Choose a compute device for future tasks; running tasks keep their original selection.",
+      "selected": "Selected",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "pending": "Pending",
+      "configure": "Configure",
+      "cpu_hint": "Runs tasks on the CPU processor",
+      "gpu_hint": "Uses WGPU hardware acceleration"
+    },
+    "service": {
+      "title": "Local compute service",
+      "description": "Service path and diagnostics used to inspect this machine configuration.",
+      "connecting": "Connecting",
+      "ready": "Ready",
+      "unavailable": "Unavailable",
+      "copy": "Copy",
+      "refresh_hint": "Configure media tools or model directories, then click Refresh devices to probe again"
+    },
+    "tasks": {
+      "description": "View task progress, results, and run history for the current project session.",
+      "all": "All",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "no_match": "No tasks match this filter",
+      "no_match_hint": "Switch to “All” to view every task in the current project",
+      "details": "View details",
+      "hide_details": "Hide details",
+      "result": "Task result",
+      "copy_result": "Copy result",
+      "copy_error": "Copy diagnostics",
+      "identifier": "Identifier",
+      "cancel_requested": "Stopping…",
+      "force_cancel": "Force stop",
+      "force_cancel_hint": "A forced stop may lose progress that has not been saved yet",
+      "cancel_hint": "Stopping keeps results already written by the worker",
+      "force_requested": "Ending process…",
+      "finished": "Finished",
+      "empty_description": "Start an operation on the Assets, Training, Generate, or Models page; progress and results will appear here."
+    }
+  },
+  "compute": {
+    "unsupported": "Unsupported",
+    "blocked": "The selected device cannot run this task; check configuration or refresh"
+  },
+  "nav": {
+    "assets": "Assets",
+    "training": "Training",
+    "generate": "Generate",
+    "models": "Models",
+    "tasks": "Tasks"
+  },
+  "page": {
+    "assets": {
+      "title": "Asset Preparation"
+    },
+    "training": {
+      "title": "Model Training"
+    },
+    "generate": {
+      "title": "Video Generation"
+    },
+    "models": {
+      "title": "Model Tools"
+    },
+    "tasks": {
+      "title": "Task History"
+    }
+  },
+  "tasks": {
+    "blocked": {
+      "no_project": "No project",
+      "no_worker": "No worker"
+    },
+    "empty": {
+      "description": "Start an operation to see its progress and result here."
+    },
+    "list": {
+      "title": "Task History"
+    },
+    "incomplete": {
+      "resume": "Resume"
+    },
+    "failure": {
+      "unsupported": "Unsupported"
+    }
+  },
+  "training": {
+    "device": {
+      "cpu": "CPU"
+    }
+  }
+}

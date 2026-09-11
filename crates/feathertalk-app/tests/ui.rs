@@ -1,5 +1,16 @@
-use feathertalk_app::ui::{ProgressPresentation, TaskFilter, progress_presentation};
+use feathertalk_app::ui::{AppLocale, ProgressPresentation, TaskFilter, progress_presentation};
 use feathertalk_domain::{Progress, TaskStatus};
+
+#[test]
+fn app_locale_defaults_to_chinese() {
+    assert_eq!(AppLocale::default().tag(), "zh-CN");
+}
+
+#[test]
+fn app_locale_tags_are_stable() {
+    assert_eq!(AppLocale::ZhCn.tag(), "zh-CN");
+    assert_eq!(AppLocale::En.tag(), "en");
+}
 
 #[test]
 fn task_filters_include_only_their_relevant_statuses() {

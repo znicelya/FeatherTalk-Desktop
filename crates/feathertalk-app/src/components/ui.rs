@@ -1,5 +1,7 @@
 //! Shared native layout primitives for the workbench pages.
 
+use yororen_ui::i18n::I18nContext;
+
 use gpui::{
     App, Div, ElementId, FontWeight, InteractiveElement, IntoElement, ParentElement, SharedString,
     Stateful, StatefulInteractiveElement, Styled, div, px,
@@ -113,4 +115,33 @@ pub fn path_field(label: impl Into<SharedString>, value: impl Into<SharedString>
                 .text_color(color(cx, "content.primary"))
                 .child(display),
         )
+}
+
+/// Separator for composed label/value strings such as "Attempts: 2".
+pub fn label_separator(cx: &App) -> &'static str {
+    label_separator_for_locale(&cx.i18n().locale().to_tag())
+}
+
+fn label_separator_for_locale(locale_tag: &str) -> &'static str {
+    if locale_tag
+        .split('-')
+        .next()
+        .is_some_and(|language| language.eq_ignore_ascii_case("zh"))
+    {
+        "："
+    } else {
+        ": "
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::label_separator_for_locale;
+
+    #[test]
+    fn label_separator_uses_locale_conventions() {
+        assert_eq!(label_separator_for_locale("zh-CN"), "：");
+        assert_eq!(label_separator_for_locale("en"), ": ");
+        assert_eq!(label_separator_for_locale("en-US"), ": ");
+    }
 }

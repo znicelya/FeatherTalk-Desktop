@@ -15,7 +15,7 @@ use yororen_ui::headless::button::button;
 use yororen_ui::headless::progress::progress;
 use yororen_ui::i18n::Translate;
 
-use crate::components::ui::{muted, page_frame, path_field, section};
+use crate::components::ui::{label_separator, muted, page_frame, path_field, section};
 use crate::project::ProjectState;
 use crate::state::AppState;
 use crate::submit::{note, submit};
@@ -326,7 +326,12 @@ fn task_record(center: &Entity<TaskCenter>, row: &TaskRow, cx: &mut App) -> Stat
             .pt_2()
             .child(path_field(cx.t("ui.tasks.identifier"), id.clone(), cx))
             .child(muted(
-                format!("{}：{}", cx.t("tasks.attempts"), row.attempts),
+                format!(
+                    "{}{}{}",
+                    cx.t("tasks.attempts"),
+                    label_separator(cx),
+                    row.attempts,
+                ),
                 cx,
             ));
         if let Some(result) = &row.result {
@@ -354,7 +359,12 @@ fn task_record(center: &Entity<TaskCenter>, row: &TaskRow, cx: &mut App) -> Stat
         if let Some(failure) = &row.failure {
             if let Some(code) = failure.code {
                 detail = detail.child(muted(
-                    format!("{}：{}", cx.t("tasks.error_code"), code.as_wire()),
+                    format!(
+                        "{}{}{}",
+                        cx.t("tasks.error_code"),
+                        label_separator(cx),
+                        code.as_wire(),
+                    ),
                     cx,
                 ));
             }
@@ -510,7 +520,7 @@ fn notes_section(notes: &[Note], cx: &App) -> Stateful<Div> {
     for note in notes {
         view = view.child(muted(
             match &note.detail {
-                Some(detail) => format!("{}：{detail}", cx.t(note.key)),
+                Some(detail) => format!("{}{}{detail}", cx.t(note.key), label_separator(cx)),
                 None => cx.t(note.key).to_string(),
             },
             cx,

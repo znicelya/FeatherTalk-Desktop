@@ -9,6 +9,12 @@
       "description": "管理外观与计算设备，查看本地服务状态。",
       "back": "返回工作台"
     },
+    "language": {
+      "title": "语言",
+      "description": "选择界面语言。",
+      "zh_cn": "中文",
+      "en": "英文"
+    },
     "theme": {
       "title": "外观",
       "description": "选择适合当前环境的界面主题。",

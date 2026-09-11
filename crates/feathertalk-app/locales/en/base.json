@@ -1,0 +1,391 @@
+{
+  "shell": {
+    "title": "FeatherTalk Workbench",
+    "subtitle": "Local training and generation without cloud dependencies",
+    "navigation": "Navigation",
+    "worker": {
+      "ready": "Ready",
+      "missing": "Missing",
+      "path": "Path",
+      "probed": "Probed",
+      "unset": "Unset",
+      "source": {
+        "cli": "Cli",
+        "env": "Env",
+        "sibling": "Sibling"
+      }
+    }
+  },
+  "compute": {
+    "label": "Compute device",
+    "refresh": "Refresh devices",
+    "automatic": "Automatic selection",
+    "discovering": "Detecting compute devices",
+    "unavailable": "Device information unavailable; refresh to try again",
+    "experimental": "Experimental device; unavailable for tasks",
+    "vram": "VRAM",
+    "vram_unavailable": "VRAM information unavailable",
+    "invalid": "Invalid compute device configuration",
+    "blocked": "The selected device cannot run this task; check configuration or refresh"
+  },
+  "nav": {
+    "assets": "Assets",
+    "training": "Training",
+    "generate": "Generate",
+    "models": "Models",
+    "tasks": "Tasks"
+  },
+  "page": {
+    "assets": {
+      "title": "Asset Preparation",
+      "pending": "Pending"
+    },
+    "training": {
+      "title": "Model Training",
+      "pending": "Pending"
+    },
+    "generate": {
+      "title": "Video Generation",
+      "pending": "Pending"
+    },
+    "models": {
+      "title": "Model Tools",
+      "pending": "Pending"
+    },
+    "tasks": {
+      "title": "Task History",
+      "pending": "Pending"
+    }
+  },
+  "task": {
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "stage": {
+      "queued": "Queued",
+      "preparing": "Preparing",
+      "extracting_audio": "Extracting audio",
+      "extracting_frames": "Extracting frames",
+      "detecting_faces": "Detecting faces",
+      "extracting_features": "Extracting features",
+      "training": "Training",
+      "importing": "Importing",
+      "exporting": "Exporting",
+      "rendering": "Rendering",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "kind": {
+      "probe_media": "Probe media",
+      "normalize_media": "Normalize media",
+      "validate_project": "Validate project",
+      "lock_asset_package": "Lock asset package",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "train": "Train",
+      "render": "Render",
+      "inspect_model": "Inspect model",
+      "import_legacy_model": "Import legacy model",
+      "export_model_package": "Export model package",
+      "export_onnx": "Export ONNX",
+      "migrate_legacy_features": "Migrate legacy features"
+    },
+    "recovery": {
+      "retry": "Retry",
+      "resume_from_checkpoint": "Resume from checkpoint",
+      "free_disk_space": "Free disk space",
+      "select_different_adapter": "Select different adapter",
+      "exclude_bad_frames": "Exclude bad frames",
+      "reimport_model": "Reimport model",
+      "not_recoverable": "Not recoverable"
+    }
+  },
+  "tasks": {
+    "submit": "Submit",
+    "blocked": {
+      "no_project": "Choose a project directory on the Assets page before submitting a task.",
+      "no_worker": "The local compute service is unavailable. Open Settings > Local compute service to configure it.",
+      "busy": "A task is already running; only one task can run at a time."
+    },
+    "incomplete": {
+      "title": "Incomplete tasks",
+      "description": "Tasks left unfinished when the app last closed.",
+      "resume": "Resume",
+      "discard": "Discard",
+      "updated": "Updated",
+      "unknown_kind": "Unknown kind"
+    },
+    "list": {
+      "title": "Session task list"
+    },
+    "empty": {
+      "title": "No tasks yet",
+      "description": "Start an operation to see its progress and result here."
+    },
+    "cancel": "Cancel",
+    "cancel_hint": "Stopping a task keeps artifacts already written by the worker.",
+    "attempts": "Attempts",
+    "detail": "Detail",
+    "error_code": "Error code",
+    "recovery": "Recovery",
+    "crash_log": "Crash log",
+    "failure": {
+      "crashed": "Crashed",
+      "unavailable": "Unavailable",
+      "rejected": "Rejected",
+      "unsupported": "Unsupported"
+    },
+    "notes": {
+      "title": "Task notes"
+    },
+    "note": {
+      "scan_failed": "Scan failed",
+      "log_failed": "Log failed",
+      "journal_failed": "Journal failed",
+      "manifest_failed": "Manifest failed",
+      "task_id_failed": "Task id failed",
+      "submit_failed": "Submit failed",
+      "resolve_failed": "Resolve failed"
+    }
+  },
+  "assets": {
+    "project": {
+      "label": "Project directory",
+      "unset": "Unset",
+      "pick": "Pick"
+    },
+    "refresh": "Refresh",
+    "video": {
+      "label": "Source video",
+      "unset": "Unset",
+      "pick": "Pick"
+    },
+    "step": {
+      "normalize": "Normalize",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "lock": "Lock"
+    },
+    "hint": {
+      "normalize": "Normalize",
+      "extract_frames": "Extract frames",
+      "extract_features": "Extract features",
+      "lock": "Lock"
+    },
+    "state": {
+      "ready": "Ready",
+      "done": "Done",
+      "locked": "Locked"
+    },
+    "blocked": {
+      "no_source": "No source",
+      "no_video": "No video",
+      "no_audio": "No audio",
+      "no_features": "No features",
+      "locked": "Locked"
+    },
+    "package": {
+      "title": "Asset package",
+      "state": "State",
+      "fps": "FPS",
+      "sample_rate": "Sample rate",
+      "channels": "Channels",
+      "frames": "Frames",
+      "resolution": "Resolution",
+      "duration": "Duration",
+      "tokens": "Tokens",
+      "landmark_model": "Landmark model",
+      "feature_model": "Feature model",
+      "preparing": "Preparing",
+      "locked": "Locked"
+    },
+    "failure": {
+      "hint": "Review the failed preparation step and its diagnostic message before retrying."
+    },
+    "notes": {
+      "title": "Asset notes"
+    },
+    "note": {
+      "pick_failed": "Pick failed",
+      "absolute_failed": "Absolute failed",
+      "manifest_failed": "Manifest failed"
+    }
+  },
+  "training": {
+    "form": {
+      "title": "Training parameters",
+      "preset": "Preset",
+      "variant": "Variant",
+      "epochs": "Epochs",
+      "epochs_hint": "Train until this final epoch; the value must be between 1 and 10,000.",
+      "batch_size": "Batch size",
+      "batch_size_hint": "Number of samples processed in each update; larger values use more memory.",
+      "batch_size_resume": "Batch size resume",
+      "resume": "Resume",
+      "resume_hint": "Resume from the latest checkpoint; disable this to start with fresh weights."
+    },
+    "preset": {
+      "fast": "Fast",
+      "fast_hint": "Baseline training for quickly validating the asset package and overall result.",
+      "mouth": "Mouth",
+      "mouth_hint": "Adds extra weight to mouth-region detail on top of baseline training.",
+      "temporal": "Temporal",
+      "temporal_hint": "Adds temporal consistency constraints between neighboring frames."
+    },
+    "variant": {
+      "original": "Original",
+      "mobileone": "MobileOne"
+    },
+    "device": {
+      "label": "Compute device",
+      "cpu": "CPU"
+    },
+    "output": {
+      "label": "Output directory"
+    },
+    "submit": "Submit",
+    "blocked": {
+      "not_locked": "Not locked",
+      "no_checkpoint": "No checkpoint",
+      "epoch_reached": "Epoch reached",
+      "batch_size_mismatch": "Batch size mismatch"
+    },
+    "warn": {
+      "fresh_over_checkpoint": "Fresh over checkpoint"
+    },
+    "live": {
+      "title": "Live training progress",
+      "position": "Position",
+      "steps": "Steps"
+    },
+    "metrics": {
+      "title": "Training metrics",
+      "empty": "Metrics appear after the first training epoch is recorded.",
+      "source": "Source",
+      "mode": "Mode",
+      "total_loss": "Total loss",
+      "full_loss": "Full loss",
+      "perceptual_loss": "Perceptual loss",
+      "mouth_loss": "Mouth loss",
+      "temporal_loss": "Temporal loss",
+      "temporal_mouth_loss": "Temporal mouth loss",
+      "samples_seen": "Samples seen",
+      "samples_per_second": "Samples per second",
+      "remaining": "Remaining",
+      "gpu_memory": "GPU memory",
+      "gpu_memory_none": "GPU memory none",
+      "mode_baseline": "Mode baseline",
+      "mode_mouth": "Mode mouth",
+      "mode_temporal": "Mode temporal"
+    },
+    "checkpoint": {
+      "title": "Training checkpoints",
+      "empty": "Checkpoints appear after training saves its first epoch.",
+      "latest": "Latest",
+      "epoch": "Epoch",
+      "count": "Count",
+      "preview_count": "Preview count"
+    },
+    "config": {
+      "title": "Saved training configuration",
+      "empty": "A configuration snapshot appears when a training task starts.",
+      "batch_size": "Batch size",
+      "learning_rate": "Learning rate",
+      "total_epochs": "Total epochs",
+      "temporal_stride": "Temporal stride",
+      "mouth_weight": "Mouth weight",
+      "temporal_weight": "Temporal weight",
+      "temporal_mouth_weight": "Temporal mouth weight",
+      "perceptual_weight": "Perceptual weight",
+      "random_seed": "Random seed"
+    },
+    "failure": {
+      "hint": "Review the training error and adjust the configuration before retrying."
+    },
+    "notes": {
+      "title": "Training notes"
+    },
+    "note": {
+      "metrics_failed": "Metrics failed",
+      "state_failed": "State failed"
+    }
+  },
+  "generate": {
+    "form": {
+      "title": "Video generation form"
+    },
+    "checkpoint": {
+      "label": "Model checkpoint",
+      "latest": "Latest",
+      "picked": "Picked",
+      "step": "Step",
+      "epoch": "Epoch",
+      "mode": "Mode",
+      "pick": "Pick",
+      "use_latest": "Use latest",
+      "unreadable": "Unreadable",
+      "none": "None"
+    },
+    "audio": {
+      "label": "Audio source",
+      "project": "Project",
+      "picked": "Picked",
+      "pick": "Pick",
+      "note": "Note",
+      "missing": "Missing"
+    },
+    "preview": {
+      "label": "Preview scope",
+      "hint": "Generate a short opening clip first to verify timing and composition.",
+      "frames": "Frames",
+      "seconds": "Seconds",
+      "full": "Full"
+    },
+    "output": {
+      "label": "Video output directory",
+      "pick": "Pick"
+    },
+    "submit": "Submit",
+    "blocked": {
+      "not_locked": "Not locked",
+      "no_checkpoint": "No checkpoint",
+      "no_audio": "No audio"
+    },
+    "format": {
+      "title": "Output format",
+      "resolution": "Resolution",
+      "fps": "FPS",
+      "video_codec": "Video codec",
+      "audio_codec": "Audio codec",
+      "quality": "Quality",
+      "quality_default": "Quality default"
+    },
+    "live": {
+      "title": "Generation progress",
+      "position": "Position"
+    },
+    "renders": {
+      "title": "Generated videos",
+      "empty": "Completed videos appear here for playback or reveal.",
+      "play": "Play",
+      "reveal": "Reveal",
+      "count": "Count"
+    },
+    "failure": {
+      "hint": "Review the generation error and confirm the checkpoint, audio, and output path."
+    },
+    "notes": {
+      "title": "Generation notes"
+    },
+    "note": {
+      "checkpoint_failed": "Checkpoint failed",
+      "output_dir_failed": "Output dir failed",
+      "pick_failed": "Pick failed"
+    }
+  }
+}

@@ -20,7 +20,9 @@ use crate::assets::AssetSurvey;
 use crate::components::control_renderers::RadioControlExt;
 use crate::components::facts::facts_list;
 use crate::components::tasks_page::{badge_variant, cancel_row, progress_bar};
-use crate::components::ui::{inline_muted, muted, page_frame, path_field, section};
+use crate::components::ui::{
+    inline_muted, label_separator, muted, page_frame, path_field, section,
+};
 use crate::facts::{Fact, FactValue};
 use crate::generate::{
     FormState, GenerateForm, MAX_PREVIEW_FRAMES, MIN_PREVIEW_FRAMES, PickedCheckpoint, RENDER_FPS,
@@ -637,8 +639,9 @@ fn activity_section(row: &TaskRow, cx: &mut App) -> Stateful<Div> {
     if row.status.is_incomplete() {
         if let TaskStage::Rendering { frame, total } = &row.stage {
             content = content.child(div().child(format!(
-                "{}：{frame} / {total}",
-                cx.t("generate.live.position")
+                "{}{}{frame} / {total}",
+                cx.t("generate.live.position"),
+                label_separator(cx),
             )));
         }
         content = content
@@ -795,7 +798,11 @@ fn renders_card(renders: &RenderSurvey, rows: &[TaskRow], cx: &mut App) -> State
             .and_then(serde_json::Value::as_u64)
         {
             output = output.child(muted(
-                format!("{}：{frame_count}", cx.t("workflow.generate.actual_frames")),
+                format!(
+                    "{}{}{frame_count}",
+                    cx.t("workflow.generate.actual_frames"),
+                    label_separator(cx),
+                ),
                 cx,
             ));
         }
@@ -809,7 +816,11 @@ fn renders_card(renders: &RenderSurvey, rows: &[TaskRow], cx: &mut App) -> State
         content = content.child(render_row(video, cx));
     }
     content.child(muted(
-        format!("{}：{count}", cx.t("generate.renders.count")),
+        format!(
+            "{}{}{count}",
+            cx.t("generate.renders.count"),
+            label_separator(cx),
+        ),
         cx,
     ))
 }
@@ -873,7 +884,7 @@ fn notes_card(notes: &[Note], cx: &App) -> Stateful<Div> {
     );
     for (index, note) in notes.iter().enumerate() {
         let line = match &note.detail {
-            Some(detail) => format!("{}：{detail}", cx.t(note.key)),
+            Some(detail) => format!("{}{}{detail}", cx.t(note.key), label_separator(cx)),
             None => cx.t(note.key).to_string(),
         };
         content =

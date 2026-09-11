@@ -1,20 +1,33 @@
-//! The Chinese copy the shell paints.
+//! The localized copy the shell paints.
 //!
-//! User-visible strings live in the bundled Chinese catalog and page fragments.
+//! User-visible strings live in bundled language catalogs and page fragments.
 //! The fragments merge over the base catalog before the shell reads any key.
 
+use gpui::App;
 use thiserror::Error;
 use yororen_ui::i18n::{LoadError, TranslationMap, parse_translation_value};
 
-/// The only locale this slice ships.
+use crate::ui::AppLocale;
+
+/// The default locale used by the shell at startup.
 pub const LOCALE_TAG: &str = "zh-CN";
 
-/// The catalog source, embedded so the shell has copy before it reads any file.
-pub const RAW: &str = include_str!("../locales/zh-CN.json");
+/// Locale tags whose catalogs are bundled with the application.
+pub const LOCALE_TAGS: &[&str] = &["zh-CN", "en"];
+
+/// The Chinese catalog source, retained as the default for existing callers.
+pub const RAW: &str = include_str!("../locales/zh-CN/base.json");
 pub const ADDITIONAL: &[&str] = &[
-    include_str!("../locales/ui.zh-CN.json"),
-    include_str!("../locales/workflow.zh-CN.json"),
-    include_str!("../locales/models.zh-CN.json"),
+    include_str!("../locales/zh-CN/ui.json"),
+    include_str!("../locales/zh-CN/workflow.json"),
+    include_str!("../locales/zh-CN/models.json"),
+];
+
+const EN_RAW: &str = include_str!("../locales/en/base.json");
+const EN_ADDITIONAL: &[&str] = &[
+    include_str!("../locales/en/ui.json"),
+    include_str!("../locales/en/workflow.json"),
+    include_str!("../locales/en/models.json"),
 ];
 
 /// The keys the shell chrome reads. Page keys come from `navigation::Page`.
@@ -259,19 +272,42 @@ pub enum CatalogError {
     Json(#[from] serde_json::Error),
     #[error("the bundled catalog is not a translation object: {0}")]
     Load(#[from] LoadError),
+    #[error("unsupported locale: {0}")]
+    UnsupportedLocale(String),
 }
 
-/// Parse the bundled catalog into a translation map.
+/// Parse the requested bundled catalog into a translation map.
 ///
 /// `yororen_ui::locale::parse_bundled_translations` does the same thing but
 /// panics on malformed input. The shell returns the error instead and falls back
 /// to the framework's own copy, because a broken catalog is not worth a crash on
 /// the user's machine.
-pub fn translations() -> Result<TranslationMap, CatalogError> {
-    let value: serde_json::Value = serde_json::from_str(RAW)?;
+pub fn translations(locale_tag: &str) -> Result<TranslationMap, CatalogError> {
+    let (raw, additional) = match locale_tag {
+        "zh-CN" => (RAW, ADDITIONAL),
+        "en" => (EN_RAW, EN_ADDITIONAL),
+        _ => return Err(CatalogError::UnsupportedLocale(locale_tag.to_owned())),
+    };
+    let value: serde_json::Value = serde_json::from_str(raw)?;
     let mut translations = parse_translation_value(value)?;
-    for raw in ADDITIONAL {
+    for raw in additional {
         translations.merge(parse_translation_value(serde_json::from_str(raw)?)?);
     }
     Ok(translations)
+}
+
+/// Install the selected app catalog over the framework's locale copy.
+///
+/// A malformed bundled catalog is reported and falls back to the framework's
+/// Chinese locale so a copy problem cannot prevent the shell from starting.
+pub fn install(cx: &mut App, locale: AppLocale) {
+    match translations(locale.tag()) {
+        Ok(translations) => {
+            yororen_ui::locale::install_with_translations(cx, locale.tag(), translations);
+        }
+        Err(error) => {
+            eprintln!("feathertalk-app: {error}");
+            yororen_ui::locale::install_locale(cx, LOCALE_TAG);
+        }
+    }
 }
