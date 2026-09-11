@@ -6,15 +6,18 @@
 use thiserror::Error;
 use yororen_ui::i18n::{LoadError, TranslationMap, parse_translation_value};
 
-/// The only locale this slice ships.
+/// The default locale used by the shell at startup.
 pub const LOCALE_TAG: &str = "zh-CN";
 
+/// Locale tags whose catalogs are bundled with the application.
+pub const LOCALE_TAGS: &[&str] = &["zh-CN", "en"];
+
 /// The catalog source, embedded so the shell has copy before it reads any file.
-pub const RAW: &str = include_str!("../locales/zh-CN.json");
+pub const RAW: &str = include_str!("../locales/zh-CN/base.json");
 pub const ADDITIONAL: &[&str] = &[
-    include_str!("../locales/ui.zh-CN.json"),
-    include_str!("../locales/workflow.zh-CN.json"),
-    include_str!("../locales/models.zh-CN.json"),
+    include_str!("../locales/zh-CN/ui.json"),
+    include_str!("../locales/zh-CN/workflow.json"),
+    include_str!("../locales/zh-CN/models.json"),
 ];
 
 /// The keys the shell chrome reads. Page keys come from `navigation::Page`.
@@ -259,6 +262,8 @@ pub enum CatalogError {
     Json(#[from] serde_json::Error),
     #[error("the bundled catalog is not a translation object: {0}")]
     Load(#[from] LoadError),
+    #[error("unsupported locale: {0}")]
+    UnsupportedLocale(String),
 }
 
 /// Parse the bundled catalog into a translation map.
@@ -267,7 +272,10 @@ pub enum CatalogError {
 /// panics on malformed input. The shell returns the error instead and falls back
 /// to the framework's own copy, because a broken catalog is not worth a crash on
 /// the user's machine.
-pub fn translations() -> Result<TranslationMap, CatalogError> {
+pub fn translations(locale_tag: &str) -> Result<TranslationMap, CatalogError> {
+    if locale_tag != LOCALE_TAG {
+        return Err(CatalogError::UnsupportedLocale(locale_tag.to_owned()));
+    }
     let value: serde_json::Value = serde_json::from_str(RAW)?;
     let mut translations = parse_translation_value(value)?;
     for raw in ADDITIONAL {

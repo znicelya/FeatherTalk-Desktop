@@ -115,7 +115,7 @@ fn install(cx: &mut App) {
         ObservedProgress(progress),
     ));
     yororen_ui::headless::text_input::init(cx);
-    locale::install_with_translations(cx, catalog::LOCALE_TAG, catalog::translations().unwrap());
+    locale::install_with_translations(cx, catalog::LOCALE_TAG, catalog::translations(catalog::LOCALE_TAG).unwrap());
     let state = AppState::new(cx, LaunchOptions::default());
     cx.set_global(state);
 }
@@ -299,7 +299,7 @@ fn short_preview_duration_is_a_horizontal_line(cx: &mut TestAppContext) {
 fn long_cancellation_hints_wrap_without_overflowing_the_action_row(cx: &mut TestAppContext) {
     cx.update(install);
     cx.update(|cx| {
-        let mut translations = catalog::translations().unwrap();
+        let mut translations = catalog::translations(catalog::LOCALE_TAG).unwrap();
         translations.merge(yororen_ui::i18n::parse_translation_value(serde_json::json!({
             "ui": { "tasks": { "cancel_hint": "停止后保留已经写出的结果，较长的说明应当在可用宽度内换行，而不是溢出容器或变成逐字竖排。".repeat(4) } }
         })).unwrap());

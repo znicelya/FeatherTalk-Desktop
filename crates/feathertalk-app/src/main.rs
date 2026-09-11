@@ -99,7 +99,7 @@ fn launch_options() -> LaunchOptions {
 /// down. `install_locale` only panics on a tag it does not ship, and the tag here
 /// is the crate's own constant.
 fn install_catalog(cx: &mut App) {
-    match catalog::translations() {
+    match catalog::translations(catalog::LOCALE_TAG) {
         Ok(translations) => {
             locale::install_with_translations(cx, catalog::LOCALE_TAG, translations);
         }
