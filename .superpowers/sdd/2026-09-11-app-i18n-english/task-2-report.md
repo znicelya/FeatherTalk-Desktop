@@ -27,3 +27,16 @@ The existing Chinese catalog files in this worktree are displayed as mojibake by
 Replaced all remaining placeholder labels/descriptions/hints/empty values with contextual English copy and corrected MobileOne, FeatherHuBERT, and UNet technical-name casing. Re-ran cargo fmt and cargo test --test catalog: 14 passed.
 
 Scoped re-review: removed all remaining generic placeholders, added forbidden-pattern test. cargo fmt and catalog tests pass (15/15).
+
+## Urgent semantic correction
+
+- Assigned page titles are now distinct: Asset Preparation, Model Training, Video Generation, Model Tools, and Task History.
+- Model operation labels identify the action: Inspect Model, Import Legacy Model, Export Model Package, Export ONNX, and Migrate Legacy Features.
+- Source and destination labels identify concrete package, checkpoint, legacy weights, ONNX, and versioned feature paths.
+- Replaced generic Overview, option-detail, batch-size, section, information, guidance, and selection placeholders with contextual copy.
+- Added catalog assertions for representative labels, paths, and forbidden generic phrases.
+
+## Verification
+
+- `cargo fmt --all -- --check` (from `crates/feathertalk-app`) — passed.
+- `cargo test --test catalog` (from `crates/feathertalk-app`) — passed: 17 tests, 0 failed.
