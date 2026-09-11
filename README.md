@@ -231,6 +231,14 @@ powershell -NoProfile -File .\installer\windows\verify.ps1 -MsiPath .\dist\Feath
 - 项目校验失败：确认路径使用正斜杠相对 manifest 路径、必需文件非空，且资产目录中没有符号链接。
 - 任务失败后：根据错误中的恢复建议重试、从最近检查点续训、释放磁盘空间、排除坏帧或重新导入模型。worker 的协议输出在 stdout，诊断信息在 stderr，便于重定向和 CI 集成。
 
+## 项目来源与致谢
+
+本项目的功能和实现思路源自 [FeatherTalk](https://github.com/anliyuan/FeatherTalk)。我们在此基础上将原项目的 Python 代码迁移并重写为 Rust，实现了对应的处理流水线、命令行工具和 worker，同时开发了桌面 GUI 客户端。
+
+感谢 [@anliyuan](https://github.com/anliyuan) 及 FeatherTalk 社区对数字人/说话头像技术的开源贡献。本项目仅作为 Rust 实现与桌面客户端的延伸，相关上游代码、模型和第三方依赖仍分别遵循其原有许可证；使用或再发布时请同时阅读上游项目及依赖项的许可说明。
+
+上游项目：<https://github.com/anliyuan/FeatherTalk>
+
 ## 许可证与第三方声明
 
 本项目代码采用 Apache-2.0（发布包会附带许可证文本）。FFmpeg、Burn/CubeCL、gpui、yororen_ui 及模型权重分别遵循各自许可证；发布包会附带 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`、`THIRD-PARTY-NOTICES.txt` 和模型目录中的 `LICENSES.json`。模型许可证不会因 FeatherTalk 的 Apache-2.0 许可而改变。对 `vendor/cubek-matmul` 的修改说明位于 [`vendor/cubek-matmul/FEATHERTALK-PATCH.md`](vendor/cubek-matmul/FEATHERTALK-PATCH.md)。
