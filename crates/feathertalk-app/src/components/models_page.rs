@@ -17,7 +17,7 @@ use yororen_ui::headless::toggle_button::toggle_button;
 use yororen_ui::i18n::Translate;
 
 use crate::components::tasks_page::{cancel_row, progress_bar};
-use crate::components::ui::{muted, page_frame, path_field, section};
+use crate::components::ui::{inline_muted, muted, page_frame, path_field, section};
 use crate::facts::FactValue;
 use crate::model_picker::{pick_destination, pick_source};
 use crate::models::{ModelForm, ModelIssue, ModelOperation, result_facts};
@@ -306,7 +306,10 @@ fn submit_row(current: &ModelForm, gate: Option<&'static str>, cx: &mut App) -> 
                 .on_click(move |_event, _window, cx| submit_current(cx))
                 .render(cx),
         );
-    row = row.child(muted(cx.t(reason.unwrap_or("models.project_hint")), cx));
+    row = row.child(inline_muted(
+        cx.t(reason.unwrap_or("models.project_hint")),
+        cx,
+    ));
     row
 }
 
