@@ -23,16 +23,31 @@ const RECOVERIES: [Recovery; 7] = [
 ];
 
 #[test]
+fn english_and_unknown_locale_selection_are_distinct() {
+    let english = catalog::translations("en").expect("the English catalog is valid");
+    assert_eq!(english.get("shell.title"), Some("FeatherTalk Workbench"));
+    assert!(matches!(
+        catalog::translations("unknown"),
+        Err(catalog::CatalogError::UnsupportedLocale(_))
+    ));
+}
+
+#[test]
 fn the_bundled_catalog_parses() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
-    assert!(matches!(catalog::translations("unknown"), Err(catalog::CatalogError::UnsupportedLocale(_))));
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    assert!(matches!(
+        catalog::translations("unknown"),
+        Err(catalog::CatalogError::UnsupportedLocale(_))
+    ));
     assert_eq!(catalog::LOCALE_TAG, "zh-CN");
     assert_eq!(translations.get("shell.title"), Some("FeatherTalk 工作台"));
 }
 
 #[test]
 fn every_navigation_key_resolves_to_chinese_copy() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for page in Page::ALL {
         for key in [page.label_key(), page.title_key(), page.pending_key()] {
             let value = translations.get(key).unwrap_or_default();
@@ -47,7 +62,8 @@ fn every_navigation_key_resolves_to_chinese_copy() {
 
 #[test]
 fn every_shell_key_resolves() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for key in catalog::SHELL_KEYS {
         assert!(
             !translations.get(key).unwrap_or_default().is_empty(),
@@ -58,7 +74,8 @@ fn every_shell_key_resolves() {
 
 #[test]
 fn every_generate_page_key_resolves() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for key in catalog::GENERATE_PAGE_KEYS {
         assert!(
             !translations.get(key).unwrap_or_default().is_empty(),
@@ -85,7 +102,8 @@ fn the_catalog_holds_objects_and_non_empty_strings_only() {
 
 #[test]
 fn every_protocol_enum_key_resolves_to_chinese_copy() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     let mut keys = Vec::new();
     for status in TaskStatus::ALL {
         keys.push(status_key(status));
@@ -111,7 +129,8 @@ fn every_protocol_enum_key_resolves_to_chinese_copy() {
 
 #[test]
 fn every_task_page_key_resolves() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for key in catalog::TASKS_PAGE_KEYS {
         assert!(
             !translations.get(key).unwrap_or_default().is_empty(),
@@ -132,7 +151,8 @@ fn the_shells_own_failure_summaries_are_task_page_keys() {
 
 #[test]
 fn every_asset_page_key_resolves() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for key in catalog::ASSETS_PAGE_KEYS {
         assert!(
             !translations.get(key).unwrap_or_default().is_empty(),
@@ -145,7 +165,8 @@ fn every_asset_page_key_resolves() {
 fn every_asset_step_has_a_name_and_a_sentence() {
     // Walking `Step::ALL` rather than listing the keys again: a fifth step fails
     // this test instead of rendering a raw key.
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for step in Step::ALL {
         for key in [step.label_key(), step.hint_key()] {
             let value = translations.get(key).unwrap_or_default();
@@ -160,7 +181,8 @@ fn every_asset_step_has_a_name_and_a_sentence() {
 
 #[test]
 fn every_training_page_key_resolves() {
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     for key in catalog::TRAINING_PAGE_KEYS {
         assert!(
             !translations.get(key).unwrap_or_default().is_empty(),
@@ -174,7 +196,8 @@ fn every_mode_and_variant_is_named() {
     // The three presets and the two variants come from the protocol's enums, so a
     // fourth mode upstream fails here instead of waiting for somebody to remember
     // a second list.
-    let translations = catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
+    let translations =
+        catalog::translations("zh-CN").expect("the bundled catalog is a JSON object");
     let mut keys = Vec::new();
     for mode in ALL_MODES {
         keys.push(mode_label_key(mode));

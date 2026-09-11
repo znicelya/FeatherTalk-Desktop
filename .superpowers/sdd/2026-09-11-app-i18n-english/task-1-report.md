@@ -23,3 +23,10 @@ Commit message: `refactor: organize locale catalogs by language`
 ## Concerns
 
 English resource files are intentionally supplied by the subsequent English-catalog task. Until those files are added, `translations("en")` remains rejected as unsupported; this task preserves the existing Chinese behavior while establishing the locale-aware API.
+
+## Reviewer fix
+
+Added locale-specific English resource selection and minimal valid English placeholders. `translations("en")` now parses successfully, while unknown tags return `UnsupportedLocale`.
+
+- `cargo fmt --all` — PASS
+- `cargo test --test catalog` — PASS (13 passed, 0 failed)

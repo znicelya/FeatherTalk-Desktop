@@ -115,7 +115,11 @@ fn install(cx: &mut App) {
         ObservedProgress(progress),
     ));
     yororen_ui::headless::text_input::init(cx);
-    locale::install_with_translations(cx, catalog::LOCALE_TAG, catalog::translations(catalog::LOCALE_TAG).unwrap());
+    locale::install_with_translations(
+        cx,
+        catalog::LOCALE_TAG,
+        catalog::translations(catalog::LOCALE_TAG).unwrap(),
+    );
     let state = AppState::new(cx, LaunchOptions::default());
     cx.set_global(state);
 }

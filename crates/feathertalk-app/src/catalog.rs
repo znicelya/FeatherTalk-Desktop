@@ -1,6 +1,6 @@
-//! The Chinese copy the shell paints.
+//! The localized copy the shell paints.
 //!
-//! User-visible strings live in the bundled Chinese catalog and page fragments.
+//! User-visible strings live in bundled language catalogs and page fragments.
 //! The fragments merge over the base catalog before the shell reads any key.
 
 use thiserror::Error;
@@ -12,12 +12,19 @@ pub const LOCALE_TAG: &str = "zh-CN";
 /// Locale tags whose catalogs are bundled with the application.
 pub const LOCALE_TAGS: &[&str] = &["zh-CN", "en"];
 
-/// The catalog source, embedded so the shell has copy before it reads any file.
+/// The Chinese catalog source, retained as the default for existing callers.
 pub const RAW: &str = include_str!("../locales/zh-CN/base.json");
 pub const ADDITIONAL: &[&str] = &[
     include_str!("../locales/zh-CN/ui.json"),
     include_str!("../locales/zh-CN/workflow.json"),
     include_str!("../locales/zh-CN/models.json"),
+];
+
+const EN_RAW: &str = include_str!("../locales/en/base.json");
+const EN_ADDITIONAL: &[&str] = &[
+    include_str!("../locales/en/ui.json"),
+    include_str!("../locales/en/workflow.json"),
+    include_str!("../locales/en/models.json"),
 ];
 
 /// The keys the shell chrome reads. Page keys come from `navigation::Page`.
@@ -266,19 +273,21 @@ pub enum CatalogError {
     UnsupportedLocale(String),
 }
 
-/// Parse the bundled catalog into a translation map.
+/// Parse the requested bundled catalog into a translation map.
 ///
 /// `yororen_ui::locale::parse_bundled_translations` does the same thing but
 /// panics on malformed input. The shell returns the error instead and falls back
 /// to the framework's own copy, because a broken catalog is not worth a crash on
 /// the user's machine.
 pub fn translations(locale_tag: &str) -> Result<TranslationMap, CatalogError> {
-    if locale_tag != LOCALE_TAG {
-        return Err(CatalogError::UnsupportedLocale(locale_tag.to_owned()));
-    }
-    let value: serde_json::Value = serde_json::from_str(RAW)?;
+    let (raw, additional) = match locale_tag {
+        "zh-CN" => (RAW, ADDITIONAL),
+        "en" => (EN_RAW, EN_ADDITIONAL),
+        _ => return Err(CatalogError::UnsupportedLocale(locale_tag.to_owned())),
+    };
+    let value: serde_json::Value = serde_json::from_str(raw)?;
     let mut translations = parse_translation_value(value)?;
-    for raw in ADDITIONAL {
+    for raw in additional {
         translations.merge(parse_translation_value(serde_json::from_str(raw)?)?);
     }
     Ok(translations)
