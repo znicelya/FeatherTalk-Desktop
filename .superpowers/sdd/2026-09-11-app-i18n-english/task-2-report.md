@@ -25,3 +25,5 @@ The existing Chinese catalog files in this worktree are displayed as mojibake by
 
 ## Review fixes
 Replaced all remaining placeholder labels/descriptions/hints/empty values with contextual English copy and corrected MobileOne, FeatherHuBERT, and UNet technical-name casing. Re-ran cargo fmt and cargo test --test catalog: 14 passed.
+
+Scoped re-review: removed all remaining generic placeholders, added forbidden-pattern test. cargo fmt and catalog tests pass (15/15).
