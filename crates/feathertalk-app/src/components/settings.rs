@@ -1,6 +1,6 @@
 //! Explicit settings surface for appearance, devices and service diagnostics.
 
-use gpui::{App, ClipboardItem, Div, ParentElement, Styled, div};
+use gpui::{App, ClipboardItem, Div, ParentElement, Styled, Window, div};
 use yororen_ui::ActionVariantKind;
 use yororen_ui::headless::button::button;
 use yororen_ui::i18n::Translate;
@@ -23,13 +23,14 @@ pub fn set_theme(dark: bool, cx: &mut App) {
     cx.refresh_windows();
 }
 
-pub fn set_locale(locale: AppLocale, cx: &mut App) {
+pub fn set_locale(locale: AppLocale, window: &mut Window, cx: &mut App) {
     let ui = cx.global::<AppState>().ui.clone();
     ui.update(cx, |ui, cx| {
         ui.locale = locale;
         cx.notify();
     });
     crate::catalog::install(cx, locale);
+    window.set_window_title(&cx.t("shell.title"));
     cx.refresh_windows();
 }
 
@@ -90,7 +91,7 @@ pub fn settings_page(cx: &mut App) -> Div {
                 } else {
                     ActionVariantKind::Neutral
                 })
-                .on_click(move |_event, _window, cx| set_locale(value, cx))
+                .on_click(move |_event, window, cx| set_locale(value, window, cx))
                 .render(cx),
         );
     }
