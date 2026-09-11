@@ -314,3 +314,88 @@ fn english_catalog_has_no_placeholder_copy() {
         }
     }
 }
+
+#[test]
+fn english_catalog_uses_distinct_page_and_model_labels() {
+    let base: serde_json::Value =
+        serde_json::from_str(include_str!("../locales/en/base.json")).expect("base JSON");
+    let models: serde_json::Value =
+        serde_json::from_str(include_str!("../locales/en/models.json")).expect("models JSON");
+    let page_titles = [
+        ("assets", "Asset Preparation"),
+        ("training", "Model Training"),
+        ("generate", "Video Generation"),
+        ("models", "Model Tools"),
+        ("tasks", "Task History"),
+    ];
+    for (page, expected) in page_titles {
+        assert_eq!(base["page"][page]["title"], expected, "base page title");
+    }
+    let operations = [
+        ("inspect", "Inspect Model"),
+        ("import", "Import Legacy Model"),
+        ("package", "Export Model Package"),
+        ("onnx", "Export ONNX"),
+        ("features", "Migrate Legacy Features"),
+    ];
+    for (operation, expected) in operations {
+        assert_eq!(
+            models[format!("models.operation.{operation}")],
+            expected,
+            "model operation label"
+        );
+    }
+}
+
+#[test]
+fn english_catalog_has_contextual_paths_and_no_generic_placeholders() {
+    let models: serde_json::Value =
+        serde_json::from_str(include_str!("../locales/en/models.json")).expect("models JSON");
+    assert_eq!(
+        models["models.source.legacy"],
+        "Legacy weights file (.pth or .pth.tar)"
+    );
+    assert_eq!(
+        models["models.source.checkpoint"],
+        "Training checkpoint directory"
+    );
+    assert_eq!(models["models.destination.onnx"], "ONNX output file path");
+    assert_eq!(
+        models["models.destination.features"],
+        "Versioned features output file path"
+    );
+
+    let forbidden = [
+        "Overview",
+        "See details for this option.",
+        "Batch size hint",
+        "Section",
+        "Additional information",
+        "Additional guidance",
+        "Select an option",
+        "Information",
+        "See the guidance above.",
+        "No items available",
+    ];
+    for raw in [
+        include_str!("../locales/en/base.json"),
+        include_str!("../locales/en/ui.json"),
+        include_str!("../locales/en/workflow.json"),
+        include_str!("../locales/en/models.json"),
+    ] {
+        let value: serde_json::Value = serde_json::from_str(raw).expect("English JSON is valid");
+        let mut stack = vec![value];
+        while let Some(current) = stack.pop() {
+            match current {
+                serde_json::Value::Object(map) => stack.extend(map.into_values()),
+                serde_json::Value::String(text) => {
+                    assert!(
+                        !forbidden.contains(&text.as_str()),
+                        "generic placeholder: {text}"
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+}

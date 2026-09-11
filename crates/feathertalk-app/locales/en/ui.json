@@ -80,19 +80,19 @@
   },
   "page": {
     "assets": {
-      "title": "Overview"
+      "title": "Asset Preparation"
     },
     "training": {
-      "title": "Overview"
+      "title": "Model Training"
     },
     "generate": {
-      "title": "Overview"
+      "title": "Video Generation"
     },
     "models": {
-      "title": "Overview"
+      "title": "Model Tools"
     },
     "tasks": {
-      "title": "Overview"
+      "title": "Task History"
     }
   },
   "tasks": {
@@ -101,10 +101,10 @@
       "no_worker": "No worker"
     },
     "empty": {
-      "description": "Information"
+      "description": "Start an operation to see its progress and result here."
     },
     "list": {
-      "title": "Overview"
+      "title": "Task History"
     },
     "incomplete": {
       "resume": "Resume"
