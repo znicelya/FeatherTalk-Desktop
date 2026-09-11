@@ -35,14 +35,25 @@ fn english_and_unknown_locale_selection_are_distinct() {
 #[test]
 fn english_catalog_contains_language_settings_copy() {
     let english = catalog::translations("en").expect("the English catalog is valid");
-    for key in [
-        "ui.language.title",
-        "ui.language.description",
-        "ui.language.zh_cn",
-        "ui.language.en",
-    ] {
-        assert!(!english.get(key).unwrap_or_default().is_empty(), "{key}");
-    }
+    assert_eq!(english.get("ui.language.title"), Some("Language"));
+    assert_eq!(
+        english.get("ui.language.description"),
+        Some("Choose the interface language.")
+    );
+    assert_eq!(english.get("ui.language.zh_cn"), Some("中文"));
+    assert_eq!(english.get("ui.language.en"), Some("English"));
+}
+
+#[test]
+fn chinese_catalog_contains_language_settings_copy() {
+    let chinese = catalog::translations("zh-CN").expect("the Chinese catalog is valid");
+    assert_eq!(chinese.get("ui.language.title"), Some("语言"));
+    assert_eq!(
+        chinese.get("ui.language.description"),
+        Some("选择界面语言。")
+    );
+    assert_eq!(chinese.get("ui.language.zh_cn"), Some("中文"));
+    assert_eq!(chinese.get("ui.language.en"), Some("英文"));
 }
 
 #[test]

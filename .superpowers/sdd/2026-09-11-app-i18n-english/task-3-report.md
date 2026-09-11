@@ -21,3 +21,8 @@ Status: complete
 ## Commit
 
 The implementation is committed as `feat: add runtime language switcher`.
+
+## Reviewer follow-up
+
+- Changed the Chinese locale's English-language label from `English` to natural Chinese `英文`.
+- Added exact assertions for all four language settings strings in both locale maps.
