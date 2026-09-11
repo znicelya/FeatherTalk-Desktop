@@ -258,3 +258,59 @@ fn every_locale_key_resolves() {
         }
     }
 }
+
+#[test]
+fn english_catalog_has_no_placeholder_copy() {
+    let forbidden = [
+        "Section",
+        "Additional information",
+        "Additional guidance",
+        "Select an option",
+        "Cancel hint",
+        "Epochs hint",
+        "Fast hint",
+        "Mouth hint",
+        "Temporal hint",
+        "Resume hint",
+        "Package title",
+        "Package description",
+        "Monitoring title",
+        "Monitoring description",
+        "Metrics empty",
+        "Metrics details hint",
+        "Preview title",
+        "Preview description",
+        "Full title",
+        "Full description",
+        "Format description",
+        "Parent hint",
+        "File hint",
+        "ONNX hint",
+        "CPU hint",
+        "GPU hint",
+        "Refresh hint",
+        "No match hint",
+        "Force cancel hint",
+    ];
+    for raw in [
+        include_str!("../locales/en/base.json"),
+        include_str!("../locales/en/ui.json"),
+        include_str!("../locales/en/workflow.json"),
+        include_str!("../locales/en/models.json"),
+    ] {
+        let value: serde_json::Value = serde_json::from_str(raw).expect("English JSON is valid");
+        let mut stack = vec![value];
+        while let Some(current) = stack.pop() {
+            match current {
+                serde_json::Value::Object(map) => stack.extend(map.into_values()),
+                serde_json::Value::String(text) => {
+                    assert!(
+                        !forbidden.contains(&text.as_str()),
+                        "forbidden placeholder: {text}"
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+}
