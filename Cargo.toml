@@ -28,6 +28,7 @@ members = [
   "tools/vgg19-package",
   "tools/model-package",
   "tools/onnx-validate",
+  "tools/feathertalk-benchmark",
 ]
 exclude = ["crates/feathertalk-app", "tools/scrfd-import", "vendor/cubek-matmul"]
 

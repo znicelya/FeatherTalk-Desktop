@@ -1,0 +1,23 @@
+[package]
+name = "feathertalk-benchmark"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "feathertalk_benchmark"
+path = "src/lib.rs"
+
+[[bin]]
+name = "feathertalk-benchmark"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+feathertalk-domain = { path = "../../crates/feathertalk-domain" }
+feathertalk-media = { path = "../../crates/feathertalk-media" }
+feathertalk-worker = { path = "../../crates/feathertalk-worker" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
