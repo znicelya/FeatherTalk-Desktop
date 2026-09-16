@@ -278,6 +278,24 @@ fn full_pipeline_runs_each_stage_in_order_on_a_fresh_project() {
         second_pass[1].1.as_deref(),
         "each repeat gets a fresh project"
     );
+    assert!(
+        !first_pass[1]
+            .1
+            .as_deref()
+            .expect("normalize names a project")
+            .join("assets/frames")
+            .exists(),
+        "extract_frames must create the frame directory itself"
+    );
+    assert!(
+        !first_pass[1]
+            .1
+            .as_deref()
+            .expect("normalize names a project")
+            .join("assets/landmarks")
+            .exists(),
+        "extract_frames must create the landmarks directory itself"
+    );
     assert_eq!(
         first_pass[6].2.as_deref(),
         first_pass[5].2.as_deref(),

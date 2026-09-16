@@ -402,9 +402,6 @@ fn prepare_pipeline_project(project_root: &Path, repeat: usize) -> Result<PathBu
         .as_nanos();
     let project_dir = project_root.join(format!("run-{}-{nonce}-{repeat}", std::process::id()));
     std::fs::create_dir(&project_dir)?;
-    std::fs::create_dir_all(project_dir.join("assets/frames"))?;
-    std::fs::create_dir_all(project_dir.join("assets/landmarks"))?;
-    std::fs::create_dir_all(project_dir.join("assets/features"))?;
     std::fs::create_dir_all(project_dir.join("models"))?;
     std::fs::create_dir_all(project_dir.join("outputs"))?;
 
