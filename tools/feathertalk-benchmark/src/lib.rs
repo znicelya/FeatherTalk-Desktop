@@ -89,11 +89,12 @@ pub enum BenchmarkError {
     ChangedRequestOrder,
     #[error("{command} did not finish within {:.3}s", timeout.as_secs_f64())]
     TaskTimeout { command: String, timeout: Duration },
-    #[error("{command} failed ({code}): {summary}")]
+    #[error("{command} failed ({code}): {summary}: {detail}")]
     TaskFailed {
         command: String,
         code: String,
         summary: String,
+        detail: String,
     },
     #[error("{command} was cancelled")]
     TaskCancelled { command: String },
@@ -530,6 +531,7 @@ fn run_sample_with_result(
             command,
             code: error.code.as_wire().to_owned(),
             summary: error.summary,
+            detail: error.detail,
         }),
     }
 }

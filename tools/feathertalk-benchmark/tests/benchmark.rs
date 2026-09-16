@@ -157,6 +157,7 @@ fn a_failed_command_reports_the_worker_error() {
         command,
         code,
         summary,
+        detail,
     } = error
     else {
         panic!("expected a task failure, got {error:?}");
@@ -164,6 +165,7 @@ fn a_failed_command_reports_the_worker_error() {
     assert_eq!(command, "validate_project");
     assert_eq!(code, "MEDIA_INVALID");
     assert_eq!(summary, "invalid media");
+    assert_eq!(detail, "invalid media detail");
 }
 
 #[test]

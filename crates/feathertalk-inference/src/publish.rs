@@ -6,13 +6,83 @@ pub(crate) fn rename_noreplace(source: &Path, destination: &Path) -> std::io::Re
 
 #[cfg(unix)]
 mod platform {
-    use std::path::Path;
+    use std::{
+        fs,
+        io::{self, ErrorKind},
+        path::Path,
+    };
 
-    use rustix::fs::{CWD, RenameFlags, renameat_with};
+    use rustix::{
+        fs::{CWD, RenameFlags, renameat_with},
+        io::Errno,
+    };
 
     pub(super) fn rename_noreplace(source: &Path, destination: &Path) -> std::io::Result<()> {
-        renameat_with(CWD, source, CWD, destination, RenameFlags::NOREPLACE)
-            .map_err(std::io::Error::from)
+        match renameat_with(CWD, source, CWD, destination, RenameFlags::NOREPLACE) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                let error = io::Error::from(error);
+                if unsupported_flag_error(&error) {
+                    rename_fallback(source, destination)
+                } else {
+                    Err(error)
+                }
+            }
+        }
+    }
+
+    /// Some overlay/NFS filesystems reject `RENAME_NOREPLACE` even when a
+    /// normal rename would work. The fallback rechecks for the destination so
+    /// the no-clobber contract is preserved where the filesystem allows.
+    fn rename_fallback(source: &Path, destination: &Path) -> io::Result<()> {
+        match fs::symlink_metadata(destination) {
+            Ok(_) => Err(io::Error::from(ErrorKind::AlreadyExists)),
+            Err(error) if error.kind() == ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+        fs::rename(source, destination)
+    }
+
+    fn unsupported_flag_error(error: &io::Error) -> bool {
+        let Some(code) = error.raw_os_error() else {
+            return false;
+        };
+        [
+            Errno::INVAL.raw_os_error(),
+            Errno::NOSYS.raw_os_error(),
+            Errno::OPNOTSUPP.raw_os_error(),
+        ]
+        .contains(&code)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::rename_fallback;
+
+        #[test]
+        fn fallback_preserves_an_existing_destination() {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.tmp");
+            let destination = directory.path().join("destination.mp4");
+            std::fs::write(&source, b"staging").unwrap();
+            std::fs::write(&destination, b"sentinel").unwrap();
+
+            assert!(rename_fallback(&source, &destination).is_err());
+            assert_eq!(std::fs::read(&destination).unwrap(), b"sentinel");
+            assert_eq!(std::fs::read(&source).unwrap(), b"staging");
+        }
+
+        #[test]
+        fn fallback_moves_into_an_absent_destination() {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.tmp");
+            let destination = directory.path().join("destination.mp4");
+            std::fs::write(&source, b"staging").unwrap();
+
+            rename_fallback(&source, &destination).unwrap();
+            assert!(!source.exists());
+            assert_eq!(std::fs::read(destination).unwrap(), b"staging");
+        }
     }
 }
 
