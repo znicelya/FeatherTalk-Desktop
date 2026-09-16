@@ -32,7 +32,7 @@ fn result(output: Output) -> serde_json::Value {
 
 #[test]
 fn compute_flags_are_global_and_reach_all_compute_commands() {
-    for backend in ["wgpu", "cuda", "auto"] {
+    for backend in ["wgpu", "cuda", "rocm", "auto"] {
         for task in [
             vec!["train", "p", "--epochs", "1"],
             vec!["render", "p", "checkpoint", "audio.wav", "out.mp4"],
@@ -40,10 +40,10 @@ fn compute_flags_are_global_and_reach_all_compute_commands() {
             vec!["extract-features", "p", "audio.wav"],
             vec!["normalize-media", "input.mov", "assets"],
         ] {
-            let adapter = if backend == "cuda" {
-                "cuda-test-0"
-            } else {
-                "wgpu-test-0"
+            let adapter = match backend {
+                "cuda" => "cuda-test-0",
+                "rocm" => "rocm-test-0",
+                _ => "wgpu-test-0",
             };
             let mut args = vec!["--backend", backend];
             args.extend(task);
@@ -78,6 +78,7 @@ fn an_adapter_without_a_backend_infers_its_compute_backend() {
         ("cpu-0", "cpu"),
         ("wgpu-test-0", "wgpu"),
         ("cuda-test-0", "cuda"),
+        ("rocm-test-0", "rocm"),
     ] {
         assert_eq!(
             result(run(

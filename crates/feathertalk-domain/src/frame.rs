@@ -12,6 +12,7 @@ pub enum Backend {
     Cpu,
     Wgpu,
     Cuda,
+    Rocm,
 }
 
 impl Backend {
@@ -19,9 +20,10 @@ impl Backend {
     pub fn selection_priority(self) -> u8 {
         match self {
             Self::Cuda => 0,
-            Self::Wgpu => 1,
-            Self::Cpu => 2,
-            Self::Auto => 3,
+            Self::Rocm => 1,
+            Self::Wgpu => 2,
+            Self::Cpu => 3,
+            Self::Auto => 4,
         }
     }
 }
@@ -56,7 +58,7 @@ impl AdapterInfo {
             && match self.backend {
                 Backend::Auto => false,
                 Backend::Cpu => self.kind == AdapterKind::Cpu && self.id == "cpu-0",
-                Backend::Wgpu | Backend::Cuda => {
+                Backend::Wgpu | Backend::Cuda | Backend::Rocm => {
                     matches!(self.kind, AdapterKind::Discrete | AdapterKind::Integrated)
                 }
             }

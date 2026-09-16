@@ -4,7 +4,7 @@ mod harness;
 use std::time::{Duration, Instant};
 
 use feathertalk_client::{ClientError, WorkerSession};
-use feathertalk_domain::TaskKind;
+use feathertalk_domain::{PROTOCOL_VERSION, TaskKind};
 
 use harness::{fake_worker, fast_options, scenario};
 
@@ -69,7 +69,7 @@ fn a_future_protocol_version_is_reported_precisely() {
         matches!(
             error,
             ClientError::ProtocolVersion {
-                expected: 3,
+                expected: PROTOCOL_VERSION,
                 actual: 99
             }
         ),

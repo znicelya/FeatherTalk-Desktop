@@ -37,6 +37,15 @@ impl WorkerBackend for feathertalk_models::backend::CudaBackend {
     }
 }
 
+#[cfg(target_os = "linux")]
+impl WorkerBackend for feathertalk_models::backend::RocmBackend {
+    const EXECUTION_NAME: &'static str = "rocm";
+
+    fn gpu_memory_bytes(device: &Device<Self>) -> Option<u64> {
+        crate::compute::rocm::memory_usage_bytes(device)
+    }
+}
+
 impl<B: WorkerBackend> WorkerBackend for Autodiff<B> {
     const EXECUTION_NAME: &'static str = B::EXECUTION_NAME;
 

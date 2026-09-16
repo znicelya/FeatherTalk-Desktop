@@ -2,7 +2,7 @@
 
 FeatherTalk 是一个离线优先的数字人/说话头像工作台。它把视频中的人脸关键点、音频语音特征与 U-Net 训练/推理串成一条可复现流水线，并提供桌面 GUI、脚本化 CLI 和独立 worker 三种入口。项目以 Rust 2024 workspace 组织，模型权重和媒体处理工具均通过可校验的 manifest、SHA-256 与许可证元数据管理。
 
-> 当前仓库版本：`0.1.0`（协议版本 `3`，客户端和 worker 需要配套更新）。桌面应用与安装器主要面向 Windows 10/11 x64；核心 crate 也可在支持的 Linux/macOS Rust 环境中构建。GPU 加速使用 NVIDIA CUDA 或 wgpu 的 Vulkan/Metal 后端，取决于运行环境和适配器能力。
+> 当前仓库版本：`0.1.0`（协议版本 `4`，客户端和 worker 需要配套更新）。桌面应用与安装器主要面向 Windows 10/11 x64；核心 crate 也可在支持的 Linux/macOS Rust 环境中构建。GPU 加速使用 NVIDIA CUDA、Linux AMD ROCm 或 wgpu 的 Vulkan/Metal 后端，取决于运行环境和适配器能力。
 
 ## 能做什么
 
@@ -23,7 +23,7 @@ FeatherTalk 是一个离线优先的数字人/说话头像工作台。它把视�
           │                                               │
           │                           ┌───────────────────┴──────────────────┐
           ▼                           ▼                                      ▼
-   feathertalk-client          feathertalk-domain                  Burn + CUDA / wgpu
+   feathertalk-client          feathertalk-domain                  Burn + CUDA / ROCm / wgpu
           ▲                           ▲
           └──────────── feathertalk-cli（脚本与 CI）
 ```
@@ -52,7 +52,7 @@ FeatherTalk 是一个离线优先的数字人/说话头像工作台。它把视�
 - Windows 桌面运行建议 Windows 10/11 x64；Linux/macOS 需自行准备对应图形驱动和 FFmpeg。
 - FFmpeg 与 FFprobe。worker 不修改 PATH，可通过环境变量指定绝对路径。
 - 模型目录：SCRFD、PFLD、FeatherHuBERT、VGG19，目录内必须有 `manifest.json` 与 `model.safetensors`（VGG19 另含 `LICENSES.json`）。
-- GPU（可选）：Windows/Linux 上的 NVIDIA 显卡优先使用 `burn-cuda`，需要兼容驱动及 CUDA Toolkit 12.x 或更新版本（含 NVRTC 和开发头文件）。CUDA 不可用时自动选择现有 wgpu 后端（Windows/Linux 的 Vulkan、macOS 的 Metal），再回退 CPU。构建和启动不强制要求安装 CUDA；先运行 `capabilities` 检查实际能力。
+- GPU（可选）：Windows/Linux 上的 NVIDIA 显卡优先使用 `burn-cuda`，需要兼容驱动及 CUDA Toolkit 12.x 或更新版本（含 NVRTC 和开发头文件）。Linux AMD 计算卡可使用 `burn-rocm`，该路径不依赖 Vulkan。CUDA/ROCm 不可用时自动选择现有 wgpu 后端（Windows/Linux 的 Vulkan、macOS 的 Metal），再回退 CPU。构建和启动不强制要求安装 CUDA/ROCm；先运行 `capabilities` 检查实际能力。
 
 ## 从源码构建与测试
 
@@ -76,7 +76,7 @@ cargo test --manifest-path crates/feathertalk-app/Cargo.toml
 
 ## 首次运行配置
 
-CLI 默认按以下顺序寻找 worker：`--worker <path>`、`FEATHERTALK_WORKER_BIN`、与 CLI 同目录的 `feathertalk-worker(.exe)`。显式设置计算后端时使用 `--backend auto|cpu|wgpu|cuda` 和可选的 `--adapter <ID>`；不指定则沿用 worker 环境，环境未配置时使用 `auto`（CUDA → wgpu → CPU）。显式指定后端或设备时，设备不可用会报错，不会替换为另一设备。
+CLI 默认按以下顺序寻找 worker：`--worker <path>`、`FEATHERTALK_WORKER_BIN`、与 CLI 同目录的 `feathertalk-worker(.exe)`。显式设置计算后端时使用 `--backend auto|cpu|wgpu|cuda|rocm` 和可选的 `--adapter <ID>`；不指定则沿用 worker 环境，环境未配置时使用 `auto`（CUDA → ROCm → wgpu → CPU）。显式指定后端或设备时，设备不可用会报错，不会替换为另一设备。
 
 ```powershell
 $env:FEATHERTALK_WORKER_FFMPEG  = 'C:\tools\ffmpeg\bin\ffmpeg.exe'
@@ -89,7 +89,7 @@ $env:FEATHERTALK_WORKER_VGG19_DIR  = 'C:\FeatherTalk\models\vgg19'
 cargo run --locked -p feathertalk-cli -- capabilities
 ```
 
-也可以设置 `FEATHERTALK_WORKER_MEDIA_TIMEOUT_MS`（默认 `300000`）、`FEATHERTALK_WORKER_BACKEND=auto|cpu|wgpu|cuda` 和 `FEATHERTALK_WORKER_ADAPTER=<ID>`。worker 启动时会返回握手帧，列出协议版本、适配器、可用命令及模型/FFmpeg 能力。
+也可以设置 `FEATHERTALK_WORKER_MEDIA_TIMEOUT_MS`（默认 `300000`）、`FEATHERTALK_WORKER_BACKEND=auto|cpu|wgpu|cuda|rocm` 和 `FEATHERTALK_WORKER_ADAPTER=<ID>`。worker 启动时会返回握手帧，列出协议版本、适配器、可用命令及模型/FFmpeg 能力。
 
 ### NVIDIA CUDA 加速
 
@@ -103,13 +103,16 @@ cargo run --locked -p feathertalk-cli -- capabilities
 
 worker 会检测驱动、NVRTC、头文件，并实际编译执行一个 Burn 内核。只有通过检测的 NVIDIA 设备才会出现在 `cuda` 后端中；仅有 `nvidia-smi` 或 `nvcc` 不代表运行环境可用。CUDA 11.x 不满足当前 Burn 版本要求，缺失或不兼容时会在 stderr 记录原因，自动模式继续使用 wgpu/CPU。
 
-CUDA 覆盖两个 U-Net 的训练和渲染、VGG19 感知损失、FeatherHuBERT 音频特征，以及 SCRFD/PFLD 人脸和关键点提取。抽帧和视频标准化由 FFmpeg 使用所选 CUDA 设备硬件解码，保留现有输出格式和编码参数；解码失败会清理本次临时输出并使用软件解码重试。任务取消或超时不会重试，已经开始的模型任务失败也不会自动换后端重跑。
+Linux ROCm 后端使用 HIP 设备 UUID 识别 AMD 计算卡，并实际执行一个 Burn 内核后才会在 `rocm` 后端中公布。该路径不依赖 Vulkan，需要与 `burn-rocm` 0.21 兼容的 ROCm 6.2.2 或更新版本；缺失或不兼容时自动模式继续使用 wgpu/CPU。
 
-可用 `--backend cuda` 强制 CUDA、`--backend cpu` 强制 CPU，或通过 `--adapter cuda-uuid-<UUID>` 指定 `capabilities` 中的稳定设备 ID。真实 GPU 测试需要手动运行：
+CUDA 和 ROCm 都覆盖两个 U-Net 的训练和渲染、VGG19 感知损失、FeatherHuBERT 音频特征，以及 SCRFD/PFLD 人脸和关键点提取。抽帧和视频标准化仍由 FFmpeg 使用所选 CUDA 设备硬件解码；ROCm 不接入视频硬解，媒体处理沿用软件解码路径。任务取消或超时不会重试，已经开始的模型任务失败也不会自动换后端重跑。
+
+可用 `--backend cuda` 强制 CUDA、`--backend rocm` 强制 ROCm、`--backend cpu` 强制 CPU，或通过 `--adapter cuda-uuid-<UUID>` / `--adapter rocm-uuid-<UUID>` 指定 `capabilities` 中的稳定设备 ID。真实 GPU 测试需要手动运行：
 
 ```powershell
 cargo test --locked -p feathertalk-worker --test cuda_execution -- --ignored --test-threads=1
 cargo test --locked -p feathertalk-worker --test wgpu_execution -- --ignored --test-threads=1
+cargo test --locked -p feathertalk-worker --test rocm_execution -- --ignored --test-threads=1
 ```
 
 设置前述 `FEATHERTALK_WORKER_FFMPEG` / `FEATHERTALK_WORKER_FFPROBE` 后，可运行 `cargo test --locked -p feathertalk-worker --test cuda_media -- --ignored --test-threads=1`，验证实际硬件解码和无效 CUDA 设备触发的软件重试。该测试需要 FFmpeg 支持 `libx264`；多显卡时可用 `FEATHERTALK_TEST_CUDA_DEVICE` 指定测试设备序号（默认 `0`）。

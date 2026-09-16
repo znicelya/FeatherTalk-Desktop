@@ -17,11 +17,11 @@ pub struct Cli {
     #[arg(long, global = true, value_name = "PATH")]
     pub worker: Option<PathBuf>,
 
-    /// 计算后端，默认自动选择 CUDA、wgpu 或 CPU
+    /// 计算后端，默认自动选择 CUDA、ROCm、wgpu 或 CPU
     #[arg(long, global = true, value_enum)]
     pub backend: Option<BackendArg>,
 
-    /// capabilities 中的设备 ID，根据 cuda- 前缀或 cpu-0 推断后端，其余为 wgpu
+    /// capabilities 中的设备 ID，根据 cuda-/rocm- 前缀或 cpu-0 推断后端，其余为 wgpu
     #[arg(long, global = true, value_name = "ID")]
     pub adapter: Option<String>,
 
@@ -47,6 +47,7 @@ pub enum BackendArg {
     Cpu,
     Wgpu,
     Cuda,
+    Rocm,
 }
 
 impl From<BackendArg> for feathertalk_domain::Backend {
@@ -56,6 +57,7 @@ impl From<BackendArg> for feathertalk_domain::Backend {
             BackendArg::Cpu => Self::Cpu,
             BackendArg::Wgpu => Self::Wgpu,
             BackendArg::Cuda => Self::Cuda,
+            BackendArg::Rocm => Self::Rocm,
         }
     }
 }

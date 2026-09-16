@@ -12,8 +12,8 @@ mod task_error;
 /// Version of the worker task protocol this crate speaks.
 ///
 /// Version 2 added `supported_commands` to the handshake and `result` to
-/// completed events.
-pub const PROTOCOL_VERSION: u32 = 3;
+/// completed events. Version 4 added the Linux ROCm execution backend.
+pub const PROTOCOL_VERSION: u32 = 4;
 
 pub use codec::{MAX_FRAME_BYTES, check_protocol_version, decode_line, encode_line};
 pub use error::DomainError;

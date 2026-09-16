@@ -241,8 +241,9 @@ impl WorkerConfig {
             Some("cpu") => Ok(Backend::Cpu),
             Some("wgpu") => Ok(Backend::Wgpu),
             Some("cuda") => Ok(Backend::Cuda),
+            Some("rocm") => Ok(Backend::Rocm),
             Some(value) => Err(format!(
-                "{ENV_BACKEND} must be auto, cpu, wgpu or cuda, got {value:?}"
+                "{ENV_BACKEND} must be auto, cpu, wgpu, cuda or rocm, got {value:?}"
             )),
         }
         .map(|backend| ComputeChoice {

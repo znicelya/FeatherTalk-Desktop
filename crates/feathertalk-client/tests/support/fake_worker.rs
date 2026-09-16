@@ -262,6 +262,7 @@ fn compute_ready() -> ServerFrame {
     };
     frame.backends.push(Backend::Wgpu);
     frame.backends.push(Backend::Cuda);
+    frame.backends.push(Backend::Rocm);
     frame.adapters.push(AdapterInfo {
         id: "cuda-test-0".into(),
         name: "NVIDIA GPU (CUDA)".into(),
@@ -286,6 +287,14 @@ fn compute_ready() -> ServerFrame {
             vram_bytes: None,
         });
     }
+    frame.adapters.push(AdapterInfo {
+        id: "rocm-test-0".into(),
+        name: "AMD GPU (ROCm)".into(),
+        backend: Backend::Rocm,
+        kind: AdapterKind::Discrete,
+        certified: true,
+        vram_bytes: None,
+    });
     ServerFrame::Ready(frame)
 }
 

@@ -24,6 +24,18 @@ fn an_explicit_wgpu_request_without_a_gpu_does_not_fall_back_to_cpu() {
 }
 
 #[test]
+fn an_explicit_rocm_request_without_a_gpu_does_not_fall_back_to_cpu() {
+    let config =
+        WorkerConfig::from_values(None, None, None).with_compute_selection(Some("rocm"), None);
+    assert!(config.compute_adapter().is_err());
+    assert!(
+        !feathertalk_worker::ready_frame(&config)
+            .backends
+            .contains(&feathertalk_domain::Backend::Rocm)
+    );
+}
+
+#[test]
 fn invalid_compute_choices_are_retained_as_errors() {
     for backend in ["", "unknown", "WGPU", "dx12"] {
         let config =

@@ -85,6 +85,26 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 GpuContext::Cuda(context),
             )
         }
+        #[cfg(target_os = "linux")]
+        Backend::Rocm => {
+            let context = match config.compute().open_rocm(&adapter.id) {
+                Ok(context) => context,
+                Err(error) => {
+                    return CommandOutcome::Failed(error.task_error(TaskStage::Preparing));
+                }
+            };
+            let device = context.device.clone();
+            execute_gpu::<feathertalk_models::backend::RocmBackend, R>(
+                request,
+                config,
+                token,
+                reporter,
+                runner,
+                &adapter,
+                &device,
+                GpuContext::Rocm(context),
+            )
+        }
         _ => CommandOutcome::Failed(
             GpuFailure::Unavailable(format!(
                 "Backend {:?} cannot execute on this platform",

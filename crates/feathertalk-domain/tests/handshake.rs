@@ -107,14 +107,14 @@ fn frames_use_adjacent_tagging_and_round_trip() {
 
 #[test]
 fn ready_frame_rejects_unknown_outer_fields() {
-    let json = r#"{"frame":"ready","data":{"protocol_version":3,"worker_version":"0.1.0","backends":["cpu"],"adapters":[],"supported_commands":["probe_media"],"capabilities":{"training":false,"wgpu_training":false,"onnx_validation":false,"ffmpeg":true}},"extra":1}"#;
+    let json = r#"{"frame":"ready","data":{"protocol_version":4,"worker_version":"0.1.0","backends":["cpu"],"adapters":[],"supported_commands":["probe_media"],"capabilities":{"training":false,"wgpu_training":false,"onnx_validation":false,"ffmpeg":true}},"extra":1}"#;
     assert!(serde_json::from_str::<ServerFrame>(json).is_err());
 }
 
 #[test]
-fn the_protocol_version_is_three() {
-    assert_eq!(PROTOCOL_VERSION, 3);
-    assert_eq!(ready().protocol_version, 3);
+fn the_protocol_version_is_four() {
+    assert_eq!(PROTOCOL_VERSION, 4);
+    assert_eq!(ready().protocol_version, 4);
 }
 
 #[test]

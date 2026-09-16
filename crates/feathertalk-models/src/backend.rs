@@ -9,3 +9,8 @@ pub type GpuAutodiffBackend = Autodiff<GpuBackend>;
 pub type CudaBackend = burn_cuda::Cuda<f32, i32>;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 pub type CudaAutodiffBackend = Autodiff<CudaBackend>;
+
+#[cfg(target_os = "linux")]
+pub type RocmBackend = burn_rocm::Rocm<f32, i32>;
+#[cfg(target_os = "linux")]
+pub type RocmAutodiffBackend = Autodiff<RocmBackend>;

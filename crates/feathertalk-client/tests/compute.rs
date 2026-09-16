@@ -207,6 +207,70 @@ fn cuda_flags_and_environment_preserve_the_requested_device() {
 }
 
 #[test]
+fn automatic_selection_prefers_rocm_before_wgpu() {
+    let mut frame = ready();
+    frame.backends.push(Backend::Rocm);
+    frame.adapters.push(adapter(
+        "rocm-z",
+        Backend::Rocm,
+        AdapterKind::Discrete,
+        true,
+    ));
+    frame.adapters.push(adapter(
+        "rocm-a",
+        Backend::Rocm,
+        AdapterKind::Integrated,
+        true,
+    ));
+    frame.adapters.push(adapter(
+        "rocm-experimental",
+        Backend::Rocm,
+        AdapterKind::Discrete,
+        false,
+    ));
+
+    assert_eq!(
+        ComputeOptions::default()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "rocm-a"
+    );
+    frame.adapters.reverse();
+    assert_eq!(
+        ComputeOptions::default()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "rocm-a"
+    );
+    assert_eq!(
+        ComputeOptions::new(Backend::Wgpu, None)
+            .unwrap()
+            .resolve_adapter(&frame)
+            .unwrap()
+            .id,
+        "wgpu-first"
+    );
+}
+
+#[test]
+fn rocm_flags_and_environment_preserve_the_requested_device() {
+    let options =
+        ComputeOptions::from_environment_values(Some(" rocm "), Some(" rocm-a ")).unwrap();
+    assert_eq!(options.backend, Backend::Rocm);
+    assert_eq!(options.env_overrides()[0].1, "rocm");
+    assert_eq!(options.adapter.as_deref(), Some("rocm-a"));
+    assert_eq!(
+        ComputeOptions::from_flags(None, Some("rocm-a"))
+            .unwrap()
+            .unwrap(),
+        options
+    );
+    assert!(ComputeOptions::from_environment_values(Some("rocm"), Some("cpu-0")).is_err());
+}
+
+#[test]
 fn absent_cli_options_emit_no_override_and_explicit_backend_clears_the_adapter() {
     assert!(ComputeOptions::from_flags(None, None).unwrap().is_none());
     let options = ComputeOptions::from_flags(Some(Backend::Cpu), None)

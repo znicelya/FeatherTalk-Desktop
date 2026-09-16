@@ -31,6 +31,8 @@ use sha2::{Digest, Sha256};
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 pub(crate) mod cuda;
 mod native;
+#[cfg(target_os = "linux")]
+pub(crate) mod rocm;
 
 /// Adapter metadata and the native handles that metadata identifies.
 ///
@@ -42,6 +44,8 @@ pub struct ComputeRegistry {
     native: BTreeMap<String, Arc<NativeAdapter>>,
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     cuda: BTreeMap<String, cuda::CudaContext>,
+    #[cfg(target_os = "linux")]
+    rocm: BTreeMap<String, rocm::RocmContext>,
 }
 
 impl ComputeRegistry {
@@ -51,6 +55,8 @@ impl ComputeRegistry {
             native: BTreeMap::new(),
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             cuda: BTreeMap::new(),
+            #[cfg(target_os = "linux")]
+            rocm: BTreeMap::new(),
         }
     }
 
@@ -71,6 +77,11 @@ impl ComputeRegistry {
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         for (adapter, context) in cuda::discover() {
             registry.cuda.insert(adapter.id.clone(), context);
+            registry.adapters.push(adapter);
+        }
+        #[cfg(target_os = "linux")]
+        for (adapter, context) in rocm::discover() {
+            registry.rocm.insert(adapter.id.clone(), context);
             registry.adapters.push(adapter);
         }
         registry.finish_discovery();
@@ -133,6 +144,8 @@ impl ComputeRegistry {
             native,
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             cuda: BTreeMap::new(),
+            #[cfg(target_os = "linux")]
+            rocm: BTreeMap::new(),
         })
     }
 
@@ -140,8 +153,8 @@ impl ComputeRegistry {
         &self.adapters
     }
 
-    /// Match an explicit ID exactly. Automatic selection prefers CUDA, wgpu,
-    /// then CPU, with stable IDs breaking ties within each backend.
+    /// Match an explicit ID exactly. Automatic selection prefers CUDA, ROCm,
+    /// wgpu, then CPU, with stable IDs breaking ties within each backend.
     pub fn resolve(&self, backend: Backend, id: Option<&str>) -> Result<AdapterInfo, String> {
         resolve_adapter(&self.adapters, backend, id)
     }
@@ -167,6 +180,17 @@ impl ComputeRegistry {
             let _ = id;
             None
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn open_rocm(&self, id: &str) -> Result<rocm::RocmContext, GpuFailure> {
+        self.resolve(Backend::Rocm, Some(id))
+            .map_err(GpuFailure::Unavailable)?;
+        let context = self.rocm.get(id).ok_or_else(|| {
+            GpuFailure::Unavailable(format!("ROCm adapter {id} has no retained device"))
+        })?;
+        context.check()?;
+        Ok(context.clone())
     }
 
     /// Open and register the retained native handle once, without enumerating
@@ -310,6 +334,8 @@ pub enum GpuContext {
     Wgpu(WgpuContext),
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     Cuda(cuda::CudaContext),
+    #[cfg(target_os = "linux")]
+    Rocm(rocm::RocmContext),
 }
 
 impl GpuContext {
@@ -318,6 +344,8 @@ impl GpuContext {
             Self::Wgpu(context) => context.check(),
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             Self::Cuda(context) => context.check(),
+            #[cfg(target_os = "linux")]
+            Self::Rocm(context) => context.check(),
         }
     }
 
@@ -326,6 +354,8 @@ impl GpuContext {
             Self::Wgpu(context) => context.graphics_api(),
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             Self::Cuda(_) => "cuda",
+            #[cfg(target_os = "linux")]
+            Self::Rocm(_) => "rocm",
         }
     }
 }

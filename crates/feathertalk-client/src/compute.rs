@@ -15,7 +15,7 @@ pub struct ComputeOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ComputeError {
-    #[error("invalid {ENV_WORKER_BACKEND} value {0:?}; expected auto, cpu, wgpu or cuda")]
+    #[error("invalid {ENV_WORKER_BACKEND} value {0:?}; expected auto, cpu, wgpu, cuda or rocm")]
     InvalidBackend(String),
     #[error("{0} is not valid Unicode")]
     InvalidEnvironment(&'static str),
@@ -62,7 +62,7 @@ impl ComputeOptions {
             (Backend::Cpu, Some(id)) if id != "cpu-0" => {
                 return Err(ComputeError::CpuAdapter(id.to_owned()));
             }
-            (Backend::Wgpu | Backend::Cuda, Some("cpu-0")) => {
+            (Backend::Wgpu | Backend::Cuda | Backend::Rocm, Some("cpu-0")) => {
                 return Err(ComputeError::WgpuCpuAdapter);
             }
             _ => {}
@@ -71,8 +71,8 @@ impl ComputeOptions {
     }
 
     /// `None` means no flags: retain the worker's inherited environment exactly.
-    /// Adapter-only flags infer CUDA from its stable ID prefix, otherwise WGPU
-    /// except for the reserved CPU identity.
+    /// Adapter-only flags infer CUDA/ROCm from stable ID prefixes, otherwise
+    /// WGPU except for the reserved CPU identity.
     pub fn from_flags(
         backend: Option<Backend>,
         adapter: Option<&str>,
@@ -83,6 +83,7 @@ impl ComputeOptions {
         let backend = backend.unwrap_or_else(|| match adapter.map(str::trim) {
             Some("cpu-0" | "") | None => Backend::Cpu,
             Some(id) if id.starts_with("cuda-") => Backend::Cuda,
+            Some(id) if id.starts_with("rocm-") => Backend::Rocm,
             Some(_) => Backend::Wgpu,
         });
         Self::new(backend, adapter.map(str::to_owned)).map(Some)
@@ -100,6 +101,7 @@ impl ComputeOptions {
             Some("cpu") => Backend::Cpu,
             Some("wgpu") => Backend::Wgpu,
             Some("cuda") => Backend::Cuda,
+            Some("rocm") => Backend::Rocm,
             Some(value) => return Err(ComputeError::InvalidBackend(value.into())),
         };
         Self::new(backend, adapter.map(str::to_owned))
@@ -153,7 +155,7 @@ impl ComputeOptions {
     }
 
     /// Revalidate on every fresh handshake. Automatic choices prefer CUDA,
-    /// wgpu, then CPU; an explicit device ID never switches to another device.
+    /// ROCm, wgpu, then CPU; an explicit device ID never switches devices.
     pub fn resolve_adapter<'a>(
         &self,
         ready: &'a ReadyFrame,
@@ -225,6 +227,7 @@ pub fn backend_name(backend: Backend) -> &'static str {
         Backend::Cpu => "cpu",
         Backend::Wgpu => "wgpu",
         Backend::Cuda => "cuda",
+        Backend::Rocm => "rocm",
     }
 }
 

@@ -21,3 +21,6 @@ thiserror.workspace = true
 burn-cuda.workspace = true
 # Also fixes the CUDA binding feature when this crate is built without worker.
 cudarc.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+burn-rocm.workspace = true

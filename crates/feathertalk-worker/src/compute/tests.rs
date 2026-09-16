@@ -357,6 +357,50 @@ fn automatic_compute_uses_cuda_then_existing_gpu_then_cpu() {
 }
 
 #[test]
+fn automatic_compute_uses_rocm_before_wgpu() {
+    let mut rocm = gpu("rocm-uuid-a", true, AdapterKind::Discrete);
+    rocm.backend = Backend::Rocm;
+    let rocm = rocm;
+    let mut adapters = vec![
+        crate::handshake::cpu_adapter(),
+        gpu("wgpu-a", true, AdapterKind::Discrete),
+        rocm.clone(),
+    ];
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "rocm-uuid-a"
+    );
+    adapters.reverse();
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "rocm-uuid-a"
+    );
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Wgpu, None).unwrap().id,
+        "wgpu-a"
+    );
+    assert!(resolve_adapter(&adapters, Backend::Rocm, Some("wgpu-a")).is_err());
+    adapters.retain(|adapter| adapter.backend != Backend::Rocm);
+    assert_eq!(
+        resolve_adapter(&adapters, Backend::Auto, None).unwrap().id,
+        "wgpu-a"
+    );
+    assert!(resolve_adapter(&adapters, Backend::Rocm, None).is_err());
+
+    let mut registry = ComputeRegistry::cpu_only();
+    registry.adapters.push(rocm);
+    let config = crate::WorkerConfig::from_values(None, None, None)
+        .with_compute_registry(registry)
+        .with_compute_selection(Some("rocm"), Some("rocm-uuid-a"));
+    assert_eq!(config.compute_adapter().unwrap().backend, Backend::Rocm);
+    assert!(
+        crate::handshake::ready_frame(&config)
+            .backends
+            .contains(&Backend::Rocm)
+    );
+}
+
+#[test]
 fn duplicate_cuda_identities_preserve_a_valid_handshake_and_automatic_fallback() {
     let mut cuda = gpu("cuda-uuid-shared", true, AdapterKind::Discrete);
     cuda.backend = Backend::Cuda;
