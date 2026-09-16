@@ -304,10 +304,11 @@ if (-not $env:FEATHERTALK_WORKER_FFMPEG) {
 if (-not $env:FEATHERTALK_WORKER_FFPROBE) {
     $env:FEATHERTALK_WORKER_FFPROBE = (Get-Command ffprobe).Source
 }
-if (-not $env:FEATHERTALK_WORKER_SCRFD_DIR)  { $env:FEATHERTALK_WORKER_SCRFD_DIR  = ".\models\scrfd_2_5g" }
-if (-not $env:FEATHERTALK_WORKER_PFLD_DIR)   { $env:FEATHERTALK_WORKER_PFLD_DIR   = ".\models\pfld_ghost_one" }
-if (-not $env:FEATHERTALK_WORKER_HUBERT_DIR) { $env:FEATHERTALK_WORKER_HUBERT_DIR = ".\models\feather_hubert" }
-if (-not $env:FEATHERTALK_WORKER_VGG19_DIR)  { $env:FEATHERTALK_WORKER_VGG19_DIR  = ".\models\vgg19" }
+$modelRoot = Join-Path (Get-Location) "models"
+if (-not $env:FEATHERTALK_WORKER_SCRFD_DIR)  { $env:FEATHERTALK_WORKER_SCRFD_DIR  = Join-Path $modelRoot "scrfd_2_5g" }
+if (-not $env:FEATHERTALK_WORKER_PFLD_DIR)   { $env:FEATHERTALK_WORKER_PFLD_DIR   = Join-Path $modelRoot "pfld_ghost_one" }
+if (-not $env:FEATHERTALK_WORKER_HUBERT_DIR) { $env:FEATHERTALK_WORKER_HUBERT_DIR = Join-Path $modelRoot "feather_hubert" }
+if (-not $env:FEATHERTALK_WORKER_VGG19_DIR)  { $env:FEATHERTALK_WORKER_VGG19_DIR  = Join-Path $modelRoot "vgg19" }
 
 Write-Log "  FFMPEG     = $env:FEATHERTALK_WORKER_FFMPEG"
 Write-Log "  FFPROBE    = $env:FEATHERTALK_WORKER_FFPROBE"

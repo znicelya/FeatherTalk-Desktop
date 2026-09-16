@@ -232,10 +232,10 @@ if not defined FEATHERTALK_WORKER_FFMPEG (
 if not defined FEATHERTALK_WORKER_FFPROBE (
     for /f "tokens=*" %%i in ('where ffprobe') do set "FEATHERTALK_WORKER_FFPROBE=%%i"
 )
-if not defined FEATHERTALK_WORKER_SCRFD_DIR  set "FEATHERTALK_WORKER_SCRFD_DIR=.\models\scrfd_2_5g"
-if not defined FEATHERTALK_WORKER_PFLD_DIR   set "FEATHERTALK_WORKER_PFLD_DIR=.\models\pfld_ghost_one"
-if not defined FEATHERTALK_WORKER_HUBERT_DIR set "FEATHERTALK_WORKER_HUBERT_DIR=.\models\feather_hubert"
-if not defined FEATHERTALK_WORKER_VGG19_DIR  set "FEATHERTALK_WORKER_VGG19_DIR=.\models\vgg19"
+if not defined FEATHERTALK_WORKER_SCRFD_DIR  set "FEATHERTALK_WORKER_SCRFD_DIR=%CD%\models\scrfd_2_5g"
+if not defined FEATHERTALK_WORKER_PFLD_DIR   set "FEATHERTALK_WORKER_PFLD_DIR=%CD%\models\pfld_ghost_one"
+if not defined FEATHERTALK_WORKER_HUBERT_DIR set "FEATHERTALK_WORKER_HUBERT_DIR=%CD%\models\feather_hubert"
+if not defined FEATHERTALK_WORKER_VGG19_DIR  set "FEATHERTALK_WORKER_VGG19_DIR=%CD%\models\vgg19"
 
 echo [bench]   FFMPEG     = %FEATHERTALK_WORKER_FFMPEG%
 echo [bench]   FFPROBE    = %FEATHERTALK_WORKER_FFPROBE%

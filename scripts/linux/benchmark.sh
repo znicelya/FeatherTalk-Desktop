@@ -12,8 +12,7 @@ set -euo pipefail
 REPO_URL="https://github.com/znicelya/FeatherTalk-Desktop.git"
 REPEATS=3
 BACKENDS=("cpu" "wgpu" "cuda" "rocm")
-PROJECT_DIR="target/benchmark/project"
-REQUEST_FILE="target/benchmark/requests.json"
+PROJECT_ROOT="target/benchmark/full-pipeline"
 FIXTURE="tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
 REPORT_DIR="target/benchmark/reports"
 
@@ -42,8 +41,7 @@ FeatherTalk Linux 基准测试脚本
   --repeats <N>           预热重复次数，0 表示只跑一次（默认: $REPEATS）
   --backends <LIST>       逗号分隔的后端列表
                           可选: cpu,wgpu,cuda,rocm（默认: cpu,wgpu,cuda,rocm）
-  --project-dir <PATH>    指定 project 目录（默认: $PROJECT_DIR）
-                          目录存在时额外跑 extract_frames/extract_features/train/render
+  --project-root <PATH>    full pipeline 临时项目根目录（默认: $PROJECT_ROOT）
   --skip-ffmpeg           跳过 FFmpeg 静态包安装
   --skip-build            跳过 cargo build
   -h, --help              显示帮助
@@ -51,7 +49,7 @@ FeatherTalk Linux 基准测试脚本
 示例:
   $0
   $0 --backends cpu --repeats 5
-  $0 --project-dir /data/my_project
+  $0 --project-root /data/my_project
   $0 --skip-ffmpeg --backends cpu,cuda
 
 环境变量:
@@ -81,7 +79,7 @@ while [[ $# -gt 0 ]]; do
       IFS=',' read -r -a BACKENDS <<< "$2"
       shift 2
       ;;
-    --project-dir)  PROJECT_DIR="$2"; shift 2 ;;
+    --project-root) PROJECT_ROOT="$2"; shift 2 ;;
     --skip-ffmpeg)  SKIP_FFMPEG=true; shift ;;
     --skip-build)   SKIP_BUILD=true; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -367,10 +365,10 @@ log "配置 worker 环境变量..."
 
 export FEATHERTALK_WORKER_FFMPEG="${FEATHERTALK_WORKER_FFMPEG:-$(command -v ffmpeg)}"
 export FEATHERTALK_WORKER_FFPROBE="${FEATHERTALK_WORKER_FFPROBE:-$(command -v ffprobe)}"
-export FEATHERTALK_WORKER_SCRFD_DIR="${FEATHERTALK_WORKER_SCRFD_DIR:-./models/scrfd_2_5g}"
-export FEATHERTALK_WORKER_PFLD_DIR="${FEATHERTALK_WORKER_PFLD_DIR:-./models/pfld_ghost_one}"
-export FEATHERTALK_WORKER_HUBERT_DIR="${FEATHERTALK_WORKER_HUBERT_DIR:-./models/feather_hubert}"
-export FEATHERTALK_WORKER_VGG19_DIR="${FEATHERTALK_WORKER_VGG19_DIR:-./models/vgg19}"
+export FEATHERTALK_WORKER_SCRFD_DIR="${FEATHERTALK_WORKER_SCRFD_DIR:-$PWD/models/scrfd_2_5g}"
+export FEATHERTALK_WORKER_PFLD_DIR="${FEATHERTALK_WORKER_PFLD_DIR:-$PWD/models/pfld_ghost_one}"
+export FEATHERTALK_WORKER_HUBERT_DIR="${FEATHERTALK_WORKER_HUBERT_DIR:-$PWD/models/feather_hubert}"
+export FEATHERTALK_WORKER_VGG19_DIR="${FEATHERTALK_WORKER_VGG19_DIR:-$PWD/models/vgg19}"
 
 log "  FFMPEG     = $FEATHERTALK_WORKER_FFMPEG"
 log "  FFPROBE    = $FEATHERTALK_WORKER_FFPROBE"
@@ -391,110 +389,13 @@ if [[ ! -f "$FIXTURE" ]]; then
 fi
 
 # ================================================================
-# 7. 检查 project 目录
+# 7. 准备完整流水线
 # ================================================================
-RUN_PROJECT_COMMANDS=false
-
-if [[ -d "$PROJECT_DIR" ]]; then
-  if [[ -f "$PROJECT_DIR/project.json" ]]; then
-    RUN_PROJECT_COMMANDS=true
-    log "检测到 project: $PROJECT_DIR"
-  else
-    warn "目录存在但缺少 project.json，跳过 project 命令: $PROJECT_DIR"
-  fi
-else
-  warn "未检测到 project 目录: $PROJECT_DIR"
-  warn "extract_frames/extract_features/train/render 将被跳过"
-  warn "如需测试这些命令，请用 --project-dir 指定一个已初始化的项目"
-fi
-
-# ================================================================
-# 8. 生成请求文件
-# ================================================================
-log "生成请求文件..."
+log "准备完整流水线..."
+log "每个 repeat 的项目由 feathertalk-benchmark 自动初始化: $PROJECT_ROOT"
 
 mkdir -p target/benchmark
 mkdir -p "$REPORT_DIR"
-
-if $RUN_PROJECT_COMMANDS; then
-  cat > "$REQUEST_FILE" <<JSON
-[
-  {
-    "command": "probe_media",
-    "params": {
-      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-    }
-  },
-  {
-    "command": "normalize_media",
-    "params": {
-      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
-      "output_dir": "target/benchmark/normalize-{{repeat}}"
-    }
-  },
-  {
-    "command": "extract_frames",
-    "params": {
-      "project_dir": "${PROJECT_DIR}",
-      "video": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-    }
-  },
-  {
-    "command": "extract_features",
-    "params": {
-      "project_dir": "${PROJECT_DIR}",
-      "audio": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-    }
-  },
-  {
-    "command": "train",
-    "params": {
-      "project_dir": "${PROJECT_DIR}",
-      "mode": "baseline",
-      "variant": "original_unet",
-      "epochs": 1,
-      "resume": false,
-      "batch_size": 1
-    }
-  },
-  {
-    "command": "render",
-    "params": {
-      "project_dir": "${PROJECT_DIR}",
-      "checkpoint": "${PROJECT_DIR}/checkpoints/latest.bin",
-      "audio": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
-      "output": "target/benchmark/render-{{repeat}}.mp4",
-      "max_output_frames": 30
-    }
-  }
-]
-JSON
-else
-  cat > "$REQUEST_FILE" <<'JSON'
-[
-  {
-    "command": "probe_media",
-    "params": {
-      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-    }
-  },
-  {
-    "command": "normalize_media",
-    "params": {
-      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
-      "output_dir": "target/benchmark/normalize-{{repeat}}"
-    }
-  }
-]
-JSON
-fi
-
-log "请求文件: $REQUEST_FILE"
-if $RUN_PROJECT_COMMANDS; then
-  log "  包含 6 条命令（含 project 命令）"
-else
-  log "  包含 2 条命令（仅媒体命令）"
-fi
 
 # ================================================================
 # 9. 首次构建
@@ -539,7 +440,7 @@ for backend in "${BACKENDS[@]}"; do
   if FEATHERTALK_WORKER_BACKEND="$backend" \
      cargo run --locked -p feathertalk-benchmark -- \
        --input "$FIXTURE" \
-       --project-root "$PROJECT_DIR" \
+       --project-root "$PROJECT_ROOT" \
        --repeats "$REPEATS" \
        --label "$backend" \
        --backend "$RUN_BACKEND" \
