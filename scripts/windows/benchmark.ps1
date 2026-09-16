@@ -4,8 +4,8 @@
     FeatherTalk Windows 基准测试脚本（PowerShell）
 
 .DESCRIPTION
-    环境检测、FFmpeg 静态包安装、Rust 工具链、克隆仓库、生成请求文件、
-    按后端（cpu/wgpu/cuda/rocm）运行 feathertalk-benchmark 并输出 JSON 报告。
+    环境检测、FFmpeg 静态包安装、Rust 工具链、克隆仓库，
+    按后端（cpu/wgpu/cuda/rocm）运行完整 benchmark 流水线并输出 JSON 报告。
 
     文件必须保存为 UTF-8 with BOM，否则 PowerShell 5.1 会按 GBK 解析导致中文乱码。
 
@@ -17,6 +17,18 @@
 
 .PARAMETER Backends
     逗号分隔的后端列表，默认 cpu,wgpu,cuda,rocm
+
+.PARAMETER ProjectRoot
+    完整流水线临时项目的根目录，默认 target\benchmark\full-pipeline
+
+.PARAMETER Epochs
+    训练阶段执行的 epoch 数，默认 1
+
+.PARAMETER MaxOutputFrames
+    渲染阶段最多输出多少帧；0 表示渲染完整视频
+
+.PARAMETER KeepProjects
+    成功完成后保留每个重复运行的临时项目目录
 
 .PARAMETER SkipFfmpeg
     跳过 FFmpeg 安装，使用系统已有版本
@@ -39,6 +51,10 @@ param(
     [string]$RepoUrl = "https://github.com/znicelya/FeatherTalk-Desktop.git",
     [int]$Repeats = 3,
     [string]$Backends = "cpu,wgpu,cuda,rocm",
+    [string]$ProjectRoot = "target\benchmark\full-pipeline",
+    [int]$Epochs = 1,
+    [int]$MaxOutputFrames = 0,
+    [switch]$KeepProjects,
     [switch]$SkipFfmpeg,
     [switch]$SkipBuild
 )
@@ -46,7 +62,6 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ---------- 配置 ----------
-$RequestFile = "target\benchmark\requests.json"
 $Fixture     = "tools\feathertalk-benchmark\fixtures\kanghui_5s.mp4"
 $ReportDir   = "target\benchmark\reports"
 
@@ -318,38 +333,16 @@ if (-not (Test-Path $Fixture)) {
 }
 
 # ================================================================
-# 6. 生成请求文件
+# 6. 准备完整流水线
 # ================================================================
-Write-Log "生成请求文件..."
+Write-Log "准备完整流水线..."
 
 New-Item -ItemType Directory -Path "target\benchmark" -Force | Out-Null
 New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
 
-$requests = @(
-    [ordered]@{
-        command = "probe_media"
-        params  = [ordered]@{
-            input = "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-        }
-    },
-    [ordered]@{
-        command = "normalize_media"
-        params  = [ordered]@{
-            input      = "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-            output_dir = "target/benchmark/normalize-{{repeat}}"
-        }
-    }
-)
-
-$json = $requests | ConvertTo-Json -Depth 10
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText(
-    (Join-Path (Get-Location) $RequestFile),
-    $json,
-    $utf8NoBom
-)
-
-Write-Log "请求文件: $RequestFile"
+Write-Log "输入: $Fixture"
+Write-Log "临时项目根目录: $ProjectRoot"
+Write-Log "流水线: probe_media -> normalize_media -> extract_frames -> extract_features -> lock_asset_package -> train -> render"
 
 # ================================================================
 # 7. 首次构建
@@ -392,12 +385,20 @@ foreach ($backend in $BackendList) {
 
     $args = @(
         "run", "--locked", "-p", "feathertalk-benchmark", "--",
-        "--request-file", $RequestFile,
+        "--input", $Fixture,
+        "--project-root", $ProjectRoot,
         "--repeats", $Repeats,
+        "--epochs", $Epochs,
         "--label", $backend,
         "--backend", $runBackend,
         "--json"
     )
+    if ($MaxOutputFrames -gt 0) {
+        $args += @("--max-output-frames", $MaxOutputFrames)
+    }
+    if ($KeepProjects) {
+        $args += "--keep-projects"
+    }
 
     $output = Invoke-Native cargo @args
     $output | Out-File -FilePath $reportJson -Encoding utf8

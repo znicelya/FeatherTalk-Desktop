@@ -10,7 +10,10 @@ setlocal enabledelayedexpansion
 set "REPO_URL=https://github.com/znicelya/FeatherTalk-Desktop.git"
 set "REPEATS=3"
 set "BACKENDS=cpu,wgpu,cuda,rocm"
-set "REQUEST_FILE=target\benchmark\requests.json"
+set "PROJECT_ROOT=target\benchmark\full-pipeline"
+set "EPOCHS=1"
+set "MAX_OUTPUT_FRAMES=0"
+set "KEEP_PROJECTS=0"
 set "FIXTURE=tools\feathertalk-benchmark\fixtures\kanghui_5s.mp4"
 set "REPORT_DIR=target\benchmark\reports"
 set "SKIP_FFMPEG=0"
@@ -30,6 +33,10 @@ if "%~1"=="" goto :args_done
 if /i "%~1"=="--repo-url" ( set "REPO_URL=%~2" & shift & shift & goto :parse_args )
 if /i "%~1"=="--repeats"  ( set "REPEATS=%~2"   & shift & shift & goto :parse_args )
 if /i "%~1"=="--backends" ( set "BACKENDS=%~2"  & shift & shift & goto :parse_args )
+if /i "%~1"=="--project-root" ( set "PROJECT_ROOT=%~2" & shift & shift & goto :parse_args )
+if /i "%~1"=="--epochs" ( set "EPOCHS=%~2" & shift & shift & goto :parse_args )
+if /i "%~1"=="--max-output-frames" ( set "MAX_OUTPUT_FRAMES=%~2" & shift & shift & goto :parse_args )
+if /i "%~1"=="--keep-projects" ( set "KEEP_PROJECTS=1" & shift & goto :parse_args )
 if /i "%~1"=="--skip-ffmpeg" ( set "SKIP_FFMPEG=1" & shift & goto :parse_args )
 if /i "%~1"=="--skip-build"  ( set "SKIP_BUILD=1"  & shift & goto :parse_args )
 echo [err] unknown argument: %~1
@@ -248,32 +255,16 @@ if not exist "%FIXTURE%" (
 )
 
 :: ================================================================
-:: 6. Request file
+:: 6. Full pipeline
 :: ================================================================
-echo [bench] writing request file...
+echo [bench] preparing full pipeline...
 
 if not exist "target\benchmark" mkdir "target\benchmark"
 if not exist "%REPORT_DIR%" mkdir "%REPORT_DIR%"
 
-(
-echo [
-echo   {
-echo     "command": "probe_media",
-echo     "params": {
-echo       "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
-echo     }
-echo   },
-echo   {
-echo     "command": "normalize_media",
-echo     "params": {
-echo       "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
-echo       "output_dir": "target/benchmark/normalize-{{repeat}}"
-echo     }
-echo   }
-echo ]
-) > "%REQUEST_FILE%"
-
-echo [bench] request file: %REQUEST_FILE%
+echo [bench] input: %FIXTURE%
+echo [bench] project root: %PROJECT_ROOT%
+echo [bench] pipeline: probe_media -^> normalize_media -^> extract_frames -^> extract_features -^> lock_asset_package -^> train -^> render
 
 :: ================================================================
 :: 7. Build
@@ -313,13 +304,18 @@ for %%b in (%BACKENDS:,= %) do (
     set "RUN_BACKEND=%%b"
     set "REPORT_JSON=%REPORT_DIR%\report-%%b.json"
     set "FEATHERTALK_WORKER_BACKEND=%%b"
+    set "EXTRA_ARGS="
+    if not "%MAX_OUTPUT_FRAMES%"=="0" set "EXTRA_ARGS=--max-output-frames %MAX_OUTPUT_FRAMES%"
+    if "%KEEP_PROJECTS%"=="1" set "EXTRA_ARGS=!EXTRA_ARGS! --keep-projects"
 
     cargo run --locked -p feathertalk-benchmark -- ^
-        --request-file "%REQUEST_FILE%" ^
+        --input "%FIXTURE%" ^
+        --project-root "%PROJECT_ROOT%" ^
         --repeats %REPEATS% ^
+        --epochs %EPOCHS% ^
         --label %%b ^
         --backend !RUN_BACKEND! ^
-        --json > "!REPORT_JSON!"
+        --json !EXTRA_ARGS! > "!REPORT_JSON!"
 
     if errorlevel 1 (
         echo [warn] backend %%b failed, see !REPORT_JSON!
@@ -355,6 +351,10 @@ echo   --repo-url ^<URL^>     repository URL - default %REPO_URL%
 echo   --repeats ^<N^>        warm repeats - default %REPEATS%
 echo   --backends ^<LIST^>    comma-separated backends - default %BACKENDS%
 echo                         choices: cpu,wgpu,cuda,rocm
+echo   --project-root ^<PATH^> full-pipeline project root - default %PROJECT_ROOT%
+echo   --epochs ^<N^>         training epochs - default %EPOCHS%
+echo   --max-output-frames ^<N^> render frame cap; 0 renders the full fixture
+echo   --keep-projects       keep successful run project directories
 echo   --skip-ffmpeg         skip FFmpeg install
 echo   --skip-build          skip cargo build
 echo   -h, --help            show this help

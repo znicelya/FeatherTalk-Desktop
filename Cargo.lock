@@ -2434,6 +2434,7 @@ dependencies = [
  "clap",
  "feathertalk-domain",
  "feathertalk-media",
+ "feathertalk-project",
  "feathertalk-worker",
  "serde",
  "serde_json",

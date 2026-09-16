@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# FeatherTalk Linux 基准测试脚本（含 FFmpeg 静态包安装）
+# FeatherTalk Linux 基准测试脚本
+#   - FFmpeg: BtbN/FFmpeg-Builds gpl 变体
+#   - Rustup: 华为云镜像 + 官方源回退
+#   - 命令: probe_media, normalize_media, extract_frames,
+#           extract_features, train, render
 # 用法: ./run_benchmark.sh [OPTIONS]
 
 set -euo pipefail
@@ -8,16 +12,22 @@ set -euo pipefail
 REPO_URL="https://github.com/znicelya/FeatherTalk-Desktop.git"
 REPEATS=3
 BACKENDS=("cpu" "wgpu" "cuda" "rocm")
+PROJECT_DIR="target/benchmark/project"
 REQUEST_FILE="target/benchmark/requests.json"
 FIXTURE="tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
 REPORT_DIR="target/benchmark/reports"
 
-# FFmpeg 静态包配置
+# FFmpeg 静态包配置（BtbN/FFmpeg-Builds，gpl 变体）
 FFMPEG_INSTALL_DIR="/opt/ffmpeg"
-FFMPEG_VERSION="7.0.2"
-FFMPEG_ARCHIVE="ffmpeg-release-amd64-static.tar.xz"
-FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/${FFMPEG_ARCHIVE}"
+FFMPEG_VARIANT="gpl"
+FFMPEG_ARCHIVE="ffmpeg-master-latest-linux64-${FFMPEG_VARIANT}.tar.xz"
+FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_ARCHIVE}"
+FFMPEG_DIR_NAME="ffmpeg-master-latest-linux64-${FFMPEG_VARIANT}"
 FFMPEG_MIN_MAJOR=5
+
+# ---------- Rustup 镜像（华为云） ----------
+export RUSTUP_DIST_SERVER="${RUSTUP_DIST_SERVER:-https://repo.huaweicloud.com/rustup}"
+export RUSTUP_UPDATE_ROOT="${RUSTUP_UPDATE_ROOT:-https://repo.huaweicloud.com/rustup/rustup}"
 
 # ---------- 帮助信息 ----------
 usage() {
@@ -28,25 +38,25 @@ FeatherTalk Linux 基准测试脚本
   $0 [OPTIONS]
 
 选项:
-  --repo-url <URL>     指定仓库地址（默认: $REPO_URL）
-  --repeats <N>        预热重复次数，0 表示只跑一次（默认: $REPEATS）
-  --backends <LIST>    指定要测试的后端，逗号分隔
-                       可选: cpu,wgpu,cuda,rocm（默认: cpu,wgpu,cuda,rocm）
-  --skip-ffmpeg        跳过 FFmpeg 静态包安装（使用系统已有版本）
-  --skip-build         跳过 cargo build 步骤（仅 cargo run）
-  -h, --help           显示本帮助信息并退出
+  --repo-url <URL>        指定仓库地址（默认: $REPO_URL）
+  --repeats <N>           预热重复次数，0 表示只跑一次（默认: $REPEATS）
+  --backends <LIST>       逗号分隔的后端列表
+                          可选: cpu,wgpu,cuda,rocm（默认: cpu,wgpu,cuda,rocm）
+  --project-dir <PATH>    指定 project 目录（默认: $PROJECT_DIR）
+                          目录存在时额外跑 extract_frames/extract_features/train/render
+  --skip-ffmpeg           跳过 FFmpeg 静态包安装
+  --skip-build            跳过 cargo build
+  -h, --help              显示帮助
 
 示例:
-  # 默认：安装 FFmpeg 静态包，四后端各跑 3 次预热
   $0
+  $0 --backends cpu --repeats 5
+  $0 --project-dir /data/my_project
+  $0 --skip-ffmpeg --backends cpu,cuda
 
-  # 只测 CPU 和 WGPU，预热 5 次
-  $0 --backends cpu,wgpu --repeats 5
-
-  # 使用已有 FFmpeg，指定 fork 仓库
-  $0 --skip-ffmpeg --repo-url https://github.com/yourfork/FeatherTalk-Desktop.git
-
-环境变量（可在运行前 export 覆盖）:
+环境变量:
+  RUSTUP_DIST_SERVER               rustup 工具链下载源（默认华为云）
+  RUSTUP_UPDATE_ROOT               rustup 自更新源（默认华为云）
   FEATHERTALK_WORKER_FFMPEG        ffmpeg 可执行文件路径
   FEATHERTALK_WORKER_FFPROBE       ffprobe 可执行文件路径
   FEATHERTALK_WORKER_SCRFD_DIR     SCRFD 人脸检测模型目录
@@ -56,10 +66,6 @@ FeatherTalk Linux 基准测试脚本
 
 输出:
   target/benchmark/reports/report-<backend>.json   各后端 JSON 报告
-
-退出码:
-  0   全部成功
-  1   参数错误或环境不满足
 EOF
 }
 
@@ -75,6 +81,7 @@ while [[ $# -gt 0 ]]; do
       IFS=',' read -r -a BACKENDS <<< "$2"
       shift 2
       ;;
+    --project-dir)  PROJECT_DIR="$2"; shift 2 ;;
     --skip-ffmpeg)  SKIP_FFMPEG=true; shift ;;
     --skip-build)   SKIP_BUILD=true; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -82,7 +89,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 校验后端取值
+log()  { printf '\033[1;34m[bench]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
+err()  { printf '\033[1;31m[err]\033[0m %s\n' "$*" >&2; }
+
 VALID_BACKENDS=("cpu" "wgpu" "cuda" "rocm")
 for b in "${BACKENDS[@]}"; do
   if [[ ! " ${VALID_BACKENDS[*]} " =~ " $b " ]]; then
@@ -91,9 +101,17 @@ for b in "${BACKENDS[@]}"; do
   fi
 done
 
-log()  { printf '\033[1;34m[bench]\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m[warn]\033[0m %s\n' "$*"; }
-err()  { printf '\033[1;31m[err]\033[0m %s\n' "$*" >&2; }
+# ---------- FFmpeg 版本解析 ----------
+parse_ffmpeg_major() {
+  local ver_line="$1"
+  if [[ "$ver_line" =~ ffmpeg\ version\ ([0-9]+)\.[0-9]+ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  elif [[ "$ver_line" =~ ffmpeg\ version\ N- ]]; then
+    echo "99"
+  else
+    echo "0"
+  fi
+}
 
 # ================================================================
 # 1. 环境检测
@@ -109,17 +127,13 @@ else
 fi
 
 if command -v apt-get &>/dev/null; then
-  PKG_MGR="apt-get"
-  PKG_INSTALL="sudo apt-get install -y"
+  PKG_MGR="apt-get"; PKG_INSTALL="sudo apt-get install -y"
 elif command -v dnf &>/dev/null; then
-  PKG_MGR="dnf"
-  PKG_INSTALL="sudo dnf install -y"
+  PKG_MGR="dnf";     PKG_INSTALL="sudo dnf install -y"
 elif command -v yum &>/dev/null; then
-  PKG_MGR="yum"
-  PKG_INSTALL="sudo yum install -y"
+  PKG_MGR="yum";     PKG_INSTALL="sudo yum install -y"
 elif command -v pacman &>/dev/null; then
-  PKG_MGR="pacman"
-  PKG_INSTALL="sudo pacman -S --noconfirm"
+  PKG_MGR="pacman";  PKG_INSTALL="sudo pacman -S --noconfirm"
 else
   err "未找到受支持的包管理器 (apt/dnf/yum/pacman)"
   exit 1
@@ -143,73 +157,78 @@ elif [[ -d /dev/kfd ]] && [[ -d /dev/dri ]]; then
 fi
 
 # ================================================================
-# 2. 安装基础系统依赖（不含 FFmpeg）
+# 2. 安装基础系统依赖
 # ================================================================
 log "安装基础系统依赖..."
 
 case "$PKG_MGR" in
-  apt-get)  $PKG_INSTALL curl git wget xz-utils build-essential pkg-config libssl-dev ;;
-  dnf|yum)  $PKG_INSTALL curl git wget xz gcc gcc-c++ make pkgconfig openssl-devel ;;
-  pacman)   $PKG_INSTALL curl git wget xz base-devel openssl ;;
+  apt-get)
+    sudo apt-get update
+    $PKG_INSTALL curl git wget xz-utils build-essential pkg-config libssl-dev
+    ;;
+  dnf|yum)
+    $PKG_INSTALL curl git wget xz gcc gcc-c++ make pkgconfig openssl-devel
+    ;;
+  pacman)
+    $PKG_INSTALL curl git wget xz base-devel openssl
+    ;;
 esac
 
 # ================================================================
-# 3. 安装 FFmpeg 静态包（>= 5.x）
+# 3. 检查/安装 FFmpeg
 # ================================================================
 if $SKIP_FFMPEG; then
   warn "--skip-ffmpeg 已指定，跳过 FFmpeg 安装"
 fi
 
 if ! $SKIP_FFMPEG; then
-  log "安装 FFmpeg 静态构建（${FFMPEG_VERSION} release）..."
-
-  if command -v ffmpeg &>/dev/null && command -v ffprobe &>/dev/null; then
-    CURRENT_MAJOR=$(ffmpeg -version 2>/dev/null | head -1 | sed -n 's/.*ffmpeg version \([0-9]*\).*/\1/p')
-    if [[ -n "$CURRENT_MAJOR" && "$CURRENT_MAJOR" -ge "$FFMPEG_MIN_MAJOR" ]]; then
-      log "已检测到满足要求的 FFmpeg: $(ffmpeg -version 2>&1 | head -1)"
-    else
-      warn "现有 FFmpeg 版本过低（major=${CURRENT_MAJOR:-unknown}），将安装静态包覆盖"
-    fi
-  fi
+  log "检查 FFmpeg..."
 
   INSTALL_FFMPEG=true
-  if [[ -x /usr/local/bin/ffmpeg ]]; then
-    LOCAL_MAJOR=$(/usr/local/bin/ffmpeg -version 2>/dev/null | head -1 | sed -n 's/.*ffmpeg version \([0-9]*\).*/\1/p')
-    if [[ -n "$LOCAL_MAJOR" && "$LOCAL_MAJOR" -ge "$FFMPEG_MIN_MAJOR" ]]; then
+
+  if command -v ffmpeg &>/dev/null && command -v ffprobe &>/dev/null; then
+    FFMPEG_VER_LINE=$(ffmpeg -version 2>/dev/null | head -1)
+    CURRENT_MAJOR=$(parse_ffmpeg_major "$FFMPEG_VER_LINE")
+    if [[ -n "$CURRENT_MAJOR" && "$CURRENT_MAJOR" -ge "$FFMPEG_MIN_MAJOR" ]]; then
+      log "已检测到满足要求的 FFmpeg: $FFMPEG_VER_LINE"
       INSTALL_FFMPEG=false
-      log "已存在 /usr/local/bin/ffmpeg (major=$LOCAL_MAJOR)，跳过安装"
+    else
+      warn "现有 FFmpeg 版本不满足要求（major=$CURRENT_MAJOR），将安装静态包覆盖"
     fi
+  else
+    log "未检测到 ffmpeg，将安装静态包"
   fi
 
   if $INSTALL_FFMPEG; then
+    log "安装 FFmpeg 静态构建（BtbN latest, linux64-gpl）..."
+
     sudo mkdir -p "$FFMPEG_INSTALL_DIR"
     cd "$FFMPEG_INSTALL_DIR"
 
-    if [[ ! -f "$FFMPEG_ARCHIVE" ]]; then
+    if [[ ! -f "$FFMPEG_ARCHIVE" ]] || ! xz -t "$FFMPEG_ARCHIVE" 2>/dev/null; then
       log "下载 $FFMPEG_URL ..."
-      sudo wget -q "$FFMPEG_URL"
-      sudo wget -q "${FFMPEG_URL}.md5"
-    fi
-
-    if sudo md5sum -c "${FFMPEG_ARCHIVE}.md5" 2>/dev/null | grep -q "OK"; then
-      log "MD5 校验通过"
-    else
-      err "MD5 校验失败，请检查下载文件"
-      exit 1
+      sudo rm -f "$FFMPEG_ARCHIVE"
+      sudo curl -fL --retry 3 --retry-delay 5 --connect-timeout 30 \
+        -o "$FFMPEG_ARCHIVE" "$FFMPEG_URL"
+      if ! xz -t "$FFMPEG_ARCHIVE" 2>/dev/null; then
+        err "下载的 FFmpeg 压缩包损坏: $FFMPEG_ARCHIVE"
+        sudo rm -f "$FFMPEG_ARCHIVE"
+        exit 1
+      fi
     fi
 
     sudo tar xf "$FFMPEG_ARCHIVE"
-    FFMPEG_DIR=$(find . -maxdepth 1 -type d -name "ffmpeg-*-static" | head -1)
-    if [[ -z "$FFMPEG_DIR" ]]; then
-      err "未找到解压后的 ffmpeg-*-static 目录"
+    FFMPEG_DIR="$FFMPEG_INSTALL_DIR/$FFMPEG_DIR_NAME"
+    if [[ ! -d "$FFMPEG_DIR" ]]; then
+      err "未找到解压后的目录: $FFMPEG_DIR"
       exit 1
     fi
-    cd "$FFMPEG_DIR"
 
-    sudo cp ffmpeg ffprobe /usr/local/bin/
+    sudo cp "$FFMPEG_DIR/bin/ffmpeg"  /usr/local/bin/
+    sudo cp "$FFMPEG_DIR/bin/ffprobe" /usr/local/bin/
     sudo chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
-    log "FFmpeg 静态包安装完成"
+    log "FFmpeg 静态包安装完成（gpl 变体）"
   fi
 fi
 
@@ -221,35 +240,104 @@ if ! command -v ffmpeg &>/dev/null || ! command -v ffprobe &>/dev/null; then
   exit 1
 fi
 
-FFMPEG_MAJOR=$(ffmpeg -version 2>/dev/null | head -1 | sed -n 's/.*ffmpeg version \([0-9]*\).*/\1/p')
+FFMPEG_VER_LINE=$(ffmpeg -version 2>/dev/null | head -1)
+FFMPEG_MAJOR=$(parse_ffmpeg_major "$FFMPEG_VER_LINE")
 if [[ -z "$FFMPEG_MAJOR" || "$FFMPEG_MAJOR" -lt "$FFMPEG_MIN_MAJOR" ]]; then
-  err "FFmpeg 版本不满足要求（需要 >= ${FFMPEG_MIN_MAJOR}.0，当前: $(ffmpeg -version 2>&1 | head -1)）"
+  err "FFmpeg 版本不满足要求（需要 >= ${FFMPEG_MIN_MAJOR}.0）"
+  err "当前: $FFMPEG_VER_LINE"
   exit 1
 fi
-log "ffmpeg: $(ffmpeg -version 2>&1 | head -1)"
+log "ffmpeg: $FFMPEG_VER_LINE"
 log "ffprobe: $(ffprobe -version 2>&1 | head -1)"
 
 # ================================================================
-# 4. 安装 Rust 工具链
+# 4. 检查/安装 Rust 工具链（华为云镜像 + 官方源回退）
 # ================================================================
 log "检查 Rust 工具链..."
 
-if ! command -v cargo &>/dev/null; then
-  log "安装 rustup..."
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-  # shellcheck source=/dev/null
-  source "$HOME/.cargo/env"
+source "$HOME/.cargo/env"
+
+# 已安装则完全跳过安装流程
+if command -v rustup &>/dev/null && command -v cargo &>/dev/null; then
+  log "已检测到 Rust 工具链，跳过安装"
+  log "  rustup: $(rustup --version 2>&1 | head -1)"
+  log "  cargo:  $(cargo --version 2>&1 | head -1)"
+  log "  rustc:  $(rustc --version 2>&1 | head -1)"
+
+  # 确保 PATH 包含 cargo bin（有些环境 rustup 装了但 PATH 未刷新）
+  export PATH="$HOME/.cargo/bin:$PATH"
+
+  # 仍导出镜像变量，供后续 rustup toolchain install 使用
+  export RUSTUP_DIST_SERVER
+  export RUSTUP_UPDATE_ROOT
+
+  SKIP_RUST_INSTALL=true
+else
+  SKIP_RUST_INSTALL=false
+  log "  RUSTUP_DIST_SERVER = $RUSTUP_DIST_SERVER"
+  log "  RUSTUP_UPDATE_ROOT = $RUSTUP_UPDATE_ROOT"
+  log "未检测到完整 Rust 工具链，将安装..."
 fi
 
-export PATH="$HOME/.cargo/bin:$PATH"
+if ! $SKIP_RUST_INSTALL; then
+  # 缺 rustup 或 cargo，先装 rustup
+  if ! command -v rustup &>/dev/null; then
+    log "安装 rustup（使用华为云镜像）..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- -y --default-toolchain none --no-modify-path
+    # shellcheck source=/dev/null
+    source "$HOME/.cargo/env"
+  else
+    log "已存在 rustup，跳过 rustup 安装"
+  fi
 
-if ! command -v rustup &>/dev/null; then
-  err "rustup 未安装，请先安装 rustup"
-  exit 1
+  export PATH="$HOME/.cargo/bin:$PATH"
+  export RUSTUP_DIST_SERVER
+  export RUSTUP_UPDATE_ROOT
+
+  if ! command -v rustup &>/dev/null; then
+    err "rustup 未安装，请先安装 rustup"
+    exit 1
+  fi
+
+  log "rustup: $(rustup --version 2>&1)"
 fi
 
-log "rustup: $(rustup --version 2>&1)"
+# ---------- 安装 rust-toolchain.toml 锁定的工具链 ----------
+# 无论 rustup 是否新装，都要确保锁定版本存在
+TOOLCHAIN_CHANNEL="1.94.0"
+if [[ -f "rust-toolchain.toml" ]]; then
+  PARSED_CHANNEL=$(grep -E '^\s*channel\s*=' rust-toolchain.toml 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+  if [[ -n "$PARSED_CHANNEL" ]]; then
+    TOOLCHAIN_CHANNEL="$PARSED_CHANNEL"
+  fi
+fi
+
+# 若该工具链已安装，直接跳过
+if rustup toolchain list 2>/dev/null | grep -qE "^${TOOLCHAIN_CHANNEL}(-|\s|$)"; then
+  log "工具链 $TOOLCHAIN_CHANNEL 已安装，跳过下载"
+else
+  log "安装工具链 $TOOLCHAIN_CHANNEL（先试华为云镜像）..."
+  if rustup toolchain install "$TOOLCHAIN_CHANNEL" 2>/dev/null; then
+    log "工具链 $TOOLCHAIN_CHANNEL 安装成功（华为云镜像）"
+  else
+    warn "华为云镜像上没有工具链 $TOOLCHAIN_CHANNEL，回退到官方源..."
+    rm -rf "$HOME/.rustup/tmp/"* 2>/dev/null || true
+    if RUSTUP_DIST_SERVER= RUSTUP_UPDATE_ROOT= rustup toolchain install "$TOOLCHAIN_CHANNEL"; then
+      log "工具链 $TOOLCHAIN_CHANNEL 安装成功（官方源）"
+    else
+      err "工具链 $TOOLCHAIN_CHANNEL 安装失败"
+      exit 1
+    fi
+  fi
+fi
+
+if [[ "$TOOLCHAIN_CHANNEL" != "stable" && "$TOOLCHAIN_CHANNEL" != "beta" && "$TOOLCHAIN_CHANNEL" != "nightly" ]]; then
+  rustup default "$TOOLCHAIN_CHANNEL" >/dev/null 2>&1 || true
+fi
+
 log "cargo: $(cargo --version 2>&1)"
+log "rustc: $(rustc --version 2>&1)"
 
 # ================================================================
 # 5. 克隆仓库
@@ -273,7 +361,7 @@ log "解析项目工具链 (rust-toolchain.toml)..."
 rustup show active-toolchain 2>/dev/null || rustup show
 
 # ================================================================
-# 6. 配置环境变量
+# 6. 配置 worker 环境变量
 # ================================================================
 log "配置 worker 环境变量..."
 
@@ -299,19 +387,90 @@ done
 
 if [[ ! -f "$FIXTURE" ]]; then
   err "测试 fixture 缺失: $FIXTURE"
-  err "请确认仓库完整克隆（git clone 后文件应存在）"
   exit 1
 fi
 
 # ================================================================
-# 7. 生成请求文件
+# 7. 检查 project 目录
+# ================================================================
+RUN_PROJECT_COMMANDS=false
+
+if [[ -d "$PROJECT_DIR" ]]; then
+  if [[ -f "$PROJECT_DIR/project.json" ]]; then
+    RUN_PROJECT_COMMANDS=true
+    log "检测到 project: $PROJECT_DIR"
+  else
+    warn "目录存在但缺少 project.json，跳过 project 命令: $PROJECT_DIR"
+  fi
+else
+  warn "未检测到 project 目录: $PROJECT_DIR"
+  warn "extract_frames/extract_features/train/render 将被跳过"
+  warn "如需测试这些命令，请用 --project-dir 指定一个已初始化的项目"
+fi
+
+# ================================================================
+# 8. 生成请求文件
 # ================================================================
 log "生成请求文件..."
 
 mkdir -p target/benchmark
 mkdir -p "$REPORT_DIR"
 
-cat > "$REQUEST_FILE" <<'JSON'
+if $RUN_PROJECT_COMMANDS; then
+  cat > "$REQUEST_FILE" <<JSON
+[
+  {
+    "command": "probe_media",
+    "params": {
+      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
+    }
+  },
+  {
+    "command": "normalize_media",
+    "params": {
+      "input": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
+      "output_dir": "target/benchmark/normalize-{{repeat}}"
+    }
+  },
+  {
+    "command": "extract_frames",
+    "params": {
+      "project_dir": "${PROJECT_DIR}",
+      "video": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
+    }
+  },
+  {
+    "command": "extract_features",
+    "params": {
+      "project_dir": "${PROJECT_DIR}",
+      "audio": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
+    }
+  },
+  {
+    "command": "train",
+    "params": {
+      "project_dir": "${PROJECT_DIR}",
+      "mode": "baseline",
+      "variant": "original_unet",
+      "epochs": 1,
+      "resume": false,
+      "batch_size": 1
+    }
+  },
+  {
+    "command": "render",
+    "params": {
+      "project_dir": "${PROJECT_DIR}",
+      "checkpoint": "${PROJECT_DIR}/checkpoints/latest.bin",
+      "audio": "tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4",
+      "output": "target/benchmark/render-{{repeat}}.mp4",
+      "max_output_frames": 30
+    }
+  }
+]
+JSON
+else
+  cat > "$REQUEST_FILE" <<'JSON'
 [
   {
     "command": "probe_media",
@@ -328,11 +487,17 @@ cat > "$REQUEST_FILE" <<'JSON'
   }
 ]
 JSON
+fi
 
 log "请求文件: $REQUEST_FILE"
+if $RUN_PROJECT_COMMANDS; then
+  log "  包含 6 条命令（含 project 命令）"
+else
+  log "  包含 2 条命令（仅媒体命令）"
+fi
 
 # ================================================================
-# 8. 首次构建
+# 9. 首次构建
 # ================================================================
 if $SKIP_BUILD; then
   warn "--skip-build 已指定，跳过 cargo build"
@@ -342,7 +507,7 @@ else
 fi
 
 # ================================================================
-# 9. 按后端运行基准测试
+# 10. 按后端运行基准测试（单个后端失败不中断）
 # ================================================================
 log "开始基准测试（repeats=$REPEATS，backends=${BACKENDS[*]}）..."
 
@@ -371,21 +536,24 @@ for backend in "${BACKENDS[@]}"; do
 
   REPORT_JSON="$REPORT_DIR/report-${backend}.json"
 
-  FEATHERTALK_WORKER_BACKEND="$backend" \
-  cargo run --locked -p feathertalk-benchmark -- \
-    --request-file "$REQUEST_FILE" \
-    --repeats "$REPEATS" \
-    --label "$backend" \
-    --backend "$RUN_BACKEND" \
-    --json \
-    | tee "$REPORT_JSON"
-
-  log "报告已保存: $REPORT_JSON"
+  if FEATHERTALK_WORKER_BACKEND="$backend" \
+     cargo run --locked -p feathertalk-benchmark -- \
+       --input "$FIXTURE" \
+       --project-root "$PROJECT_DIR" \
+       --repeats "$REPEATS" \
+       --label "$backend" \
+       --backend "$RUN_BACKEND" \
+       --json \
+       | tee "$REPORT_JSON"; then
+    log "报告已保存: $REPORT_JSON"
+  else
+    warn "后端 $backend 失败，继续下一个"
+  fi
   echo
 done
 
 # ================================================================
-# 10. 汇总
+# 11. 汇总
 # ================================================================
 log "基准测试完成。报告目录: $REPORT_DIR"
 ls -lh "$REPORT_DIR"/*.json 2>/dev/null || warn "未生成任何 JSON 报告"

@@ -17,6 +17,7 @@ path = "src/main.rs"
 clap = { workspace = true }
 feathertalk-domain = { path = "../../crates/feathertalk-domain" }
 feathertalk-media = { path = "../../crates/feathertalk-media" }
+feathertalk-project = { path = "../../crates/feathertalk-project" }
 feathertalk-worker = { path = "../../crates/feathertalk-worker" }
 serde = { workspace = true }
 serde_json = { workspace = true }
