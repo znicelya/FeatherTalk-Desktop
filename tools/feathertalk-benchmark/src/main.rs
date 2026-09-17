@@ -74,6 +74,7 @@ enum BackendArg {
     Cpu,
     Wgpu,
     Cuda,
+    Rocm,
 }
 
 impl BackendArg {
@@ -83,6 +84,7 @@ impl BackendArg {
             Self::Cpu => "cpu",
             Self::Wgpu => "wgpu",
             Self::Cuda => "cuda",
+            Self::Rocm => "rocm",
         }
     }
 }
@@ -152,4 +154,24 @@ fn print_report<T: serde::Serialize>(
 fn benchmark_failure(error: impl std::fmt::Display) -> ExitCode {
     eprintln!("benchmark failed: {error}");
     ExitCode::FAILURE
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn backend_flag_accepts_rocm() {
+        let arguments = Arguments::try_parse_from([
+            "feathertalk-benchmark",
+            "--backend",
+            "rocm",
+            "--repeats",
+            "0",
+        ])
+        .expect("rocm is a supported backend");
+        assert_eq!(arguments.backend, Some(BackendArg::Rocm));
+        assert_eq!(arguments.backend.unwrap().as_value(), "rocm");
+    }
 }

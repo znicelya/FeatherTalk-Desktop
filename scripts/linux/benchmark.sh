@@ -15,6 +15,8 @@ BACKENDS=("cpu" "wgpu" "cuda" "rocm")
 PROJECT_ROOT="target/benchmark/full-pipeline"
 FIXTURE="tools/feathertalk-benchmark/fixtures/kanghui_5s.mp4"
 REPORT_DIR="target/benchmark/reports"
+TIMEOUT_SECS=10800
+EPOCHS=3
 
 # FFmpeg 静态包配置（BtbN/FFmpeg-Builds，gpl 变体）
 FFMPEG_INSTALL_DIR="/opt/ffmpeg"
@@ -44,6 +46,8 @@ FeatherTalk Linux 基准测试脚本
   --project-root <PATH>    full pipeline 临时项目根目录（默认: $PROJECT_ROOT）
   --skip-ffmpeg           跳过 FFmpeg 静态包安装
   --skip-build            跳过 cargo build
+  --timeout-secs <N>     单次命令超时秒数（默认: $TIMEOUT_SECS）
+  --epochs <N>           训练 epoch 数（默认: $EPOCHS）
   -h, --help              显示帮助
 
 示例:
@@ -80,6 +84,8 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --project-root) PROJECT_ROOT="$2"; shift 2 ;;
+    --timeout-secs) TIMEOUT_SECS="$2"; shift 2 ;;
+    --epochs)       EPOCHS="$2"; shift 2 ;;
     --skip-ffmpeg)  SKIP_FFMPEG=true; shift ;;
     --skip-build)   SKIP_BUILD=true; shift ;;
     -h|--help)      usage; exit 0 ;;
@@ -153,6 +159,15 @@ elif [[ -d /dev/kfd ]] && [[ -d /dev/dri ]]; then
   HAS_AMD=true
   log "检测到 AMD GPU 设备节点 (/dev/kfd, /dev/dri)"
 fi
+
+HAS_VULKAN=false
+if command -v vulkaninfo >/dev/null 2>&1 && { vulkaninfo --summary >/dev/null 2>&1 || vulkaninfo >/dev/null 2>&1; }; then
+  HAS_VULKAN=true
+  log "detected Vulkan"
+else
+  log "no Vulkan runtime/adapters detected"
+fi
+
 
 # ================================================================
 # 2. 安装基础系统依赖
@@ -253,7 +268,9 @@ log "ffprobe: $(ffprobe -version 2>&1 | head -1)"
 # ================================================================
 log "检查 Rust 工具链..."
 
-source "$HOME/.cargo/env"
+if [ -f "$HOME/.cargo/env" ]; then
+    source "$HOME/.cargo/env"
+fi
 
 # 已安装则完全跳过安装流程
 if command -v rustup &>/dev/null && command -v cargo &>/dev/null; then
@@ -404,7 +421,7 @@ if $SKIP_BUILD; then
   warn "--skip-build 已指定，跳过 cargo build"
 else
   log "构建 feathertalk-benchmark（首次编译可能较久）..."
-  cargo build --locked -p feathertalk-benchmark
+  cargo build --locked --release -p feathertalk-benchmark
 fi
 
 # ================================================================
@@ -414,6 +431,12 @@ log "开始基准测试（repeats=$REPEATS，backends=${BACKENDS[*]}）..."
 
 for backend in "${BACKENDS[@]}"; do
   case "$backend" in
+    wgpu)
+      if ! $HAS_VULKAN; then
+        warn "skip wgpu: no Vulkan runtime/adapters detected"
+        continue
+      fi
+      ;;
     cuda)
       if ! $HAS_NVIDIA; then
         warn "跳过 cuda: 未检测到 NVIDIA GPU"
@@ -430,24 +453,23 @@ for backend in "${BACKENDS[@]}"; do
 
   log "===== 后端: $backend ====="
 
-  RUN_BACKEND="$backend"
-  if [[ "$backend" == "rocm" ]]; then
-    RUN_BACKEND="auto"
-  fi
-
   REPORT_JSON="$REPORT_DIR/report-${backend}.json"
 
   if FEATHERTALK_WORKER_BACKEND="$backend" \
-     cargo run --locked -p feathertalk-benchmark -- \
+     cargo run --locked --release -p feathertalk-benchmark -- \
        --input "$FIXTURE" \
        --project-root "$PROJECT_ROOT" \
        --repeats "$REPEATS" \
+       --epochs "$EPOCHS" \
+       --timeout-secs "$TIMEOUT_SECS" \
        --label "$backend" \
-       --backend "$RUN_BACKEND" \
+       --backend "$backend" \
        --json \
-       | tee "$REPORT_JSON"; then
+       > "$REPORT_JSON"; then
     log "报告已保存: $REPORT_JSON"
   else
+    rm -f "$REPORT_JSON"
+
     warn "后端 $backend 失败，继续下一个"
   fi
   echo

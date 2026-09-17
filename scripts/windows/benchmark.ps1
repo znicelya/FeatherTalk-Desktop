@@ -53,6 +53,7 @@ param(
     [string]$Backends = "cpu,wgpu,cuda,rocm",
     [string]$ProjectRoot = "target\benchmark\full-pipeline",
     [int]$Epochs = 1,
+    [int]$TimeoutSecs = 10800,
     [int]$MaxOutputFrames = 0,
     [switch]$KeepProjects,
     [switch]$SkipFfmpeg,
@@ -164,6 +165,14 @@ try {
     }
 } catch { }
 if (-not $HasAmd) { Write-Log "未检测到 AMD GPU" }
+
+$HasVulkan = $false
+if (Get-Command vulkaninfo -ErrorAction SilentlyContinue) {
+    $null = Invoke-Native vulkaninfo --summary
+    if ($LASTEXITCODE -eq 0) { $HasVulkan = $true }
+}
+if (-not $HasVulkan) { Write-Log "未检测到 Vulkan 运行时/适配器" }
+else { Write-Log "检测到 Vulkan" }
 
 # ================================================================
 # 2. 安装 FFmpeg 静态包
@@ -352,7 +361,7 @@ if ($SkipBuild) {
     Write-Warn "-SkipBuild 已指定，跳过 cargo build"
 } else {
     Write-Log "构建 feathertalk-benchmark（首次编译可能较久）..."
-    Invoke-Native cargo build --locked -p feathertalk-benchmark | ForEach-Object { Write-Host $_ }
+    Invoke-Native cargo build --locked --release -p feathertalk-benchmark | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) {
         Write-Err "构建失败"
         exit 1
@@ -365,6 +374,10 @@ if ($SkipBuild) {
 Write-Log "开始基准测试（repeats=$Repeats，backends=$($BackendList -join ',')）..."
 
 foreach ($backend in $BackendList) {
+    if ($backend -eq "wgpu" -and -not $HasVulkan) {
+        Write-Warn "跳过 wgpu: 未检测到 Vulkan 运行时/适配器"
+        continue
+    }
     if ($backend -eq "cuda" -and -not $HasNvidia) {
         Write-Warn "跳过 cuda: 未检测到 NVIDIA GPU"
         continue
@@ -376,22 +389,19 @@ foreach ($backend in $BackendList) {
 
     Write-Log "===== 后端: $backend ====="
 
-    # ROCm 通过环境变量控制（--backend 只支持 auto/cpu/wgpu/cuda）
-    $runBackend = $backend
-    if ($backend -eq "rocm") { $runBackend = "auto" }
-
     $reportJson = Join-Path $ReportDir "report-$backend.json"
 
     $env:FEATHERTALK_WORKER_BACKEND = $backend
 
     $args = @(
-        "run", "--locked", "-p", "feathertalk-benchmark", "--",
+        "run", "--locked", "--release", "-p", "feathertalk-benchmark", "--",
         "--input", $Fixture,
         "--project-root", $ProjectRoot,
         "--repeats", $Repeats,
         "--epochs", $Epochs,
+        "--timeout-secs", $TimeoutSecs,
         "--label", $backend,
-        "--backend", $runBackend,
+        "--backend", $backend,
         "--json"
     )
     if ($MaxOutputFrames -gt 0) {
@@ -402,11 +412,12 @@ foreach ($backend in $BackendList) {
     }
 
     $output = Invoke-Native cargo @args
-    $output | Out-File -FilePath $reportJson -Encoding utf8
-
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn "后端 $backend 测试失败，检查 $reportJson"
+        Write-Warn "后端 $backend 测试失败"
+        if (Test-Path $reportJson) { Remove-Item -LiteralPath $reportJson -Force }
+        Write-Host $output
     } else {
+        $output | Out-File -FilePath $reportJson -Encoding utf8
         Write-Log "报告已保存: $reportJson"
     }
     Write-Host ""

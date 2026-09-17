@@ -22,7 +22,7 @@ mod platform {
             Ok(()) => Ok(()),
             Err(error) => {
                 let error = io::Error::from(error);
-                if unsupported_flag_error(&error) {
+                if retryable_rename_error(&error) {
                     rename_fallback(source, destination)
                 } else {
                     Err(error)
@@ -35,29 +35,66 @@ mod platform {
     /// normal rename would work. The fallback rechecks for the destination so
     /// the no-clobber contract is preserved where the filesystem allows.
     fn rename_fallback(source: &Path, destination: &Path) -> io::Result<()> {
-        match fs::symlink_metadata(destination) {
-            Ok(_) => Err(io::Error::from(ErrorKind::AlreadyExists)),
-            Err(error) if error.kind() == ErrorKind::NotFound => {}
-            Err(error) => return Err(error),
+        ensure_absent(destination)?;
+        match fs::rename(source, destination) {
+            Ok(()) => Ok(()),
+            Err(error) if cross_device_error(&error) => copy_noreplace(source, destination),
+            Err(error) => Err(error),
         }
-        fs::rename(source, destination)
+    }
+
+    fn copy_noreplace(source: &Path, destination: &Path) -> io::Result<()> {
+        ensure_absent(destination)?;
+        let mut from = fs::File::open(source)?;
+        let mut to = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(destination)?;
+        let copy_result = io::copy(&mut from, &mut to).and_then(|_| to.sync_all());
+        if let Err(error) = copy_result {
+            drop(to);
+            let _ = fs::remove_file(destination);
+            return Err(error);
+        }
+        drop(to);
+        fs::remove_file(source)
+    }
+
+    fn ensure_absent(path: &Path) -> io::Result<()> {
+        match fs::symlink_metadata(path) {
+            Ok(_) => Err(io::Error::from(ErrorKind::AlreadyExists)),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn retryable_rename_error(error: &io::Error) -> bool {
+        unsupported_flag_error(error) || cross_device_error(error)
     }
 
     fn unsupported_flag_error(error: &io::Error) -> bool {
+        matches_os_error(
+            error,
+            &[Errno::INVAL, Errno::NOSYS, Errno::OPNOTSUPP, Errno::PERM],
+        )
+    }
+
+    fn cross_device_error(error: &io::Error) -> bool {
+        matches_os_error(error, &[Errno::XDEV])
+    }
+
+    fn matches_os_error(error: &io::Error, codes: &[Errno]) -> bool {
         let Some(code) = error.raw_os_error() else {
             return false;
         };
-        [
-            Errno::INVAL.raw_os_error(),
-            Errno::NOSYS.raw_os_error(),
-            Errno::OPNOTSUPP.raw_os_error(),
-        ]
-        .contains(&code)
+        codes.iter().any(|errno| errno.raw_os_error() == code)
     }
 
     #[cfg(test)]
     mod tests {
-        use super::rename_fallback;
+        use super::{copy_noreplace, rename_fallback, retryable_rename_error};
+        use rustix::io::Errno;
+        use std::io;
 
         #[test]
         fn fallback_preserves_an_existing_destination() {
@@ -82,6 +119,50 @@ mod platform {
             rename_fallback(&source, &destination).unwrap();
             assert!(!source.exists());
             assert_eq!(std::fs::read(destination).unwrap(), b"staging");
+        }
+
+        #[test]
+        fn copy_fallback_preserves_an_existing_destination() {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.tmp");
+            let destination = directory.path().join("destination.mp4");
+            std::fs::write(&source, b"staging").unwrap();
+            std::fs::write(&destination, b"sentinel").unwrap();
+
+            assert!(copy_noreplace(&source, &destination).is_err());
+            assert_eq!(std::fs::read(&destination).unwrap(), b"sentinel");
+            assert_eq!(std::fs::read(&source).unwrap(), b"staging");
+        }
+
+        #[test]
+        fn copy_fallback_moves_into_an_absent_destination() {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source.tmp");
+            let destination = directory.path().join("destination.mp4");
+            std::fs::write(&source, b"staging").unwrap();
+
+            copy_noreplace(&source, &destination).unwrap();
+            assert!(!source.exists());
+            assert_eq!(std::fs::read(destination).unwrap(), b"staging");
+        }
+
+        #[test]
+        fn overlay_rename_failures_are_retried() {
+            for errno in [
+                Errno::INVAL,
+                Errno::NOSYS,
+                Errno::OPNOTSUPP,
+                Errno::PERM,
+                Errno::XDEV,
+            ] {
+                let error = io::Error::from_raw_os_error(errno.raw_os_error());
+                assert!(
+                    retryable_rename_error(&error),
+                    "{errno:?} should fall back instead of failing the publish"
+                );
+            }
+            let unrelated = io::Error::from_raw_os_error(Errno::BUSY.raw_os_error());
+            assert!(!retryable_rename_error(&unrelated));
         }
     }
 }

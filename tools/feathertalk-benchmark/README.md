@@ -161,11 +161,11 @@ cargo run --locked -p feathertalk-benchmark -- `
 | `--repeats <N>` | 首次执行之后的预热重复次数，`0` 表示只跑一次 | `3` |
 | `--timeout-secs <F>` | 单次命令超时秒数，超时后取消该命令并报错 | `900` |
 | `--label <STRING>` | 报告标签，用于区分不同批次 | `main` |
-| `--backend <auto\|cpu\|wgpu\|cuda>` | 覆盖计算后端（优先级高于环境变量） | 无（沿用 worker 环境变量） |
+| `--backend <auto\|cpu\|wgpu\|cuda\|rocm>` | 覆盖计算后端（优先级高于环境变量） | 无（沿用 worker 环境变量） |
 | `--adapter <ID>` | 指定计算适配器 ID | 无 |
 | `--json` | 输出机器可读的 JSON 报告 | 关闭（输出表格） |
 
-> 说明：`--backend` 只提供 `auto`/`cpu`/`wgpu`/`cuda` 四个选项；Linux ROCm 后端请改用 `FEATHERTALK_WORKER_BACKEND=rocm` 环境变量。
+> 说明：`--backend` 提供 `auto`/`cpu`/`wgpu`/`cuda`/`rocm`。显式指定的后端在设备不可用时会直接报错，不会自动换用其他设备。
 
 ### 6. 阅读报告
 
@@ -199,9 +199,10 @@ cargo run --locked -p feathertalk-benchmark -- `
 用 `--backend` 在同一批请求上分别测量，配合不同 `--label` 区分报告：
 
 ```powershell
-cargo run --locked -p feathertalk-benchmark -- --request-file requests.json --backend cpu  --label cpu  --json | Out-File report-cpu.json
-cargo run --locked -p feathertalk-benchmark -- --request-file requests.json --backend wgpu --label wgpu --json | Out-File report-wgpu.json
-cargo run --locked -p feathertalk-benchmark -- --request-file requests.json --backend cuda --label cuda --json | Out-File report-cuda.json
+cargo run --locked --release -p feathertalk-benchmark -- --request-file requests.json --backend cpu  --label cpu  --json | Out-File report-cpu.json
+cargo run --locked --release -p feathertalk-benchmark -- --request-file requests.json --backend wgpu --label wgpu --json | Out-File report-wgpu.json
+cargo run --locked --release -p feathertalk-benchmark -- --request-file requests.json --backend cuda --label cuda --json | Out-File report-cuda.json
+cargo run --locked --release -p feathertalk-benchmark -- --request-file requests.json --backend rocm --label rocm --json | Out-File report-rocm.json
 ```
 
 指定 GPU 设备时用 `--adapter <ID>`，ID 来自 `cargo run --locked -p feathertalk-cli -- capabilities` 的适配器列表。显式指定的后端或设备不可用时**会直接报错**，不会自动换用其他设备。
