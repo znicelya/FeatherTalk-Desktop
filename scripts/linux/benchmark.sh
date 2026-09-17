@@ -20,7 +20,7 @@ REPORT_DIR="target/benchmark/reports"
 FFMPEG_INSTALL_DIR="/opt/ffmpeg"
 FFMPEG_VARIANT="gpl"
 FFMPEG_ARCHIVE="ffmpeg-master-latest-linux64-${FFMPEG_VARIANT}.tar.xz"
-FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_ARCHIVE}"
+FFMPEG_URL="https://gh-proxy.org/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_ARCHIVE}"
 FFMPEG_DIR_NAME="ffmpeg-master-latest-linux64-${FFMPEG_VARIANT}"
 FFMPEG_MIN_MAJOR=5
 
