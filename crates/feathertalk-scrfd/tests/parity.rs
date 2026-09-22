@@ -1,9 +1,6 @@
 mod support;
 
-use burn::{
-    backend::Flex,
-    tensor::{Tensor, TensorData},
-};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_scrfd::ScrfdModel;
 
 #[test]

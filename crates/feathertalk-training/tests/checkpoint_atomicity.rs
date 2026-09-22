@@ -1,34 +1,34 @@
 use std::{
     collections::BTreeMap,
     fs,
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig},
     optim::{AdamConfig, ModuleOptimizer},
-    tensor::Tensor};
+};
 use feathertalk_training::{
     CheckpointCompatibility, CheckpointDescriptor, DATA_LOADER_STATE_SCHEMA_VERSION,
     DataLoaderConfig, DataLoaderState, Provenance, RandomAlgorithm, RestoredTrainingState,
     SamplingConfig, SamplingKind, TRAINING_STATE_SCHEMA_VERSION, TrainingCheckpointState,
     TrainingConfig, TrainingError, TrainingMode, load_training_checkpoint,
-    save_training_checkpoint};
+    save_training_checkpoint,
+};
 
-type CpuBackend = burn::backend::Flex;
-type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
 type TinyOptimizer = ModuleOptimizer;
 
 #[derive(Module, Debug)]
 struct TinyModel {
-    linear: Linear}
+    linear: Linear,
+}
 
-fn model_and_optimizer(
-    device: &burn::tensor::Device,
-) -> (TinyModel, TinyOptimizer) {
+fn model_and_optimizer(device: &burn::tensor::Device) -> (TinyModel, TinyOptimizer) {
     (
         TinyModel {
-            linear: LinearConfig::new(2, 1).init(device)},
+            linear: LinearConfig::new(2, 1).init(device),
+        },
         AdamConfig::new().init(),
     )
 }
@@ -47,10 +47,13 @@ fn state() -> TrainingCheckpointState {
                 seed: 7,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride: 0}},
+                    temporal_stride: 0,
+                },
+            },
             frame_count: 2,
             epoch: 0,
-            next_position: 0},
+            next_position: 0,
+        },
         training_config: TrainingConfig {
             mode: TrainingMode::Baseline,
             batch_size: 1,
@@ -60,11 +63,15 @@ fn state() -> TrainingCheckpointState {
             mouth_weight: 0.0,
             temporal_weight: 0.0,
             temporal_mouth_weight: 0.0,
-            perceptual_weight: 0.01},
+            perceptual_weight: 0.01,
+        },
         asset_provenance: Provenance {
-            entries: BTreeMap::new()},
+            entries: BTreeMap::new(),
+        },
         model_provenance: Provenance {
-            entries: BTreeMap::new()}}
+            entries: BTreeMap::new(),
+        },
+    }
 }
 
 fn oversized_state() -> TrainingCheckpointState {
@@ -91,7 +98,8 @@ struct SavedCheckpoint {
     root: tempfile::TempDir,
     destination: PathBuf,
     device: burn::tensor::Device,
-    state: TrainingCheckpointState}
+    state: TrainingCheckpointState,
+}
 
 fn saved_checkpoint() -> SavedCheckpoint {
     let root = tempfile::tempdir().unwrap();
@@ -111,7 +119,8 @@ fn saved_checkpoint() -> SavedCheckpoint {
         root,
         destination,
         device,
-        state}
+        state,
+    }
 }
 
 fn load_saved(
@@ -131,7 +140,8 @@ fn load_saved(
 fn load_error(saved: &SavedCheckpoint, expected: &CheckpointCompatibility) -> TrainingError {
     match load_saved(saved, expected) {
         Ok(_) => panic!("checkpoint load unexpectedly succeeded"),
-        Err(error) => error}
+        Err(error) => error,
+    }
 }
 
 fn invalidate_model_record(saved: &SavedCheckpoint) {
@@ -207,14 +217,9 @@ fn save_publishes_exactly_four_files_and_returns_the_persisted_manifest() {
     let device = Default::default();
     let (model, optimizer) = model_and_optimizer(&device);
 
-    let manifest = save_training_checkpoint::<_, _>(
-        &destination,
-        &model,
-        &optimizer,
-        descriptor(),
-        state(),
-    )
-    .unwrap();
+    let manifest =
+        save_training_checkpoint::<_, _>(&destination, &model, &optimizer, descriptor(), state())
+            .unwrap();
 
     let mut names = fs::read_dir(&destination)
         .unwrap()
@@ -246,14 +251,9 @@ fn existing_destination_is_rejected_without_overwriting_it() {
     let device = Default::default();
     let (model, optimizer) = model_and_optimizer(&device);
 
-    let error = save_training_checkpoint::<_, _>(
-        &destination,
-        &model,
-        &optimizer,
-        descriptor(),
-        state(),
-    )
-    .unwrap_err();
+    let error =
+        save_training_checkpoint::<_, _>(&destination, &model, &optimizer, descriptor(), state())
+            .unwrap_err();
     assert!(matches!(error, TrainingError::CheckpointDirectory(_)));
     assert_eq!(fs::read(destination.join("sentinel")).unwrap(), b"old");
     assert!(staging_entries(root.path()).is_empty());
@@ -265,14 +265,8 @@ fn failed_second_save_preserves_every_existing_checkpoint_file() {
     let destination = root.path().join("checkpoint-000001");
     let device = Default::default();
     let (model, optimizer) = model_and_optimizer(&device);
-    save_training_checkpoint::<_, _>(
-        &destination,
-        &model,
-        &optimizer,
-        descriptor(),
-        state(),
-    )
-    .unwrap();
+    save_training_checkpoint::<_, _>(&destination, &model, &optimizer, descriptor(), state())
+        .unwrap();
 
     let before = [
         "manifest.json",
@@ -310,14 +304,9 @@ fn invalid_state_fails_before_staging_and_leaves_no_partial_directory() {
     let mut invalid = state();
     invalid.random_seed = 99;
 
-    let error = save_training_checkpoint::<_, _>(
-        &destination,
-        &model,
-        &optimizer,
-        descriptor(),
-        invalid,
-    )
-    .unwrap_err();
+    let error =
+        save_training_checkpoint::<_, _>(&destination, &model, &optimizer, descriptor(), invalid)
+            .unwrap_err();
     assert!(matches!(error, TrainingError::InvalidCheckpoint(_)));
     assert!(!destination.exists());
     assert!(staging_entries(root.path()).is_empty());
@@ -479,14 +468,9 @@ fn symlinked_destination_parent_is_rejected_without_writing_through_it() {
     let destination = linked_parent.join("checkpoint-000001");
     let device = Default::default();
     let (model, optimizer) = model_and_optimizer(&device);
-    let error = save_training_checkpoint::<_, _>(
-        &destination,
-        &model,
-        &optimizer,
-        descriptor(),
-        state(),
-    )
-    .unwrap_err();
+    let error =
+        save_training_checkpoint::<_, _>(&destination, &model, &optimizer, descriptor(), state())
+            .unwrap_err();
     assert!(matches!(error, TrainingError::CheckpointDirectory(_)));
     assert!(!real_parent.join("checkpoint-000001").exists());
     assert!(staging_entries(root.path()).is_empty());

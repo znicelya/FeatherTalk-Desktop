@@ -1,10 +1,11 @@
 use std::{
     collections::BTreeMap,
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
 use burn::nn::LinearConfig;
 use burn_store::ModuleSnapshot;
-use feathertalk_models::{PFLD_GhostOne, PfldConfig, backend::CpuBackend};
+use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 use feathertalk_weights::{PfldImportRequest, WeightImportError, import_pfld_checkpoint};
 
 fn checkpoint_path() -> PathBuf {
@@ -25,7 +26,12 @@ fn capture_module_data<M: ModuleSnapshot>(
     module
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
+        .map(|snapshot| {
+            (
+                snapshot.name.clone(),
+                burn_store::bridge::to_data(&snapshot).unwrap(),
+            )
+        })
         .collect()
 }
 
@@ -46,8 +52,7 @@ fn existing_destination_is_rejected_without_overwrite_or_model_mutation() {
     let mut model = PFLD_GhostOne::new(PfldConfig::production(), &device);
     let before = capture_module_data(&model);
 
-    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone()))
-        .unwrap_err();
+    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone())).unwrap_err();
 
     assert!(matches!(
         error,
@@ -68,8 +73,7 @@ fn incompatible_module_leaves_destination_absent_and_module_unchanged() {
     let mut model = LinearConfig::new(2, 2).init(&device);
     let before = capture_module_data(&model);
 
-    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone()))
-        .unwrap_err();
+    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone())).unwrap_err();
 
     assert!(matches!(
         error,

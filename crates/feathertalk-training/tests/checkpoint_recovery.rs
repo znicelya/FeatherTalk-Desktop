@@ -2,34 +2,35 @@ use burn::{
     module::{Initializer, Module, list_param_ids},
     nn::{Linear, LinearConfig},
     optim::{AdamConfig, GradientsParams, ModuleOptimizer},
-    tensor::{
-        Device, Tensor}};
+    tensor::{Device, Tensor},
+};
 use feathertalk_training::{
     CheckpointCompatibility, CheckpointDescriptor, DATA_LOADER_STATE_SCHEMA_VERSION,
     DataLoaderConfig, DataLoaderState, Provenance, RandomAlgorithm, RestoredCheckpointModel,
     RestoredTrainingState, SamplingConfig, SamplingKind, TRAINING_STATE_SCHEMA_VERSION,
     TrainingCheckpointState, TrainingConfig, TrainingMode, load_training_checkpoint,
-    load_training_checkpoint_model, read_training_checkpoint, save_training_checkpoint};
+    load_training_checkpoint_model, read_training_checkpoint, save_training_checkpoint,
+};
 use std::collections::BTreeMap;
-
-type CpuBackend = burn::backend::Flex;
-type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
 
 #[derive(Module, Debug)]
 struct TinyModel {
-    linear: Linear}
+    linear: Linear,
+}
 
 impl TinyModel {
     fn new(device: &burn::tensor::Device) -> Self {
         Self {
-            linear: LinearConfig::new(2, 1).init(device)}
+            linear: LinearConfig::new(2, 1).init(device),
+        }
     }
 
     fn deterministic(device: &burn::tensor::Device) -> Self {
         Self {
             linear: LinearConfig::new(2, 1)
                 .with_initializer(Initializer::Constant { value: 0.125 })
-                .init(device)}
+                .init(device),
+        }
     }
 
     fn forward(&self, input: Tensor<2>) -> Tensor<2> {
@@ -87,7 +88,8 @@ fn training_config() -> TrainingConfig {
         mouth_weight: 0.0,
         temporal_weight: 0.0,
         temporal_mouth_weight: 0.0,
-        perceptual_weight: 0.01}
+        perceptual_weight: 0.01,
+    }
 }
 
 fn state() -> TrainingCheckpointState {
@@ -104,15 +106,21 @@ fn state() -> TrainingCheckpointState {
                 seed: 7,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride: 0}},
+                    temporal_stride: 0,
+                },
+            },
             frame_count: 2,
             epoch: 0,
-            next_position: 0},
+            next_position: 0,
+        },
         training_config: training_config(),
         asset_provenance: Provenance {
-            entries: BTreeMap::new()},
+            entries: BTreeMap::new(),
+        },
         model_provenance: Provenance {
-            entries: BTreeMap::new()}}
+            entries: BTreeMap::new(),
+        },
+    }
 }
 
 #[test]
@@ -165,10 +173,8 @@ fn restored_adam_and_model_match_uninterrupted_next_step() {
     let target1 = [[-0.75]];
 
     // The uninterrupted reference path.
-    let (continuous_model, mut continuous_optimizer) = (
-        TinyModel::deterministic(&device),
-        AdamConfig::new().init(),
-    );
+    let (continuous_model, mut continuous_optimizer) =
+        (TinyModel::deterministic(&device), AdamConfig::new().init());
     let (continuous_model, first_loss) = train_step(
         continuous_model,
         &mut continuous_optimizer,
@@ -186,10 +192,8 @@ fn restored_adam_and_model_match_uninterrupted_next_step() {
 
     // The interrupted path uses the same initial values, then persists both
     // the model record and Adam's parameter-keyed momentum record.
-    let (interrupted_model, mut interrupted_optimizer) = (
-        TinyModel::deterministic(&device),
-        AdamConfig::new().init(),
-    );
+    let (interrupted_model, mut interrupted_optimizer) =
+        (TinyModel::deterministic(&device), AdamConfig::new().init());
     let (interrupted_model, interrupted_first_loss) = train_step(
         interrupted_model,
         &mut interrupted_optimizer,
@@ -280,10 +284,13 @@ fn progress_state() -> TrainingCheckpointState {
                 seed: 17,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride: 0}},
+                    temporal_stride: 0,
+                },
+            },
             frame_count: 5,
             epoch: 3,
-            next_position: 4},
+            next_position: 4,
+        },
         training_config: TrainingConfig {
             mode: TrainingMode::Baseline,
             batch_size: 2,
@@ -293,11 +300,15 @@ fn progress_state() -> TrainingCheckpointState {
             mouth_weight: 0.0,
             temporal_weight: 0.0,
             temporal_mouth_weight: 0.0,
-            perceptual_weight: 0.01},
+            perceptual_weight: 0.01,
+        },
         asset_provenance: Provenance {
-            entries: BTreeMap::new()},
+            entries: BTreeMap::new(),
+        },
         model_provenance: Provenance {
-            entries: BTreeMap::new()}}
+            entries: BTreeMap::new(),
+        },
+    }
 }
 
 /// A checkpoint of a model that has taken one step, so its parameters differ
@@ -310,14 +321,8 @@ fn saved_checkpoint(
     let mut optimizer = AdamConfig::new().init();
     let (model, _) = train_step(model, &mut optimizer, [[1.0, -2.0]], [[0.5]], device);
     let descriptor = CheckpointDescriptor::new("tiny", "tiny-v1", "0".repeat(64));
-    save_training_checkpoint::<_, _>(
-        directory,
-        &model,
-        &optimizer,
-        descriptor.clone(),
-        state(),
-    )
-    .unwrap();
+    save_training_checkpoint::<_, _>(directory, &model, &optimizer, descriptor.clone(), state())
+        .unwrap();
     (descriptor, model)
 }
 
@@ -345,13 +350,8 @@ fn a_model_only_load_restores_the_weights_and_leaves_the_template_alone() {
     let template = TinyModel::deterministic(&device);
     let fresh_values = model_parameter_values(&template);
 
-    let restored = load_training_checkpoint_model::<_>(
-        &checkpoint,
-        &template,
-        &device,
-        &descriptor,
-    )
-    .unwrap();
+    let restored =
+        load_training_checkpoint_model::<_>(&checkpoint, &template, &device, &descriptor).unwrap();
 
     assert_eq!(
         model_parameter_values(&restored.model),
@@ -371,13 +371,8 @@ fn a_model_only_load_refuses_a_descriptor_that_does_not_match() {
     let template = TinyModel::deterministic(&device);
     let other = CheckpointDescriptor::new("other", "tiny-v1", "0".repeat(64));
 
-    let error = load_training_checkpoint_model::<_>(
-        &checkpoint,
-        &template,
-        &device,
-        &other,
-    )
-    .expect_err("a checkpoint of another model is refused");
+    let error = load_training_checkpoint_model::<_>(&checkpoint, &template, &device, &other)
+        .expect_err("a checkpoint of another model is refused");
 
     assert!(
         matches!(
@@ -403,13 +398,8 @@ fn a_model_only_load_refuses_a_checkpoint_without_its_record() {
     let refused = read_training_checkpoint(&checkpoint)
         .expect_err("a checkpoint without its record is not a checkpoint");
     assert!(refused.to_string().contains("model.bpk"), "{refused}");
-    let error = load_training_checkpoint_model::<_>(
-        &checkpoint,
-        &template,
-        &device,
-        &descriptor,
-    )
-    .expect_err("a missing model record is refused");
+    let error = load_training_checkpoint_model::<_>(&checkpoint, &template, &device, &descriptor)
+        .expect_err("a missing model record is refused");
 
     let message = error.to_string();
     assert!(message.contains("model.bpk"), "{message}");
@@ -424,13 +414,7 @@ fn a_model_only_load_of_a_restored_checkpoint_carries_the_metadata_type() {
     let template = TinyModel::deterministic(&device);
 
     let restored: RestoredCheckpointModel<TinyModel> =
-        load_training_checkpoint_model::<_>(
-            &checkpoint,
-            &template,
-            &device,
-            &descriptor,
-        )
-        .unwrap();
+        load_training_checkpoint_model::<_>(&checkpoint, &template, &device, &descriptor).unwrap();
 
     assert_eq!(
         restored.metadata,

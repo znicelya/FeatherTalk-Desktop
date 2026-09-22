@@ -1,12 +1,13 @@
 use std::{
     fs::{self, OpenOptions},
     io::Write,
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
-use burn::backend::Flex;
 use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 use feathertalk_pfld::{
-    PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS, PfldRuntimeManifest};
+    PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS, PfldRuntimeManifest,
+};
 use feathertalk_weights::{PfldImportRequest, import_pfld_checkpoint};
 use sha2::{Digest, Sha256};
 

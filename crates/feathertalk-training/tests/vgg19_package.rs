@@ -3,17 +3,16 @@ use std::{fs, path::PathBuf};
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig, conv::Conv2d},
-    tensor::Tensor};
+};
 use burn_store::ModuleSnapshot;
 use feathertalk_training::{
     TrainingError, VGG19_ARCHITECTURE_VERSION, VGG19_MODEL_KIND, VGG19_PACKAGE_SCHEMA_VERSION,
     VGG19_SOURCE_URL, Vgg19Conv3_3, Vgg19FileManifest, Vgg19InputManifest, Vgg19LicenseBundle,
     Vgg19LicenseEntry, Vgg19PackageManifest, Vgg19SourceManifest, load_vgg19_package,
-    read_vgg19_manifest};
+    read_vgg19_manifest,
+};
 use feathertalk_weights::save_safetensors;
 use sha2::{Digest, Sha256};
-
-type CpuBackend = burn::backend::Flex;
 
 const MODEL_FILE_NAME: &str = "model.safetensors";
 const LICENSE_FILE_NAME: &str = "LICENSES.json";
@@ -33,11 +32,7 @@ fn valid_three_file_package_loads_all_fourteen_tensors() {
 #[test]
 fn loaded_vgg_parameters_are_marked_no_grad() {
     let fixture = valid_package();
-    let loaded = load_vgg19_package(
-        &fixture.directory,
-        &Default::default(),
-    )
-    .unwrap();
+    let loaded = load_vgg19_package(&fixture.directory, &Default::default()).unwrap();
 
     assert!(!loaded.conv1_1.weight.val().is_require_grad());
     assert!(
@@ -124,7 +119,8 @@ fn symlink_model_file_is_rejected_when_symlinks_are_available() {
         {
             return;
         }
-        Err(error) => panic!("failed to create test symlink: {error}")}
+        Err(error) => panic!("failed to create test symlink: {error}"),
+    }
 
     assert_invalid_package_contains(&fixture.directory, "symbolic link");
 }
@@ -151,7 +147,8 @@ fn missing_safetensors_tensor_is_rejected() {
         conv2_1: model.conv2_1,
         conv2_2: model.conv2_2,
         conv3_1: model.conv3_1,
-        conv3_2: model.conv3_2};
+        conv3_2: model.conv3_2,
+    };
     save_safetensors::<_>(&missing, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
     refresh_model_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -170,7 +167,8 @@ fn extra_safetensors_tensor_is_rejected() {
         conv3_1: model.conv3_1,
         conv3_2: model.conv3_2,
         conv3_3: model.conv3_3,
-        extra: LinearConfig::new(1, 1).init(&Default::default())};
+        extra: LinearConfig::new(1, 1).init(&Default::default()),
+    };
     save_safetensors::<_>(&extra, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
     refresh_model_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -184,7 +182,8 @@ fn empty_license_bundle_is_rejected() {
         &fixture.directory,
         &Vgg19LicenseBundle {
             schema_version: 1,
-            entries: Vec::new()},
+            entries: Vec::new(),
+        },
     );
     refresh_license_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -202,7 +201,9 @@ fn blank_license_fields_are_rejected() {
                 component: " ".to_owned(),
                 license_id: "LicenseRef-Test".to_owned(),
                 source_url: "https://example.invalid/test".to_owned(),
-                notice: "local test only".to_owned()}]},
+                notice: "local test only".to_owned(),
+            }],
+        },
     );
     refresh_license_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -222,7 +223,8 @@ struct PackageFixture {
     _temp: tempfile::TempDir,
     directory: PathBuf,
     original: Vgg19Conv3_3,
-    manifest: Vgg19PackageManifest}
+    manifest: Vgg19PackageManifest,
+}
 
 fn valid_package() -> PackageFixture {
     let temp = tempfile::tempdir().unwrap();
@@ -239,7 +241,9 @@ fn valid_package() -> PackageFixture {
             component: "local VGG19 test fixture".to_owned(),
             license_id: "LicenseRef-Test-Only".to_owned(),
             source_url: "https://example.invalid/vgg19".to_owned(),
-            notice: "Synthetic local package for loader tests only.".to_owned()}]};
+            notice: "Synthetic local package for loader tests only.".to_owned(),
+        }],
+    };
     write_license_bundle(&directory, &licenses);
 
     let manifest = Vgg19PackageManifest {
@@ -250,31 +254,36 @@ fn valid_package() -> PackageFixture {
             framework: "torchvision".to_owned(),
             weight_id: "VGG19_Weights.IMAGENET1K_V1".to_owned(),
             url: VGG19_SOURCE_URL.to_owned(),
-            sha256: "a".repeat(64)},
+            sha256: "a".repeat(64),
+        },
         input: Vgg19InputManifest {
             channels: 3,
             color_order: "bgr".to_owned(),
             value_range: "0..1".to_owned(),
-            normalization: "none".to_owned()},
+            normalization: "none".to_owned(),
+        },
         output_layer: "features.14".to_owned(),
         tensor_count: 14,
         total_elements: 1_735_488,
         model: file_manifest(&model_path),
-        licenses: file_manifest(&directory.join(LICENSE_FILE_NAME))};
+        licenses: file_manifest(&directory.join(LICENSE_FILE_NAME)),
+    };
     write_manifest(&directory, &manifest);
 
     PackageFixture {
         _temp: temp,
         directory,
         original,
-        manifest}
+        manifest,
+    }
 }
 
 fn file_manifest(path: &std::path::Path) -> Vgg19FileManifest {
     Vgg19FileManifest {
         file_name: path.file_name().unwrap().to_str().unwrap().to_owned(),
         bytes: fs::metadata(path).unwrap().len(),
-        sha256: sha256_file(path)}
+        sha256: sha256_file(path),
+    }
 }
 
 fn refresh_model_manifest(directory: &std::path::Path, manifest: &mut Vgg19PackageManifest) {
@@ -342,7 +351,8 @@ struct MissingVgg {
     conv2_1: Conv2d,
     conv2_2: Conv2d,
     conv3_1: Conv2d,
-    conv3_2: Conv2d}
+    conv3_2: Conv2d,
+}
 
 #[derive(Module, Debug)]
 struct ExtraVgg {
@@ -353,4 +363,5 @@ struct ExtraVgg {
     conv3_1: Conv2d,
     conv3_2: Conv2d,
     conv3_3: Conv2d,
-    extra: Linear}
+    extra: Linear,
+}

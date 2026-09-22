@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, path::Path};
 
-use burn::{backend::Flex, tensor::Tensor};
+use burn::tensor::Tensor;
 use feathertalk_scrfd::{ScrfdArtifactPaths, ScrfdError, ScrfdModel};
 use tempfile::TempDir;
 

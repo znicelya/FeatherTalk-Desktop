@@ -1,8 +1,6 @@
 use std::{fs, path::Path};
 
-use burn::{
-    backend::Wgpu,
-    tensor::{Tensor, TensorData}};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_pfld::PfldRuntime;
 
 #[test]
@@ -16,10 +14,8 @@ fn committed_pfld_artifact_runs_on_wgpu_without_cpu_fallback() {
         .map(|chunk| f32::from_le_bytes(chunk.try_into().unwrap()))
         .collect::<Vec<_>>();
     let device = Default::default();
-    let input =
-        Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
-    let runtime =
-        PfldRuntime::load(&root.join("artifacts/pfld_ghost_one"), &device).unwrap();
+    let input = Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
+    let runtime = PfldRuntime::load(&root.join("artifacts/pfld_ghost_one"), &device).unwrap();
     let output = runtime.forward(input).unwrap();
     assert_eq!(output.dims(), [1, 220]);
     let actual = output.into_data().try_to_vec::<f32>().unwrap();

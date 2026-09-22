@@ -1,10 +1,8 @@
-use burn::tensor::{Tensor};
+use burn::tensor::Tensor;
 use feathertalk_training::{
     BaselineLossConfig, LossBreakdown, MouthRoiLossConfig, PerceptualFeatureExtractor,
-    TemporalLossConfig, TrainingError, baseline_loss, mouth_l1_loss, mouth_roi_loss, temporal_loss};
-
-type CpuBackend = burn::backend::Flex;
-type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
+    TemporalLossConfig, TrainingError, baseline_loss, mouth_l1_loss, mouth_roi_loss, temporal_loss,
+};
 
 #[derive(Debug, Clone, Copy)]
 struct IdentityExtractor;
@@ -112,8 +110,7 @@ fn mouth_roi_components_use_channel_scaled_mask_denominator() {
     let device = Default::default();
     let prediction = Tensor::<4>::ones([1, 3, 4, 4], &device);
     let target = Tensor::<4>::zeros([1, 3, 4, 4], &device);
-    let mask = Tensor::<4>::zeros([1, 1, 4, 4], &device)
-        .slice_fill([0..1, 0..1, 0..2, 0..4], 1.0);
+    let mask = Tensor::<4>::zeros([1, 1, 4, 4], &device).slice_fill([0..1, 0..1, 0..2, 0..4], 1.0);
 
     let result = mouth_roi_loss(
         &IdentityExtractor,
@@ -281,11 +278,7 @@ fn all_three_loss_totals_propagate_prediction_gradients() {
     assert!(prediction.grad(&temporal.total.backward()).is_some());
 }
 
-fn assert_breakdown_value(
-    breakdown: &LossBreakdown,
-    tensor: Tensor<1>,
-    expected: f32,
-) {
+fn assert_breakdown_value(breakdown: &LossBreakdown, tensor: Tensor<1>, expected: f32) {
     let actual = tensor.into_scalar::<f32>();
     assert!(
         (actual - expected).abs() <= 1e-5,

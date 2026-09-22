@@ -1,18 +1,18 @@
 use std::{
     io::{Cursor, Read},
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
 use burn::{
     backend::Flex,
-    tensor::{Tensor, TensorData}};
+    tensor::{Tensor, TensorData},
+};
 use feathertalk_training::{load_vgg19_package, read_vgg19_manifest};
 use ndarray::ArrayD;
 use ndarray_npy::ReadNpyExt;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
-
-type CpuBackend = Flex;
 
 const GOLDEN_ARCHIVE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -28,7 +28,8 @@ struct GoldenManifest {
     output_layer: String,
     input_contract: InputContract,
     input: ArrayManifest,
-    expected: ArrayManifest}
+    expected: ArrayManifest,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -36,7 +37,8 @@ struct InputContract {
     channels: usize,
     color_order: String,
     value_range: String,
-    normalization: String}
+    normalization: String,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,7 +46,8 @@ struct ArrayManifest {
     path: String,
     shape: Vec<usize>,
     dtype: String,
-    sha256: String}
+    sha256: String,
+}
 
 #[test]
 #[ignore = "requires an explicitly supplied licensed VGG19 package"]

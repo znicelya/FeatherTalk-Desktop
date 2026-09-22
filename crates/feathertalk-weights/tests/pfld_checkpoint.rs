@@ -2,9 +2,10 @@ use std::{fs::File, io::Read, path::Path};
 
 use burn::tensor::Tensor;
 use burn_store::{ModuleSnapshot, SafetensorsStore};
-use feathertalk_models::{PFLD_GhostOne, PfldConfig, backend::CpuBackend};
+use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 use feathertalk_weights::{
-    PfldImportManifest, PfldImportRequest, TensorAudit, TensorSummary, import_pfld_checkpoint};
+    PfldImportManifest, PfldImportRequest, TensorAudit, TensorSummary, import_pfld_checkpoint,
+};
 use sha2::{Digest, Sha256};
 
 fn sha256(path: &Path) -> String {
@@ -29,7 +30,10 @@ fn assert_module_snapshots_equal<M: ModuleSnapshot>(left: &M, right: &M) {
         assert_eq!(left.name.clone(), right.name.clone());
         assert_eq!(left.shape, right.shape);
         assert_eq!(left.dtype, right.dtype);
-        assert_eq!(burn_store::bridge::to_data(&left).unwrap(), burn_store::bridge::to_data(&right).unwrap());
+        assert_eq!(
+            burn_store::bridge::to_data(&left).unwrap(),
+            burn_store::bridge::to_data(&right).unwrap()
+        );
     }
 }
 
@@ -82,7 +86,8 @@ fn tracked_epoch_335_checkpoint_imports_and_round_trips() {
         report.manifest.backbone,
         TensorSummary {
             tensor_count: 2_090,
-            total_elements: 913_663}
+            total_elements: 913_663
+        }
     );
     assert_eq!(report.applied.len(), 1_735);
     assert_sorted_unique(&report.applied);
@@ -107,7 +112,8 @@ fn tracked_epoch_335_checkpoint_imports_and_round_trips() {
                 "localization.0.weight".to_owned(),
                 "localization.3.bias".to_owned(),
                 "localization.3.weight".to_owned(),
-            ]}
+            ]
+        }
     );
     assert_sorted_unique(&report.manifest.ignored.localization.keys);
     let auxiliary = report.manifest.ignored.auxiliarynet.as_ref().unwrap();

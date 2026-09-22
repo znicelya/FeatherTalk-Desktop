@@ -27,9 +27,7 @@ pub struct ScrfdLevelOutput {
     pub keypoint_deltas: Tensor<3>,
 }
 
-pub(crate) fn assemble(
-    outputs: GeneratedOutput,
-) -> Result<ScrfdRawOutput, ScrfdError> {
+pub(crate) fn assemble(outputs: GeneratedOutput) -> Result<ScrfdRawOutput, ScrfdError> {
     let (out0, out1, out2, out3, out4, out5, out6, out7, out8) = outputs;
     validate("out0", out0.dims().to_vec(), vec![1, 12_800, 1])?;
     validate("out1", out1.dims().to_vec(), vec![1, 3_200, 1])?;
@@ -83,7 +81,6 @@ fn validate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::Flex;
 
     fn valid(device: &burn::tensor::Device) -> GeneratedOutput {
         (

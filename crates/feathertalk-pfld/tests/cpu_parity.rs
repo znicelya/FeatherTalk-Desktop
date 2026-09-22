@@ -1,10 +1,9 @@
 use std::{
     fs,
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
-use burn::{
-    backend::Flex,
-    tensor::{Tensor, TensorData}};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_pfld::PfldRuntime;
 use sha2::{Digest, Sha256};
 
@@ -67,10 +66,8 @@ fn committed_pfld_runtime_matches_python_on_all_220_cpu_outputs() {
             &device,
         )
         .unwrap();
-        let input = Tensor::<4>::from_data(
-            TensorData::new(input_values, [1, 3, 192, 192]),
-            &device,
-        );
+        let input =
+            Tensor::<4>::from_data(TensorData::new(input_values, [1, 3, 192, 192]), &device);
         let actual = runtime
             .forward(input)
             .unwrap()

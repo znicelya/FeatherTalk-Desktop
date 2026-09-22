@@ -1,10 +1,9 @@
 use burn::{
     module::{Module, Param},
     nn::conv::Conv2d,
-    tensor::{Tensor}};
+    tensor::Tensor,
+};
 use feathertalk_training::Vgg19Conv3_3;
-
-type CpuBackend = burn::backend::Flex;
 
 fn assert_module<M: Module>() {}
 

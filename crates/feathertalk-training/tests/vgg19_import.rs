@@ -1,12 +1,10 @@
 use std::{fs, io, path::PathBuf};
 
-use burn::{nn::conv::Conv2dConfig, tensor::Tensor};
+use burn::nn::conv::Conv2dConfig;
 use burn_store::ModuleSnapshot;
 use feathertalk_training::Vgg19Conv3_3;
 use feathertalk_weights::{LegacyImportRequest, LegacyModelKind, WeightImportError, import_into};
 use zip::ZipArchive;
-
-type CpuBackend = burn::backend::Flex;
 
 #[test]
 fn vgg19_direct_state_imports_the_exact_truncated_tensor_set() {
@@ -97,7 +95,8 @@ fn request_for(path: PathBuf) -> LegacyImportRequest {
         top_level_key: None,
         max_file_bytes: 16 * 1024 * 1024,
         max_tensor_count: 64,
-        max_total_elements: 2_000_000}
+        max_total_elements: 2_000_000,
+    }
 }
 
 fn materialize_model(model: &Vgg19Conv3_3) {

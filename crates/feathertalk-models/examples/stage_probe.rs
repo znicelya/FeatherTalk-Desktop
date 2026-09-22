@@ -77,8 +77,6 @@ fn main() {
     let x2d = x2.detach();
     let x3d = x3.detach();
     let x4d = x4.detach();
-    let x5d = x5.detach();
-    let ad = a.detach();
     let x5cd = x5c.detach();
     let f1d = f1.detach();
     let f2d = f2.detach();
@@ -103,19 +101,58 @@ fn main() {
         };
     }
 
-    stage!("inc            @160", model.inc.forward(image.clone().require_grad()));
-    stage!("down1  32->64  @160", model.down1.forward(x1d.clone().require_grad()));
-    stage!("down2  64->128 @80 ", model.down2.forward(x2d.clone().require_grad()));
-    stage!("down3 128->256 @40 ", model.down3.forward(x3d.clone().require_grad()));
-    stage!("down4 256->512 @20 ", model.down4.forward(x4d.clone().require_grad()));
-    stage!("audio_model    @32 ", model.audio_model.forward(audio.clone().require_grad()));
-    stage!("fuse_first     @10 ", model.fuse_first.forward(x5cd.clone().require_grad()));
-    stage!("fuse_second    @10 ", model.fuse_second.forward(f1d.clone().require_grad()));
-    stage!("up1            @10>20", model.up1.forward(f2d.clone().require_grad(), x4d.clone()));
-    stage!("up2            @20>40", model.up2.forward(o1d.clone().require_grad(), x3d.clone()));
-    stage!("up3            @40>80", model.up3.forward(o2d.clone().require_grad(), x2d.clone()));
-    stage!("up4            @80>160", model.up4.forward(o3d.clone().require_grad(), x1d.clone()));
-    stage!("outc           @160", model.outc.forward(o4d.clone().require_grad()));
+    stage!(
+        "inc            @160",
+        model.inc.forward(image.clone().require_grad())
+    );
+    stage!(
+        "down1  32->64  @160",
+        model.down1.forward(x1d.clone().require_grad())
+    );
+    stage!(
+        "down2  64->128 @80 ",
+        model.down2.forward(x2d.clone().require_grad())
+    );
+    stage!(
+        "down3 128->256 @40 ",
+        model.down3.forward(x3d.clone().require_grad())
+    );
+    stage!(
+        "down4 256->512 @20 ",
+        model.down4.forward(x4d.clone().require_grad())
+    );
+    stage!(
+        "audio_model    @32 ",
+        model.audio_model.forward(audio.clone().require_grad())
+    );
+    stage!(
+        "fuse_first     @10 ",
+        model.fuse_first.forward(x5cd.clone().require_grad())
+    );
+    stage!(
+        "fuse_second    @10 ",
+        model.fuse_second.forward(f1d.clone().require_grad())
+    );
+    stage!(
+        "up1            @10>20",
+        model.up1.forward(f2d.clone().require_grad(), x4d.clone())
+    );
+    stage!(
+        "up2            @20>40",
+        model.up2.forward(o1d.clone().require_grad(), x3d.clone())
+    );
+    stage!(
+        "up3            @40>80",
+        model.up3.forward(o2d.clone().require_grad(), x2d.clone())
+    );
+    stage!(
+        "up4            @80>160",
+        model.up4.forward(o3d.clone().require_grad(), x1d.clone())
+    );
+    stage!(
+        "outc           @160",
+        model.outc.forward(o4d.clone().require_grad())
+    );
 
     // Whole-model reference.
     time_stage(&device, "FULL MODEL", iters, || {

@@ -1,11 +1,10 @@
 use burn::{
     module::Module,
-    tensor::{Tensor, TensorData}};
+    tensor::{Tensor, TensorData},
+};
 use feathertalk_training::{
-    PerceptualFeatureExtractor, TrainingError, Vgg19Conv3_3, perceptual_mse};
-
-type CpuBackend = burn::backend::Flex;
-type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
+    PerceptualFeatureExtractor, TrainingError, Vgg19Conv3_3, perceptual_mse,
+};
 
 #[derive(Debug, Clone, Copy)]
 struct IdentityExtractor;

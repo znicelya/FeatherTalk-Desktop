@@ -1,8 +1,6 @@
 use std::{fs::OpenOptions, path::Path};
 
-use burn::{
-    backend::Flex,
-    tensor::{Tensor, TensorData}};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_pfld::{PfldRuntime, PfldRuntimeError};
 
 fn artifact_dir() -> std::path::PathBuf {
@@ -60,8 +58,7 @@ fn committed_artifact_loads_and_runs_the_fixed_cpu_contract() {
 
         let mut values = vec![0.0_f32; 3 * 192 * 192];
         values[0] = f32::NAN;
-        let input =
-            Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
+        let input = Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
         assert!(matches!(
             runtime.forward(input),
             Err(PfldRuntimeError::NonFiniteInput)
