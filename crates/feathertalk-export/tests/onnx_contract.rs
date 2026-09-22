@@ -1,7 +1,6 @@
 use feathertalk_export::onnx::{
     ONNX_OPSET_VERSION, OnnxModel, OnnxModelContract, OnnxModelKind, OnnxTensorContract,
-    OnnxValidationError, serialize_model, validate_model_contract,
-};
+    OnnxValidationError, serialize_model, validate_model_contract};
 
 fn contract(kind: OnnxModelKind) -> OnnxModelContract {
     OnnxModelContract::new(
@@ -11,8 +10,7 @@ fn contract(kind: OnnxModelKind) -> OnnxModelContract {
             OnnxModelKind::OriginalUnet | OnnxModelKind::MobileOneUnet => vec![
                 OnnxTensorContract::new("input", vec![1, 6, 160, 160]),
                 OnnxTensorContract::new("audio", vec![1, 16, 32, 32]),
-            ],
-        },
+            ]},
         match kind {
             OnnxModelKind::FeatherHubert => {
                 vec![OnnxTensorContract::new("hidden", vec![1, -1, 1024])]

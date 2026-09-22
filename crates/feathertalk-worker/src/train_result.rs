@@ -36,8 +36,7 @@ pub struct TrainSummary<'a> {
     pub checkpoint_dir: Option<&'a Path>,
     pub checkpoints_written: u64,
     pub metrics_written: u64,
-    pub previews_written: u64,
-}
+    pub previews_written: u64}
 
 /// Shapes the payload the `completed` event of a training task carries.
 ///
@@ -69,8 +68,7 @@ pub(crate) fn train_to_json_on(summary: &TrainSummary<'_>, backend: &str) -> Val
         "checkpoint_dir": summary.checkpoint_dir.map(path_text),
         "checkpoints_written": summary.checkpoints_written,
         "metrics_written": summary.metrics_written,
-        "previews_written": summary.previews_written,
-    })
+        "previews_written": summary.previews_written})
 }
 
 /// The request's spelling of the mode.
@@ -81,16 +79,14 @@ fn mode_slug(mode: TrainingMode) -> &'static str {
     match mode {
         TrainingMode::Baseline => "baseline",
         TrainingMode::MouthRoi => "mouth_roi",
-        TrainingMode::Temporal => "temporal",
-    }
+        TrainingMode::Temporal => "temporal"}
 }
 
 /// The request's spelling of the variant.
 fn variant_slug(variant: UnetVariant) -> &'static str {
     match variant {
         UnetVariant::OriginalUnet => "original_unet",
-        UnetVariant::MobileOneUnet => "mobileone_unet",
-    }
+        UnetVariant::MobileOneUnet => "mobileone_unet"}
 }
 
 fn path_text(path: &Path) -> String {

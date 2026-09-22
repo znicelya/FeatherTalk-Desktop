@@ -77,15 +77,14 @@ powershell -NoProfile -File .\installer\windows\build.ps1 -FfmpegDirectory 'D:\e
 用于读取项目 `LICENSE` 和默认的 FeatherHuBERT 检查点；上面的示例假定两个仓库为同级目录。
 不传该参数时沿用旧布局，查找当前 Rust workspace 的上级目录。
 
-模型打包默认复用 `crates/feathertalk-scrfd/artifacts/scrfd_2_5g` 和
-`crates/feathertalk-pfld/artifacts/pfld_ghost_one` 的转换结果，并从
-源仓库内的 `demo/kanghui_training_video_featherhubert_188_latest/feather_hubert_188_latest_99.pth`
-通过刚构建的 Rust worker 转换 FeatherHuBERT。转换输入保存在独立构建目录，
-不写入原始模型目录。VGG19 默认读取 `target/installer/models/vgg19` 的转换包。
+模型打包默认直接使用仓库 `models/` 下的四个预构建包：`models/scrfd_2_5g`、
+`models/pfld_ghost_one`、`models/feather_hubert`、`models/vgg19`。
+每个包已自带 manifest、`model.safetensors` 权重与许可证元数据，构建时不再
+从原始 `.pth`/`.onnx` 检查点转换，也不复用各 crate 的 artifacts 目录。
 `-ScrfdModelDirectory`、`-PfldModelDirectory`、`-HubertModelDirectory`、
-`-Vgg19ModelDirectory` 可指定已有转换包；每个包均核对原始模型身份与权重哈希。
+`-Vgg19ModelDirectory` 可覆盖为其他已转换包目录；每个包均核对原始模型身份与权重哈希。
 
-如缺少 SCRFD/PFLD 转换结果，可先在仓库根目录运行：
+若需重新生成 SCRFD/PFLD 包（例如更新权重后覆盖 `models/` 或用 `-ScrfdModelDirectory`/`-PfldModelDirectory` 指向新包），可在仓库根目录运行：
 
 ```powershell
 cargo run --locked --manifest-path tools/scrfd-import/Cargo.toml --bin generate -- --repo-root .. --destination target/installer/scrfd-conversion

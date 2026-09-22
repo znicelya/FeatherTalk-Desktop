@@ -3,8 +3,7 @@ use std::time::Duration;
 use feathertalk_domain::{AdapterKind, Backend, TaskKind};
 use feathertalk_worker::{
     CPU_ADAPTER_ID, DEFAULT_MEDIA_TIMEOUT_MS, ENV_FFPROBE, ENV_HUBERT_DIR, ENV_MEDIA_TIMEOUT_MS,
-    ENV_SCRFD_DIR, ENV_VGG19_DIR, WorkerConfig, ready_frame, supported_commands,
-};
+    ENV_SCRFD_DIR, ENV_VGG19_DIR, WorkerConfig, ready_frame, supported_commands};
 
 fn absolute(name: &str) -> String {
     std::env::current_dir()

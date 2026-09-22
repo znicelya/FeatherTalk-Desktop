@@ -13,8 +13,7 @@ use feathertalk_worker::{
     audio_task_error, is_audio_cancellation, is_inference_cancellation, is_media_cancellation,
     is_pipeline_cancellation, legacy_task_error, media_task_error, package_task_error,
     pipeline_task_error, project_task_error, quality_task_error, render_task_error,
-    training_data_task_error, training_task_error,
-};
+    training_data_task_error, training_task_error};
 
 fn io_error(kind: io::ErrorKind) -> io::Error {
     io::Error::new(kind, "synthetic")
@@ -35,31 +34,27 @@ fn every_project_error_maps_to_a_code_and_a_valid_payload() {
             ProjectError::Io {
                 operation: "read",
                 path: path(),
-                source: io_error(io::ErrorKind::PermissionDenied),
-            },
+                source: io_error(io::ErrorKind::PermissionDenied)},
             ErrorCode::WorkerCrashed,
         ),
         (
             ProjectError::Io {
                 operation: "write",
                 path: path(),
-                source: io_error(io::ErrorKind::StorageFull),
-            },
+                source: io_error(io::ErrorKind::StorageFull)},
             ErrorCode::DiskSpaceLow,
         ),
         (
             ProjectError::Io {
                 operation: "write",
                 path: path(),
-                source: io_error(io::ErrorKind::QuotaExceeded),
-            },
+                source: io_error(io::ErrorKind::QuotaExceeded)},
             ErrorCode::DiskSpaceLow,
         ),
         (
             ProjectError::ManifestTooLarge {
                 path: path(),
-                limit: 1024,
-            },
+                limit: 1024},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -69,28 +64,24 @@ fn every_project_error_maps_to_a_code_and_a_valid_payload() {
         (
             ProjectError::InvalidJson {
                 path: path(),
-                source: json_error(),
-            },
+                source: json_error()},
             ErrorCode::MediaInvalid,
         ),
         (
             ProjectError::UnsupportedSchemaVersion {
                 path: path(),
-                version: 9,
-            },
+                version: 9},
             ErrorCode::MediaInvalid,
         ),
         (
             ProjectError::InvalidField {
                 field: "project_id".to_owned(),
-                message: "empty".to_owned(),
-            },
+                message: "empty".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             ProjectError::UnsafeRelativePath {
-                path: "../x".to_owned(),
-            },
+                path: "../x".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -133,16 +124,14 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
             MediaError::Io {
                 operation: "read",
                 path: path(),
-                source: io_error(io::ErrorKind::NotFound),
-            },
+                source: io_error(io::ErrorKind::NotFound)},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::Io {
                 operation: "write",
                 path: path(),
-                source: io_error(io::ErrorKind::StorageFull),
-            },
+                source: io_error(io::ErrorKind::StorageFull)},
             ErrorCode::DiskSpaceLow,
         ),
         (
@@ -164,8 +153,7 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
         (
             MediaError::OutputInsideInput {
                 input: path(),
-                output: path(),
-            },
+                output: path()},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -180,35 +168,30 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
             MediaError::UnsupportedTarget {
                 field: "fps",
                 expected: "25",
-                actual: "30".to_owned(),
-            },
+                actual: "30".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::InvalidToolchain {
                 field: "ffprobe",
-                message: "relative".to_owned(),
-            },
+                message: "relative".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             MediaError::ProbeTooLarge {
                 limit: 16,
-                actual: 32,
-            },
+                actual: 32},
             ErrorCode::MediaInvalid,
         ),
         (
             MediaError::ProbeJson {
-                message: "bad".to_owned(),
-            },
+                message: "bad".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             MediaError::ProbeContract {
                 field: "width".to_owned(),
-                message: "missing".to_owned(),
-            },
+                message: "missing".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -223,15 +206,13 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
             MediaError::ToolFailed {
                 operation: "probe",
                 exit_code: Some(1),
-                stderr: "boom".to_owned(),
-            },
+                stderr: "boom".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::ToolTimedOut {
                 operation: "probe",
-                timeout_ms: 10,
-            },
+                timeout_ms: 10},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -239,15 +220,13 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
                 operation: "probe",
                 stream: "stdout",
                 limit: 16,
-                actual: 32,
-            },
+                actual: 32},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::ToolSpawn {
                 operation: "probe",
-                message: "not found".to_owned(),
-            },
+                message: "not found".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -258,23 +237,20 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
             MediaError::NormalizationVerificationFailed {
                 field: "fps",
                 expected: "25".to_owned(),
-                actual: "30".to_owned(),
-            },
+                actual: "30".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::OutputCommitFailed {
                 operation: "commit",
-                message: "busy".to_owned(),
-            },
+                message: "busy".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             MediaError::OutputRollbackFailed {
                 operation: "rollback",
                 primary: "a".to_owned(),
-                rollback: "b".to_owned(),
-            },
+                rollback: "b".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
     ];
@@ -292,8 +268,7 @@ fn every_media_error_maps_to_a_code_and_a_valid_payload() {
 #[test]
 fn an_oversized_detail_is_clamped_to_the_wire_limit() {
     let mapped = media_task_error(&MediaError::ProbeJson {
-        message: "x".repeat(MAX_DETAIL_CHARS * 2),
-    });
+        message: "x".repeat(MAX_DETAIL_CHARS * 2)});
     assert_eq!(mapped.detail.chars().count(), MAX_DETAIL_CHARS);
     mapped.validate().unwrap();
 }
@@ -322,8 +297,7 @@ fn every_pipeline_error_maps_to_a_code_and_a_valid_payload() {
         (
             PipelineError::InvalidField {
                 field: "frame_count",
-                message: "must be greater than zero".to_owned(),
-            },
+                message: "must be greater than zero".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -338,36 +312,31 @@ fn every_pipeline_error_maps_to_a_code_and_a_valid_payload() {
             PipelineError::Io {
                 operation: "create_dir",
                 path: path(),
-                source: io_error(io::ErrorKind::StorageFull),
-            },
+                source: io_error(io::ErrorKind::StorageFull)},
             ErrorCode::DiskSpaceLow,
         ),
         (
             PipelineError::Io {
                 operation: "create_dir",
                 path: path(),
-                source: io_error(io::ErrorKind::PermissionDenied),
-            },
+                source: io_error(io::ErrorKind::PermissionDenied)},
             ErrorCode::WorkerCrashed,
         ),
         (
             PipelineError::Adapter {
                 component: "scrfd",
-                message: "device lost".to_owned(),
-            },
+                message: "device lost".to_owned()},
             ErrorCode::ModelIncompatible,
         ),
         (
             PipelineError::Cancelled {
-                operation: "extract_frames",
-            },
+                operation: "extract_frames"},
             ErrorCode::TaskCancelled,
         ),
         (
             PipelineError::ToolTimedOut {
                 operation: "extract_frames",
-                timeout_ms: 300_000,
-            },
+                timeout_ms: 300_000},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -377,8 +346,7 @@ fn every_pipeline_error_maps_to_a_code_and_a_valid_payload() {
         (
             PipelineError::FrameUndecodable {
                 path: path(),
-                message: "no SOI marker".to_owned(),
-            },
+                message: "no SOI marker".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -388,8 +356,7 @@ fn every_pipeline_error_maps_to_a_code_and_a_valid_payload() {
         (
             PipelineError::InvalidLandmark {
                 path: path(),
-                message: "expected 110 lines, found 109".to_owned(),
-            },
+                message: "expected 110 lines, found 109".to_owned()},
             ErrorCode::MediaInvalid,
         ),
     ];
@@ -419,8 +386,7 @@ fn only_cancellation_is_reported_as_cancellation() {
 fn the_asset_lock_failures_read_as_media_problems() {
     let undecodable = pipeline_task_error(&PipelineError::FrameUndecodable {
         path: path(),
-        message: "no SOI marker".to_owned(),
-    });
+        message: "no SOI marker".to_owned()});
     assert_eq!(undecodable.summary, "素材帧无法解码");
     assert!(
         undecodable.detail.contains("no SOI marker"),
@@ -433,8 +399,7 @@ fn the_asset_lock_failures_read_as_media_problems() {
 
     let malformed = pipeline_task_error(&PipelineError::InvalidLandmark {
         path: path(),
-        message: "expected 110 lines, found 109".to_owned(),
-    });
+        message: "expected 110 lines, found 109".to_owned()});
     assert_eq!(malformed.summary, "关键点文件不可用");
     malformed.validate().unwrap();
 }
@@ -480,8 +445,7 @@ fn audio_errors_map_onto_wire_codes() {
         (
             AudioError::UnsupportedWavSampleRate {
                 actual: 44_100,
-                expected: 16_000,
-            },
+                expected: 16_000},
             ErrorCode::MediaInvalid,
         ),
         (AudioError::EmptyWav, ErrorCode::MediaInvalid),
@@ -490,16 +454,14 @@ fn audio_errors_map_onto_wire_codes() {
             AudioError::WavIo {
                 operation: "read",
                 path: path(),
-                source: io_error(io::ErrorKind::StorageFull),
-            },
+                source: io_error(io::ErrorKind::StorageFull)},
             ErrorCode::DiskSpaceLow,
         ),
         (
             AudioError::WavIo {
                 operation: "read",
                 path: path(),
-                source: io_error(io::ErrorKind::PermissionDenied),
-            },
+                source: io_error(io::ErrorKind::PermissionDenied)},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -510,21 +472,18 @@ fn audio_errors_map_onto_wire_codes() {
             AudioError::FeatureShapeMismatch {
                 frame_count: 4,
                 tokens: 7,
-                dims: 1024,
-            },
+                dims: 1024},
             ErrorCode::FeatureShapeMismatch,
         ),
         (
             AudioError::TooManyChunks {
                 actual: 2_000_000,
-                limit: 1_000_000,
-            },
+                limit: 1_000_000},
             ErrorCode::WorkerCrashed,
         ),
         (
             AudioError::Cancelled {
-                operation: "extract_features",
-            },
+                operation: "extract_features"},
             ErrorCode::TaskCancelled,
         ),
     ];
@@ -542,8 +501,7 @@ fn audio_errors_map_onto_wire_codes() {
 #[test]
 fn only_cancellation_is_audio_cancellation() {
     let cancelled = AudioError::Cancelled {
-        operation: "extract_features",
-    };
+        operation: "extract_features"};
 
     assert!(is_audio_cancellation(&cancelled));
     assert!(!is_audio_cancellation(&AudioError::EmptyWav));
@@ -615,22 +573,19 @@ fn every_training_error_maps_to_a_code_and_a_valid_payload() {
         ),
         (
             TrainingError::DataLoaderOverflow {
-                operation: "counting steps",
-            },
+                operation: "counting steps"},
             ErrorCode::WorkerCrashed,
         ),
         (
             TrainingError::PermutationAllocation {
                 samples: 8,
-                source: try_reserve_error(),
-            },
+                source: try_reserve_error()},
             ErrorCode::WorkerCrashed,
         ),
         (
             TrainingError::BatchAllocation {
                 items: 2,
-                source: try_reserve_error(),
-            },
+                source: try_reserve_error()},
             ErrorCode::WorkerCrashed,
         ),
         (TrainingError::StalePreparedBatch, ErrorCode::WorkerCrashed),
@@ -642,8 +597,7 @@ fn every_training_error_maps_to_a_code_and_a_valid_payload() {
             TrainingError::HashMismatch {
                 file: "model.safetensors".to_owned(),
                 expected: "a".repeat(64),
-                actual: "b".repeat(64),
-            },
+                actual: "b".repeat(64)},
             ErrorCode::ModelIncompatible,
         ),
         (
@@ -679,8 +633,7 @@ fn a_mid_run_training_failure_keeps_the_stage_it_failed_in() {
     let stage = TaskStage::Training {
         epoch: 3,
         step: 3000,
-        loss: 0.125,
-    };
+        loss: 0.125};
     let mapped = training_task_error(&TrainingError::StalePreparedBatch, stage.clone());
 
     assert_eq!(mapped.stage, stage);
@@ -702,15 +655,13 @@ fn every_training_data_error_maps_to_a_code_and_a_valid_payload() {
         (
             TrainingDataError::Project {
                 path: path(),
-                message: "not locked".to_owned(),
-            },
+                message: "not locked".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             TrainingDataError::Features {
                 path: path(),
-                message: "truncated".to_owned(),
-            },
+                message: "truncated".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -718,44 +669,38 @@ fn every_training_data_error_maps_to_a_code_and_a_valid_payload() {
                 path: path(),
                 expected_tokens: 8,
                 actual_tokens: 98,
-                dims: 1024,
-            },
+                dims: 1024},
             ErrorCode::FeatureShapeMismatch,
         ),
         (
             TrainingDataError::FrameIndexOutOfRange {
                 index: 9,
-                frame_count: 4,
-            },
+                frame_count: 4},
             ErrorCode::WorkerCrashed,
         ),
         (
             TrainingDataError::Frame {
                 index: 0,
                 path: path(),
-                message: "not a jpeg".to_owned(),
-            },
+                message: "not a jpeg".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             TrainingDataError::Landmarks {
                 index: 0,
                 path: path(),
-                message: "short line".to_owned(),
-            },
+                message: "short line".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             TrainingDataError::Sample {
                 index: 0,
-                message: "image plane".to_owned(),
-            },
+                message: "image plane".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
             TrainingDataError::Batch {
-                message: "shape".to_owned(),
-            },
+                message: "shape".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
     ];
@@ -779,24 +724,21 @@ fn every_inference_error_maps_to_a_render_task_error() {
         (
             InferenceError::InvalidInputDirectory {
                 field: "frame_dir",
-                path: path(),
-            },
+                path: path()},
             ErrorCode::MediaInvalid,
         ),
         (
             InferenceError::InvalidInputArtifact {
                 field: "landmark_path",
                 path: path(),
-                message: "bad".to_owned(),
-            },
+                message: "bad".to_owned()},
             ErrorCode::LandmarkInvalid,
         ),
         (
             InferenceError::InvalidInputArtifact {
                 field: "feature_path",
                 path: path(),
-                message: "bad".to_owned(),
-            },
+                message: "bad".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -809,34 +751,29 @@ fn every_inference_error_maps_to_a_render_task_error() {
                 expected_width: 1280,
                 expected_height: 720,
                 actual_width: 640,
-                actual_height: 480,
-            },
+                actual_height: 480},
             ErrorCode::MediaInvalid,
         ),
         (
             InferenceError::FrameReader {
                 index: 0,
                 path: path(),
-                message: "decode".to_owned(),
-            },
+                message: "decode".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::SinkStart {
-                message: "spawn".to_owned(),
-            },
+                message: "spawn".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::SinkWrite {
-                message: "broken pipe".to_owned(),
-            },
+                message: "broken pipe".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::SinkFinish {
-                message: "exit".to_owned(),
-            },
+                message: "exit".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
@@ -846,30 +783,26 @@ fn every_inference_error_maps_to_a_render_task_error() {
         (
             InferenceError::StagingOutputInvalid {
                 path: path(),
-                message: "empty".to_owned(),
-            },
+                message: "empty".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::AtomicPublishFailed {
                 path: path(),
-                message: "rename".to_owned(),
-            },
+                message: "rename".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::ToolFailed {
                 operation: "render",
                 exit_code: Some(1),
-                stderr: "ffmpeg".to_owned(),
-            },
+                stderr: "ffmpeg".to_owned()},
             ErrorCode::WorkerCrashed,
         ),
         (
             InferenceError::FrameCountTooSmall {
                 actual: 1,
-                minimum: 2,
-            },
+                minimum: 2},
             ErrorCode::MediaInvalid,
         ),
         (InferenceError::EmptyFeatures, ErrorCode::MediaInvalid),
@@ -880,8 +813,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
         (
             InferenceError::InvalidField {
                 field: "task_id",
-                message: "empty".to_owned(),
-            },
+                message: "empty".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (InferenceError::ArithmeticOverflow, ErrorCode::MediaInvalid),
@@ -903,8 +835,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
         ),
         (
             InferenceError::InvalidTaskId {
-                task_id: "..".to_owned(),
-            },
+                task_id: "..".to_owned()},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -915,15 +846,13 @@ fn every_inference_error_maps_to_a_render_task_error() {
         (
             InferenceError::InvalidFrameDimensions {
                 width: 0,
-                height: 720,
-            },
+                height: 720},
             ErrorCode::MediaInvalid,
         ),
         (
             InferenceError::FrameBufferLengthMismatch {
                 expected: 100,
-                actual: 99,
-            },
+                actual: 99},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -931,8 +860,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
                 x: 9,
                 y: 9,
                 width: 4,
-                height: 4,
-            },
+                height: 4},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -942,52 +870,45 @@ fn every_inference_error_maps_to_a_render_task_error() {
                 xmax: 0,
                 ymax: 0,
                 frame_width: 8,
-                frame_height: 8,
-            },
+                frame_height: 8},
             ErrorCode::LandmarkInvalid,
         ),
         (
             InferenceError::InvalidResizeTarget {
                 width: 0,
-                height: 0,
-            },
+                height: 0},
             ErrorCode::MediaInvalid,
         ),
         (
             InferenceError::TensorShapeMismatch {
                 context: "audio",
                 expected: vec![1, 32, 32, 32],
-                actual: vec![1, 2, 3, 4],
-            },
+                actual: vec![1, 2, 3, 4]},
             ErrorCode::ModelIncompatible,
         ),
         (
             InferenceError::InvalidFeatureShape {
                 tokens: 3,
-                dims: 1024,
-            },
+                dims: 1024},
             ErrorCode::FeatureShapeMismatch,
         ),
         (
             InferenceError::InvalidAudioWindowIndex {
                 slot: 1,
                 index: 9,
-                frame_count: 2,
-            },
+                frame_count: 2},
             ErrorCode::MediaInvalid,
         ),
         (
             InferenceError::NonFiniteModelInput {
                 context: "reference",
-                index: 7,
-            },
+                index: 7},
             ErrorCode::ModelIncompatible,
         ),
         (
             InferenceError::ModelTensorData {
                 context: "prediction",
-                message: "read".to_owned(),
-            },
+                message: "read".to_owned()},
             ErrorCode::ModelIncompatible,
         ),
         (
@@ -997,8 +918,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
         (
             InferenceError::ModelOutputOutOfRange {
                 index: 3,
-                value: 1.5,
-            },
+                value: 1.5},
             ErrorCode::ModelIncompatible,
         ),
         (
@@ -1012,8 +932,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
                 source_width: 4,
                 source_height: 4,
                 destination_width: 2,
-                destination_height: 2,
-            },
+                destination_height: 2},
             ErrorCode::MediaInvalid,
         ),
         (
@@ -1022,8 +941,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
         ),
         (
             InferenceError::Cancelled {
-                operation: "render",
-            },
+                operation: "render"},
             ErrorCode::TaskCancelled,
         ),
     ];
@@ -1044,8 +962,7 @@ fn every_inference_error_maps_to_a_render_task_error() {
 #[test]
 fn only_a_cancelled_render_counts_as_a_cancellation() {
     assert!(is_inference_cancellation(&InferenceError::Cancelled {
-        operation: "render",
-    }));
+        operation: "render"}));
     assert!(!is_inference_cancellation(&InferenceError::EmptyFeatures));
     assert!(!is_inference_cancellation(
         &InferenceError::ArithmeticOverflow

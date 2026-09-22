@@ -6,21 +6,18 @@ use std::{ffi::OsStr, fs, path::Path, sync::Mutex, time::Duration};
 use feathertalk_domain::{ErrorCode, ExtractFramesParams, Progress, TaskError, TaskStage};
 use feathertalk_frame_pipeline::{
     self as pipeline, DecodedFrame, FaceDetection, FaceDetector, FrameDecoder, LandmarkPredictor,
-    PipelineError,
-};
+    PipelineError};
 use feathertalk_media::{CancellationToken, CommandSpec, MediaError, ProcessOutput, ProcessRunner};
 use feathertalk_pfld::{CropGeometry, PFLDLandmarks, decode_landmarks};
 use feathertalk_worker::{
-    CommandOutcome, NoReporter, TaskReporter, WorkerConfig, execute_extract_frames,
-};
+    CommandOutcome, NoReporter, TaskReporter, WorkerConfig, execute_extract_frames};
 use tempfile::TempDir;
 
 /// Answers every ffprobe call with the same report, so a test only has to say
 /// how many frames the video has and what frame rate it claims.
 struct MediaRunner {
     probe: Vec<u8>,
-    calls: Mutex<usize>,
-}
+    calls: Mutex<usize>}
 
 impl MediaRunner {
     fn new(frame_count: u64, frame_rate: &str) -> Self {
@@ -45,8 +42,7 @@ impl MediaRunner {
         });
         Self {
             probe: probe.to_string().into_bytes(),
-            calls: Mutex::new(0),
-        }
+            calls: Mutex::new(0)}
     }
 
     fn call_count(&self) -> usize {
@@ -65,14 +61,12 @@ impl ProcessRunner for MediaRunner {
 /// `%06d.jpg` pattern, and `-start_number` plus `-frames:v` say which indices
 /// that pattern expands to.
 struct FfmpegRunner {
-    chunks: Mutex<Vec<(u64, u64)>>,
-}
+    chunks: Mutex<Vec<(u64, u64)>>}
 
 impl FfmpegRunner {
     fn new() -> Self {
         Self {
-            chunks: Mutex::new(Vec::new()),
-        }
+            chunks: Mutex::new(Vec::new())}
     }
 
     /// One `(first_index, count)` pair per invocation.
@@ -119,8 +113,7 @@ fn flag_number(command: &pipeline::CommandSpec, flag: &str) -> u64 {
 }
 
 struct Decoder {
-    blur: f64,
-}
+    blur: f64}
 
 impl FrameDecoder for Decoder {
     fn decode(&self, _index: u64, path: &Path) -> Result<DecodedFrame, PipelineError> {
@@ -129,8 +122,7 @@ impl FrameDecoder for Decoder {
 }
 
 struct Detector {
-    detections: Vec<FaceDetection>,
-}
+    detections: Vec<FaceDetection>}
 
 impl FaceDetector for Detector {
     fn detect(&self, _frame: &DecodedFrame) -> Result<Vec<FaceDetection>, PipelineError> {
@@ -139,8 +131,7 @@ impl FaceDetector for Detector {
 }
 
 struct Predictor {
-    landmarks: PFLDLandmarks,
-}
+    landmarks: PFLDLandmarks}
 
 impl LandmarkPredictor for Predictor {
     fn predict(
@@ -164,9 +155,7 @@ fn detector() -> Detector {
         detections: vec![FaceDetection {
             bbox: [12.0, 12.0, 400.0, 350.0],
             score: 0.9,
-            keypoints: [[0.0, 0.0]; 5],
-        }],
-    }
+            keypoints: [[0.0, 0.0]; 5]}]}
 }
 
 fn predictor() -> Predictor {
@@ -178,22 +167,18 @@ fn predictor() -> Predictor {
                 width: 640,
                 height: 480,
                 offset_x: 0,
-                offset_y: 0,
-            },
+                offset_y: 0},
         )
-        .unwrap(),
-    }
+        .unwrap()}
 }
 
 struct Recorder {
-    events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
-}
+    events: Mutex<Vec<(TaskStage, Option<Progress>)>>}
 
 impl Recorder {
     fn new() -> Self {
         Self {
-            events: Mutex::new(Vec::new()),
-        }
+            events: Mutex::new(Vec::new())}
     }
 
     fn events(&self) -> Vec<(TaskStage, Option<Progress>)> {
@@ -239,8 +224,7 @@ struct Case {
     token: CancellationToken,
     media: MediaRunner,
     frames: FfmpegRunner,
-    detector: Detector,
-}
+    detector: Detector}
 
 impl Case {
     fn new() -> Self {
@@ -249,8 +233,7 @@ impl Case {
             token: CancellationToken::new(),
             media: MediaRunner::new(3, "25/1"),
             frames: FfmpegRunner::new(),
-            detector: detector(),
-        }
+            detector: detector()}
     }
 
     fn run(&self, params: &ExtractFramesParams, reporter: &dyn TaskReporter) -> CommandOutcome {
@@ -271,8 +254,7 @@ impl Case {
 fn progress(completed: u64, total: u64) -> Option<Progress> {
     Some(Progress {
         completed,
-        total: Some(total),
-    })
+        total: Some(total)})
 }
 
 fn file_count(directory: &Path) -> usize {
@@ -282,8 +264,7 @@ fn file_count(directory: &Path) -> usize {
 fn expect_failure(outcome: CommandOutcome) -> TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failure, got {other:?}"),
-    }
+        other => panic!("expected a failure, got {other:?}")}
 }
 
 #[test]
@@ -305,8 +286,7 @@ fn three_frames_are_published_and_every_stage_is_reported() {
 
     let result = match case.run(&params, &recorder) {
         CommandOutcome::Completed(Some(result)) => result,
-        other => panic!("expected a completed command, got {other:?}"),
-    };
+        other => panic!("expected a completed command, got {other:?}")};
 
     let assets = params.project_dir.join("assets");
     let frames = assets.join("frames");
@@ -421,8 +401,7 @@ fn a_frame_without_a_face_fails_the_run_and_publishes_nothing() {
     let (_root, params) = project();
     let mut case = Case::new();
     case.detector = Detector {
-        detections: Vec::new(),
-    };
+        detections: Vec::new()};
 
     let error = expect_failure(case.run(&params, &NoReporter));
 

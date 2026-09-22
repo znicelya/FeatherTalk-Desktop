@@ -4,7 +4,6 @@ use std::{
     path::Path,
 };
 
-use burn::tensor::backend::Backend;
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, SafetensorsStore};
 use sha2::{Digest, Sha256};
 
@@ -28,10 +27,10 @@ pub struct ScrfdArtifactPaths {
     pub weights: std::path::PathBuf,
 }
 
-pub(crate) fn load_model<B: Backend>(
+pub(crate) fn load_model(
     paths: &ScrfdArtifactPaths,
-    device: &B::Device,
-) -> Result<(scrfd_2_5g::Model<B>, ScrfdArtifactManifest), ScrfdError> {
+    device: &burn::tensor::Device,
+) -> Result<(scrfd_2_5g::Model, ScrfdArtifactManifest), ScrfdError> {
     let manifest_bytes = read_bounded(&paths.manifest, MAX_MANIFEST_BYTES, "read manifest")?;
     let manifest: ScrfdArtifactManifest = serde_json::from_slice(&manifest_bytes)
         .map_err(|error| ScrfdError::ManifestJson(error.to_string()))?;
@@ -68,7 +67,7 @@ pub(crate) fn load_model<B: Backend>(
         });
     }
 
-    let mut model = scrfd_2_5g::Model::<B>::new(device);
+    let mut model = scrfd_2_5g::Model::new(device);
     let mut store = SafetensorsStore::from_bytes(Some(weight_bytes))
         .allow_partial(true)
         .validate(false);

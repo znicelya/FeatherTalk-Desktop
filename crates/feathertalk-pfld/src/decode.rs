@@ -8,19 +8,16 @@ pub struct CropGeometry {
     pub width: u32,
     pub height: u32,
     pub offset_x: i32,
-    pub offset_y: i32,
-}
+    pub offset_y: i32}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LandmarkPoint {
     pub x: i32,
-    pub y: i32,
-}
+    pub y: i32}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PFLDLandmarks {
-    points: Vec<LandmarkPoint>,
-}
+    points: Vec<LandmarkPoint>}
 
 impl PFLDLandmarks {
     pub fn points(&self) -> &[LandmarkPoint] {
@@ -73,8 +70,7 @@ fn validate_length(field: &'static str, actual: usize) -> Result<(), PfldError> 
         return Err(PfldError::InvalidVectorLength {
             field,
             expected: PFLD_OUTPUT_VALUE_COUNT,
-            actual,
-        });
+            actual});
     }
     Ok(())
 }

@@ -3,8 +3,7 @@ use std::path::Path;
 use feathertalk_pfld::{
     PFLD_ARCHITECTURE_VERSION, PFLD_INPUT_SHAPE, PFLD_MODEL_SHA256, PFLD_OUTPUT_SHAPE,
     PFLD_RUNTIME_SCHEMA_VERSION, PFLD_SOURCE_SHA256, PfldLicenseManifest, PfldRuntimeError,
-    PfldRuntimeManifest, PfldTensorSpec,
-};
+    PfldRuntimeManifest, PfldTensorSpec};
 
 fn valid_manifest() -> PfldRuntimeManifest {
     PfldRuntimeManifest::approved(
@@ -33,8 +32,7 @@ fn approved_manifest_round_trips_and_exposes_fixed_contract() {
         manifest.license,
         PfldLicenseManifest {
             spdx: "NOASSERTION".to_owned(),
-            redistribution_approved: false,
-        }
+            redistribution_approved: false}
     );
     let encoded = serde_json::to_vec(&manifest).unwrap();
     let decoded: PfldRuntimeManifest = serde_json::from_slice(&encoded).unwrap();

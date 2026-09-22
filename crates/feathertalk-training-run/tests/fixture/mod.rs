@@ -9,8 +9,7 @@ use feathertalk_inference::{BgrFrame, FrameReader, InferenceError};
 use feathertalk_preprocess::PFLD_LANDMARK_COUNT;
 use feathertalk_project::{
     AssetManifest, AssetPackageState, FeatureType, ModelSelection, ProjectManifest,
-    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic,
-};
+    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic};
 use feathertalk_training_data::ProjectTrainingDataset;
 use tempfile::TempDir;
 
@@ -33,15 +32,13 @@ impl FrameReader for GradientFrameReader {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_path_buf(),
-                message: format!("expected a file named {expected}"),
-            });
+                message: format!("expected a file named {expected}")});
         }
         if !path.is_file() {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_path_buf(),
-                message: "not a file".to_owned(),
-            });
+                message: "not a file".to_owned()});
         }
         let width = FRAME_WIDTH as usize;
         let height = FRAME_HEIGHT as usize;
@@ -68,8 +65,7 @@ pub struct FixtureSpec {
     pub face_xmax: u32,
     pub face_ymin: u32,
     pub mouth_x: u32,
-    pub mouth_y: u32,
-}
+    pub mouth_y: u32}
 
 impl FixtureSpec {
     /// The 256x256 gradient project the dataset tests start from.
@@ -83,8 +79,7 @@ impl FixtureSpec {
             face_xmax: 200,
             face_ymin: 60,
             mouth_x: 100,
-            mouth_y: 160,
-        }
+            mouth_y: 160}
     }
 
     pub fn manifest(&self) -> AssetManifest {
@@ -100,8 +95,7 @@ impl FixtureSpec {
             feature_type: FeatureType::FeatherHubert,
             feature_shape: [self.frame_count as u64, 2, 1024],
             landmark_model_sha256: "a".repeat(64),
-            feature_model_sha256: "b".repeat(64),
-        }
+            feature_model_sha256: "b".repeat(64)}
     }
 }
 
@@ -171,9 +165,7 @@ pub fn valid_project() -> ProjectManifest {
             task_id: "task-1".into(),
             kind: "preprocess".into(),
             status: TaskHistoryStatus::Completed,
-            updated_at: "2026-08-20T10:00:00Z".into(),
-        }],
-    }
+            updated_at: "2026-08-20T10:00:00Z".into()}]}
 }
 
 /// Opens the fixture project as a training dataset backed by the gradient reader.

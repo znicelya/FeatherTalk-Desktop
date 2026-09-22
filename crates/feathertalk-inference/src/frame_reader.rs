@@ -1,8 +1,7 @@
 use std::{
     fs,
     io::Cursor,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use jpeg_decoder::{Decoder, PixelFormat};
 
@@ -17,8 +16,7 @@ pub trait FrameReader: Send + Sync {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JpegFrameReader {
-    max_pixels: u64,
-}
+    max_pixels: u64}
 
 impl JpegFrameReader {
     pub const fn new(max_pixels: u64) -> Self {
@@ -133,6 +131,5 @@ fn reader_error(index: usize, path: &Path, message: impl Into<String>) -> Infere
     InferenceError::FrameReader {
         index,
         path: PathBuf::from(path),
-        message: message.into(),
-    }
+        message: message.into()}
 }

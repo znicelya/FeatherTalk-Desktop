@@ -1,11 +1,10 @@
-﻿use std::{fs, path::Path};
+use std::{fs, path::Path};
 
 use crate::{PFLD_OUTPUT_VALUE_COUNT, PfldError};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeanFace {
-    values: [f32; PFLD_OUTPUT_VALUE_COUNT],
-}
+    values: [f32; PFLD_OUTPUT_VALUE_COUNT]}
 
 #[allow(clippy::excessive_precision)]
 pub const MEAN_FACE: MeanFace = MeanFace {
@@ -230,8 +229,7 @@ pub const MEAN_FACE: MeanFace = MeanFace {
         0.6787626f32,
         0.4114343f32,
         0.66389504f32,
-    ],
-};
+    ]};
 
 impl MeanFace {
     pub fn values(&self) -> &[f32; PFLD_OUTPUT_VALUE_COUNT] {
@@ -243,24 +241,20 @@ pub fn read_mean_face(path: &Path) -> Result<MeanFace, PfldError> {
     let bytes = fs::read(path).map_err(|source| PfldError::Io {
         operation: "read_mean_face",
         path: path.to_path_buf(),
-        source,
-    })?;
+        source})?;
     let text = String::from_utf8(bytes).map_err(|_| PfldError::InvalidUtf8 {
-        path: path.to_path_buf(),
-    })?;
+        path: path.to_path_buf()})?;
     let mut values = Vec::new();
     for (index, token) in text.split_whitespace().enumerate() {
         let value = token
             .parse::<f32>()
             .map_err(|_| PfldError::InvalidMeanFaceToken {
                 path: path.to_path_buf(),
-                index,
-            })?;
+                index})?;
         if !value.is_finite() {
             return Err(PfldError::NonFiniteValue {
                 field: "mean_face",
-                index,
-            });
+                index});
         }
         values.push(value);
     }
@@ -268,15 +262,13 @@ pub fn read_mean_face(path: &Path) -> Result<MeanFace, PfldError> {
         return Err(PfldError::InvalidMeanFaceCount {
             path: path.to_path_buf(),
             expected: PFLD_OUTPUT_VALUE_COUNT,
-            actual: values.len(),
-        });
+            actual: values.len()});
     }
     let values = values
         .try_into()
         .map_err(|values: Vec<f32>| PfldError::InvalidMeanFaceCount {
             path: path.to_path_buf(),
             expected: PFLD_OUTPUT_VALUE_COUNT,
-            actual: values.len(),
-        })?;
+            actual: values.len()})?;
     Ok(MeanFace { values })
 }

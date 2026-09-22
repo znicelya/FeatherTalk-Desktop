@@ -1,17 +1,13 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_audio::ChunkEncoder;
 use feathertalk_export::{
     LicenseBundle, LicenseEntry, ModelConfiguration, ModelDescription, ModelPackageManifest,
-    PackageBuildRequest, PackageError, SourceManifest, TrainingManifest, write_model_package,
-};
+    PackageBuildRequest, PackageError, SourceManifest, TrainingManifest, write_model_package};
 use feathertalk_models::{
-    backend::CpuBackend,
-    feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder},
-};
+    feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder}};
 use feathertalk_worker::{FeatureModel, WorkerConfig};
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -32,13 +28,11 @@ fn published_package(root: &Path) -> PathBuf {
             component: "synthetic FeatherHuBERT fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/feather-hubert".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(&licenses_path, serde_json::to_vec(&licenses).unwrap()).unwrap();
     let config = FeatherHubertConfig::parity_micro();
     let device = Default::default();
-    let model = config.init::<CpuBackend>(&device);
+    let model = config.init(&device);
     let request = PackageBuildRequest {
         destination: root.join("hubert"),
         description: ModelDescription::feather_hubert(config.clone()),
@@ -49,18 +43,16 @@ fn published_package(root: &Path) -> PathBuf {
             version: "1".to_owned(),
             file_name: "source.pth".to_owned(),
             sha256: source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path,
         created_at: "2026-08-27T00:00:00Z".to_owned(),
         minimum_app_version: "0.1.0".to_owned(),
-        training: TrainingManifest::default(),
-    };
-    write_model_package::<CpuBackend, FeatherHubertEncoder<CpuBackend>, _>(
+        training: TrainingManifest::default()};
+    write_model_package::<FeatherHubertEncoder, _>(
         &request,
         &model,
         &device,
-        |device| config.init::<CpuBackend>(device),
+        |device| config.init(device),
     )
     .unwrap();
     request.destination
@@ -98,8 +90,7 @@ fn a_published_package_loads_with_the_configuration_the_manifest_declares() {
             expansion: 2,
             num_blocks: 2,
             output_dim: 64,
-            dropout: 0.0,
-        }
+            dropout: 0.0}
     );
 }
 
@@ -115,8 +106,7 @@ fn a_directory_without_a_package_is_refused_before_any_weight_is_read() {
             message.contains("package directory entries must be exactly"),
             "unexpected message: {message}"
         ),
-        other => panic!("expected an invalid request, got {other:?}"),
-    }
+        other => panic!("expected an invalid request, got {other:?}")}
 }
 
 #[test]
@@ -129,8 +119,7 @@ fn a_package_of_another_kind_is_refused_by_name() {
     let other = ModelDescription::from_configuration(ModelConfiguration::MobileOneUnet {
         channels: [2, 4, 8, 16, 32],
         num_conv_branches: 1,
-        reparameterized: false,
-    });
+        reparameterized: false});
     manifest.model_type = other.model_type;
     manifest.architecture_version = other.architecture_version;
     manifest.configuration = other.configuration;
@@ -146,6 +135,5 @@ fn a_package_of_another_kind_is_refused_by_name() {
             message,
             "expected a feather_hubert configuration, got mobileone_unet"
         ),
-        other => panic!("expected an invalid manifest, got {other:?}"),
-    }
+        other => panic!("expected an invalid manifest, got {other:?}")}
 }

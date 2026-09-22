@@ -4,17 +4,14 @@ use std::{
     fs,
     path::{Path, PathBuf},
     sync::{Arc, OnceLock},
-    time::Duration,
-};
+    time::Duration};
 
 use feathertalk_frame_adapters::{
-    FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor, ScrfdFaceDetector,
-};
+    FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor, ScrfdFaceDetector};
 use feathertalk_frame_pipeline::{
     AnomalyCode, BLUR_VARIANCE_THRESHOLD, CommandSpec, FrameAnomaly, FrameEvaluation,
     FrameExtractor, FramePipelineSpec, PipelineError, ProcessOutput, ProcessRunner, RecoveryAction,
-    evaluate_frames_with_models, extract_frames_with_runner,
-};
+    evaluate_frames_with_models, extract_frames_with_runner};
 use feathertalk_models::backend::CpuBackend;
 use feathertalk_scrfd::ScrfdArtifactPaths;
 
@@ -24,8 +21,7 @@ fn scrfd_artifact_paths() -> ScrfdArtifactPaths {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../feathertalk-scrfd/artifacts/scrfd_2_5g");
     ScrfdArtifactPaths {
         manifest: root.join("manifest.json"),
-        weights: root.join("model.safetensors"),
-    }
+        weights: root.join("model.safetensors")}
 }
 
 /// The committed PFLD artifact directory, one crate over.
@@ -37,8 +33,7 @@ fn pfld_artifact_dir() -> PathBuf {
 /// `<staging>/frames/{index:06}.jpg`, so the frame index selects which
 /// committed JPEG this frame carries.
 struct FixtureRunner {
-    payloads: Vec<Vec<u8>>,
-}
+    payloads: Vec<Vec<u8>>}
 
 impl ProcessRunner for FixtureRunner {
     fn run(
@@ -65,8 +60,7 @@ impl ProcessRunner for FixtureRunner {
 /// not files to open.
 struct Outcome {
     evaluation: FrameEvaluation,
-    staged_paths: Vec<PathBuf>,
-}
+    staged_paths: Vec<PathBuf>}
 
 /// Loading the GhostOne graph moves a 125 768-byte module struct through
 /// several frames, which overruns the default test-thread stack on Windows.
@@ -125,14 +119,14 @@ fn build_outcome() -> Outcome {
     // frame is decoded once and the pixels are reused by detect and predict.
     let cache = Arc::new(FrameImageCache::new());
     let decoder = JpegFrameDecoder::new(Arc::clone(&cache));
-    let detector = ScrfdFaceDetector::<CpuBackend>::load(
+    let detector = ScrfdFaceDetector::load(
         &scrfd_artifact_paths(),
         Default::default(),
         Arc::clone(&cache),
     )
     .expect("the committed SCRFD artifact loads");
     let predictor =
-        PfldLandmarkPredictor::<CpuBackend>::load(&pfld_artifact_dir(), Default::default(), cache)
+        PfldLandmarkPredictor::load(&pfld_artifact_dir(), Default::default(), cache)
             .expect("the committed PFLD artifact loads");
 
     let evaluation = evaluate_frames_with_models(&batch, &decoder, &detector, &predictor)
@@ -140,8 +134,7 @@ fn build_outcome() -> Outcome {
 
     Outcome {
         evaluation,
-        staged_paths,
-    }
+        staged_paths}
 }
 
 fn anomaly_for(evaluation: &FrameEvaluation, index: u64) -> &FrameAnomaly {

@@ -1,15 +1,12 @@
 use std::{
     path::{Path, PathBuf},
-    sync::Arc,
-};
+    sync::Arc};
 
-use burn::tensor::{Device, backend::Backend};
+use burn::tensor::Device;
 
 use feathertalk_frame_adapters::{
-    FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor, ScrfdArtifactPaths, ScrfdFaceDetector,
-};
+    FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor, ScrfdArtifactPaths, ScrfdFaceDetector};
 use feathertalk_frame_pipeline::{FaceDetector, FrameDecoder, LandmarkPredictor, PipelineError};
-use feathertalk_models::backend::CpuBackend;
 
 use crate::{GpuContext, ModelToolchain};
 
@@ -25,41 +22,39 @@ const PREDICTOR_LOAD_STACK_BYTES: usize = 64 * 1024 * 1024;
 /// They share one image cache so the detector and the predictor reuse the
 /// pixels the decoder already produced, which is the arrangement the adapter
 /// parity tests certify. Both model adapters use the same selected device.
-pub struct FrameModels<B: Backend = CpuBackend> {
+pub struct FrameModels {
     decoder: JpegFrameDecoder,
-    detector: ScrfdFaceDetector<B>,
-    predictor: Box<PfldLandmarkPredictor<B>>,
-}
+    detector: ScrfdFaceDetector,
+    predictor: Box<PfldLandmarkPredictor>}
 
-impl FrameModels<CpuBackend> {
+impl FrameModels{
     pub fn load(models: &ModelToolchain) -> Result<Self, PipelineError> {
         Self::load_on(models, Default::default())
     }
 }
 
-impl<B: Backend> FrameModels<B> {
-    pub fn load_on(models: &ModelToolchain, device: Device<B>) -> Result<Self, PipelineError> {
+impl FrameModels {
+    pub fn load_on(models: &ModelToolchain, device: Device) -> Result<Self, PipelineError> {
         Self::load_checked(models, device, None)
     }
 
     pub(crate) fn load_checked(
         models: &ModelToolchain,
-        device: Device<B>,
+        device: Device,
         context: Option<GpuContext>,
     ) -> Result<Self, PipelineError> {
         let cache = Arc::new(FrameImageCache::new());
         let decoder = JpegFrameDecoder::new(Arc::clone(&cache));
-        let detector = ScrfdFaceDetector::<B>::load(
+        let detector = ScrfdFaceDetector::load(
             &scrfd_paths(models.scrfd_dir()),
             device.clone(),
             Arc::clone(&cache),
         )?;
-        let predictor = load_predictor::<B>(models.pfld_dir().to_owned(), cache, device, context)?;
+        let predictor = load_predictor(models.pfld_dir().to_owned(), cache, device, context)?;
         Ok(Self {
             decoder,
             detector,
-            predictor,
-        })
+            predictor})
     }
 
     pub fn decoder(&self) -> &dyn FrameDecoder {
@@ -80,21 +75,20 @@ impl<B: Backend> FrameModels<B> {
 fn scrfd_paths(dir: &Path) -> ScrfdArtifactPaths {
     ScrfdArtifactPaths {
         manifest: dir.join("manifest.json"),
-        weights: dir.join("model.safetensors"),
-    }
+        weights: dir.join("model.safetensors")}
 }
 
-fn load_predictor<B: Backend>(
+fn load_predictor(
     artifacts: PathBuf,
     cache: Arc<FrameImageCache>,
-    device: Device<B>,
+    device: Device,
     context: Option<GpuContext>,
-) -> Result<Box<PfldLandmarkPredictor<B>>, PipelineError> {
+) -> Result<Box<PfldLandmarkPredictor>, PipelineError> {
     std::thread::Builder::new()
         .name("pfld-predictor-load".to_owned())
         .stack_size(PREDICTOR_LOAD_STACK_BYTES)
         .spawn(move || {
-            let predictor = PfldLandmarkPredictor::<B>::load(&artifacts, device.clone(), cache)
+            let predictor = PfldLandmarkPredictor::load(&artifacts, device.clone(), cache)
                 .map(Box::new)?;
             // CubeCL records errors per thread stream. Drain the loader's
             // stream here; the execution thread cannot observe it afterwards.
@@ -103,7 +97,7 @@ fn load_predictor<B: Backend>(
                     .check()
                     .map_err(|error| adapter_failure(error.to_string()))?;
             } else {
-                B::sync(&device).map_err(|error| adapter_failure(error.to_string()))?;
+                device.sync().map_err(|error| adapter_failure(error.to_string()))?;
             }
             Ok(predictor)
         })
@@ -115,6 +109,5 @@ fn load_predictor<B: Backend>(
 fn adapter_failure(message: String) -> PipelineError {
     PipelineError::Adapter {
         component: "pfld",
-        message,
-    }
+        message}
 }

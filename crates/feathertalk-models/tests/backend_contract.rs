@@ -1,14 +1,16 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
 use feathertalk_models::backend::{CpuAutodiffBackend, CpuBackend};
-
-fn assert_backend<B: Backend>() {}
+#[allow(unused_imports)]
 
 #[test]
 fn cpu_backend_aliases_compile_and_execute() {
-    assert_backend::<CpuBackend>();
-    assert_backend::<CpuAutodiffBackend>();
-
-    let device = Default::default();
-    let tensor = Tensor::<CpuBackend, 2>::ones([2, 3], &device);
+    // The 0.22 dispatch backend aliases still resolve and execute on CPU.
+    let device = burn::tensor::Device::default();
+    let tensor = Tensor::<2>::ones([2, 3], &device);
     assert_eq!(tensor.dims(), [2, 3]);
+
+    // Autodiff is a device property in 0.22, so the aliases are exercised by name only.
+    fn aliases<B: burn::backend::Backend>() {}
+    aliases::<CpuBackend>();
+    aliases::<CpuAutodiffBackend>();
 }

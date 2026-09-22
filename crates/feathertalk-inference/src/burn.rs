@@ -1,11 +1,10 @@
-use burn::tensor::{Tensor, TensorData, backend::Backend};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_audio::FeatureMatrix;
 use feathertalk_models::unet::TalkingHeadModel;
 
 use crate::{
     BgrFrame, InferenceError, InferenceFramePlan, RenderGeometry, build_face_crop,
-    build_unet_image_input, render_frame,
-};
+    build_unet_image_input, render_frame};
 
 const FEATURE_DIMS: usize = 1024;
 const TOKENS_PER_FRAME: usize = 2;
@@ -17,8 +16,7 @@ const UNET_OUTPUT_SHAPE: [usize; 4] = [1, 3, 160, 160];
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnetAudioInput {
-    values: Vec<f32>,
-}
+    values: Vec<f32>}
 
 impl UnetAudioInput {
     pub fn shape(&self) -> [usize; 4] {
@@ -39,8 +37,7 @@ pub fn build_unet_audio_window(
     values
         .try_reserve_exact(UNET_AUDIO_VALUES)
         .map_err(|_| InferenceError::AllocationFailure {
-            bytes: UNET_AUDIO_VALUES * std::mem::size_of::<f32>(),
-        })?;
+            bytes: UNET_AUDIO_VALUES * std::mem::size_of::<f32>()})?;
     values.resize(UNET_AUDIO_VALUES, 0.0);
 
     for (slot, frame_index) in audio_window.iter().copied().enumerate() {
@@ -51,8 +48,7 @@ pub fn build_unet_audio_window(
             return Err(InferenceError::InvalidAudioWindowIndex {
                 slot,
                 index: frame_index,
-                frame_count,
-            });
+                frame_count});
         }
 
         let source_start = frame_index
@@ -82,8 +78,7 @@ pub fn build_unet_audio_input(
     if plan.output_index >= frame_count {
         return Err(InferenceError::OutputFrameOutOfRange {
             index: plan.output_index,
-            count: frame_count,
-        });
+            count: frame_count});
     }
     build_unet_audio_window(features, &plan.audio_window)
 }
@@ -97,26 +92,25 @@ fn feature_frame_count(features: &FeatureMatrix) -> Result<usize, InferenceError
     Ok(tokens / TOKENS_PER_FRAME)
 }
 
-pub fn run_unet_prediction<B, M>(
+pub fn run_unet_prediction<M>(
     model: &M,
     image: &crate::UnetImageInput,
     audio: &UnetAudioInput,
-    device: &B::Device,
+    device: &burn::tensor::Device,
 ) -> Result<Vec<f32>, InferenceError>
 where
-    B: Backend,
-    M: TalkingHeadModel<B>,
+    M: TalkingHeadModel,
 {
     validate_shape("unet_image_input", image.shape(), UNET_IMAGE_SHAPE)?;
     validate_shape("unet_audio_input", audio.shape(), UNET_AUDIO_SHAPE)?;
     ensure_finite(image.as_slice(), "image")?;
     ensure_finite(audio.as_slice(), "audio")?;
 
-    let image_tensor = Tensor::<B, 4>::from_data(
+    let image_tensor = Tensor::<4>::from_data(
         TensorData::new(image.as_slice().to_vec(), UNET_IMAGE_SHAPE),
         device,
     );
-    let audio_tensor = Tensor::<B, 4>::from_data(
+    let audio_tensor = Tensor::<4>::from_data(
         TensorData::new(audio.as_slice().to_vec(), UNET_AUDIO_SHAPE),
         device,
     );
@@ -125,17 +119,15 @@ where
     let values =
         output
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .map_err(|error| InferenceError::ModelTensorData {
                 context: "unet_output",
-                message: error.to_string(),
-            })?;
+                message: error.to_string()})?;
     if values.len() != 3 * 160 * 160 {
         return Err(InferenceError::TensorShapeMismatch {
             context: "unet_output",
             expected: UNET_OUTPUT_SHAPE.to_vec(),
-            actual: vec![values.len()],
-        });
+            actual: vec![values.len()]});
     }
     if let Some(index) = values.iter().position(|value| !value.is_finite()) {
         return Err(InferenceError::NonFiniteModelOutput { index });
@@ -151,23 +143,22 @@ where
     Ok(values)
 }
 
-pub fn render_planned_frame<B, M>(
+pub fn render_planned_frame<M>(
     model: &M,
     frame: &BgrFrame,
     bbox: &feathertalk_preprocess::FaceBoundingBox,
     features: &FeatureMatrix,
     plan: &InferenceFramePlan,
     geometry: &RenderGeometry,
-    device: &B::Device,
+    device: &burn::tensor::Device,
 ) -> Result<BgrFrame, InferenceError>
 where
-    B: Backend,
-    M: TalkingHeadModel<B>,
+    M: TalkingHeadModel,
 {
     let audio = build_unet_audio_input(features, plan)?;
     let face_crop = build_face_crop(frame, bbox, geometry)?;
     let image = build_unet_image_input(&face_crop, geometry)?;
-    let prediction = run_unet_prediction::<B, M>(model, &image, &audio, device)?;
+    let prediction = run_unet_prediction::<M>(model, &image, &audio, device)?;
     render_frame(frame, bbox, &prediction, geometry)
 }
 
@@ -180,8 +171,7 @@ fn validate_shape(
         return Err(InferenceError::TensorShapeMismatch {
             context,
             expected: expected.to_vec(),
-            actual: actual.to_vec(),
-        });
+            actual: actual.to_vec()});
     }
     Ok(())
 }

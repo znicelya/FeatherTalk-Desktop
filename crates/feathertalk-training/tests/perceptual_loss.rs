@@ -1,19 +1,17 @@
 use burn::{
     module::Module,
-    tensor::{Tensor, TensorData, backend::Backend},
-};
+    tensor::{Tensor, TensorData}};
 use feathertalk_training::{
-    PerceptualFeatureExtractor, TrainingError, Vgg19Conv3_3, perceptual_mse,
-};
+    PerceptualFeatureExtractor, TrainingError, Vgg19Conv3_3, perceptual_mse};
 
-type CpuBackend = burn::backend::NdArray<f32>;
+type CpuBackend = burn::backend::Flex;
 type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
 
 #[derive(Debug, Clone, Copy)]
 struct IdentityExtractor;
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for IdentityExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         image
     }
 }
@@ -21,12 +19,12 @@ impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
 #[test]
 fn perceptual_mse_matches_a_hand_computed_mean_square() {
     let device = Default::default();
-    let prediction = Tensor::<CpuBackend, 4>::full([1, 3, 4, 4], 1.0, &device);
-    let target = Tensor::<CpuBackend, 4>::full([1, 3, 4, 4], 0.5, &device);
+    let prediction = Tensor::<4>::full([1, 3, 4, 4], 1.0, &device);
+    let target = Tensor::<4>::full([1, 3, 4, 4], 0.5, &device);
 
     let actual = perceptual_mse(&IdentityExtractor, prediction, target)
         .unwrap()
-        .into_scalar();
+        .into_scalar::<f32>();
 
     assert!((actual - 0.25).abs() <= f32::EPSILON);
 }
@@ -34,7 +32,7 @@ fn perceptual_mse_matches_a_hand_computed_mean_square() {
 #[test]
 fn identical_perceptual_inputs_have_exactly_zero_loss() {
     let device = Default::default();
-    let input = Tensor::<CpuBackend, 4>::from_data(
+    let input = Tensor::<4>::from_data(
         TensorData::from([[
             [
                 [0.0_f32, 0.1, 0.2, 0.3],
@@ -60,7 +58,7 @@ fn identical_perceptual_inputs_have_exactly_zero_loss() {
 
     let actual = perceptual_mse(&IdentityExtractor, input.clone(), input)
         .unwrap()
-        .into_scalar();
+        .into_scalar::<f32>();
 
     assert_eq!(actual, 0.0);
 }
@@ -68,8 +66,8 @@ fn identical_perceptual_inputs_have_exactly_zero_loss() {
 #[test]
 fn perceptual_mse_rejects_shape_mismatch_before_extraction() {
     let device = Default::default();
-    let prediction = Tensor::<CpuBackend, 4>::zeros([1, 3, 4, 4], &device);
-    let target = Tensor::<CpuBackend, 4>::zeros([1, 3, 4, 5], &device);
+    let prediction = Tensor::<4>::zeros([1, 3, 4, 4], &device);
+    let target = Tensor::<4>::zeros([1, 3, 4, 5], &device);
 
     let error = perceptual_mse(&IdentityExtractor, prediction, target).unwrap_err();
 
@@ -79,8 +77,8 @@ fn perceptual_mse_rejects_shape_mismatch_before_extraction() {
 #[test]
 fn perceptual_mse_rejects_non_three_channel_input() {
     let device = Default::default();
-    let prediction = Tensor::<CpuBackend, 4>::zeros([1, 1, 4, 4], &device);
-    let target = Tensor::<CpuBackend, 4>::zeros([1, 1, 4, 4], &device);
+    let prediction = Tensor::<4>::zeros([1, 1, 4, 4], &device);
+    let target = Tensor::<4>::zeros([1, 1, 4, 4], &device);
 
     let error = perceptual_mse(&IdentityExtractor, prediction, target).unwrap_err();
 
@@ -92,8 +90,8 @@ fn perceptual_mse_rejects_non_three_channel_input() {
 #[test]
 fn perceptual_mse_rejects_empty_batch() {
     let device = Default::default();
-    let prediction = Tensor::<CpuBackend, 4>::zeros([0, 3, 4, 4], &device);
-    let target = Tensor::<CpuBackend, 4>::zeros([0, 3, 4, 4], &device);
+    let prediction = Tensor::<4>::zeros([0, 3, 4, 4], &device);
+    let target = Tensor::<4>::zeros([0, 3, 4, 4], &device);
 
     let error = perceptual_mse(&IdentityExtractor, prediction, target).unwrap_err();
 
@@ -103,8 +101,8 @@ fn perceptual_mse_rejects_empty_batch() {
 #[test]
 fn perceptual_mse_rejects_spatial_dimensions_smaller_than_four() {
     let device = Default::default();
-    let prediction = Tensor::<CpuBackend, 4>::zeros([1, 3, 3, 4], &device);
-    let target = Tensor::<CpuBackend, 4>::zeros([1, 3, 3, 4], &device);
+    let prediction = Tensor::<4>::zeros([1, 3, 3, 4], &device);
+    let target = Tensor::<4>::zeros([1, 3, 3, 4], &device);
 
     let error = perceptual_mse(&IdentityExtractor, prediction, target).unwrap_err();
 
@@ -113,10 +111,10 @@ fn perceptual_mse_rejects_spatial_dimensions_smaller_than_four() {
 
 #[test]
 fn frozen_vgg_keeps_prediction_gradient_and_drops_target_and_vgg_gradients() {
-    let device = Default::default();
-    let vgg = Vgg19Conv3_3::<CpuAutodiffBackend>::new_for_import(&device).no_grad();
-    let prediction = Tensor::<CpuAutodiffBackend, 4>::ones([1, 3, 8, 8], &device).require_grad();
-    let target = Tensor::<CpuAutodiffBackend, 4>::zeros([1, 3, 8, 8], &device).require_grad();
+    let device = burn::tensor::Device::default().autodiff();
+    let vgg = Vgg19Conv3_3::new_for_import(&device).no_grad();
+    let prediction = Tensor::<4>::ones([1, 3, 8, 8], &device).require_grad();
+    let target = Tensor::<4>::zeros([1, 3, 8, 8], &device).require_grad();
 
     let loss = perceptual_mse(&vgg, prediction.clone(), target.clone()).unwrap();
     let gradients = loss.backward();

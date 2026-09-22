@@ -29,8 +29,7 @@ fn render_frame_returns_new_frame_and_leaves_input_unchanged() {
         xmin: 0,
         ymin: 0,
         xmax: 2,
-        ymax: 2,
-    };
+        ymax: 2};
     let prediction = vec![1.0; 3 * 160 * 160];
     let rendered = render_frame(&frame, &bbox, &prediction, &geometry).unwrap();
     assert_eq!(frame, original);

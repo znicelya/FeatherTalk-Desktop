@@ -2,8 +2,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Take, Write},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
-};
+    sync::atomic::{AtomicU64, Ordering}};
 
 use sha2::{Digest, Sha256};
 
@@ -11,8 +10,7 @@ use crate::{
     PREVIEW_ARTIFACT_FORMAT, PREVIEW_ARTIFACT_SCHEMA_VERSION, PREVIEW_MANIFEST_FILE_NAME,
     PREVIEW_MOUTH_ROI_FILE_NAME, PREVIEW_PREDICTION_FILE_NAME, PREVIEW_TARGET_FILE_NAME,
     PREVIEW_TENSOR_ELEMENTS, PREVIEW_TENSOR_SHAPE, PreviewArtifact, PreviewArtifactManifest,
-    PreviewFileManifest, TrainingError, TrainingMetrics,
-};
+    PreviewFileManifest, TrainingError, TrainingMetrics};
 
 const PREVIEW_MAGIC: [u8; 8] = *b"FTPV32\0\0";
 const PREVIEW_FORMAT_VERSION: u32 = 1;
@@ -107,8 +105,7 @@ pub fn write_preview_artifact(
         shape: PREVIEW_TENSOR_SHAPE,
         prediction,
         target,
-        mouth_roi,
-    };
+        mouth_roi};
     manifest.validate_against(artifact)?;
 
     let manifest_bytes = serde_json::to_vec(&manifest)
@@ -337,8 +334,7 @@ fn validate_declared_file(
         return Err(TrainingError::HashMismatch {
             file: declared.file_name.clone(),
             expected: declared.sha256.clone(),
-            actual: sha256,
-        });
+            actual: sha256});
     }
     if bytes != declared.bytes {
         return Err(TrainingError::InvalidCheckpoint(format!(
@@ -354,8 +350,7 @@ fn file_manifest(path: &Path, expected_name: &str) -> Result<PreviewFileManifest
     let manifest = PreviewFileManifest {
         file_name: expected_name.to_owned(),
         bytes,
-        sha256,
-    };
+        sha256};
     manifest.validate(expected_name)?;
     if bytes > PREVIEW_MAX_FILE_BYTES {
         return Err(TrainingError::InvalidCheckpoint(format!(
@@ -445,8 +440,7 @@ fn reject_existing_destination(path: &Path, label: &str) -> Result<(), TrainingE
             path.display()
         ))),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
-    }
+        Err(error) => Err(error.into())}
 }
 
 fn parent_or_current(path: &Path) -> &Path {
@@ -466,8 +460,7 @@ fn create_temp_file(parent: &Path, destination: &Path) -> Result<(PathBuf, File)
         match OpenOptions::new().write(true).create_new(true).open(&path) {
             Ok(file) => return Ok((path, file)),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
     }
     Err(TrainingError::CheckpointDirectory(
         "unable to allocate a unique metrics temporary file".to_owned(),
@@ -476,8 +469,7 @@ fn create_temp_file(parent: &Path, destination: &Path) -> Result<(PathBuf, File)
 
 struct StagingDirectory {
     path: PathBuf,
-    armed: bool,
-}
+    armed: bool}
 
 impl StagingDirectory {
     fn path(&self) -> &Path {
@@ -504,8 +496,7 @@ fn create_staging_directory(parent: &Path) -> Result<StagingDirectory, TrainingE
         match fs::create_dir(&path) {
             Ok(()) => return Ok(StagingDirectory { path, armed: true }),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
     }
     Err(TrainingError::CheckpointDirectory(
         "unable to allocate a unique preview staging directory".to_owned(),
@@ -525,8 +516,7 @@ fn reject_symlink_components(path: &Path) -> Result<(), TrainingError> {
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
     }
     Ok(())
 }

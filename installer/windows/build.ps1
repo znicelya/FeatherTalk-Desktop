@@ -9,7 +9,8 @@ param(
     [string]$HubertModelDirectory,
     [string]$Vgg19ModelDirectory,
     [string]$OutputDirectory,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$SkipValidation
 )
 
 $ErrorActionPreference = 'Stop'
@@ -213,9 +214,13 @@ foreach ($binary in $binaries) {
     Copy-Item -LiteralPath $binary -Destination $destination
 }
 
-if (!$ScrfdModelDirectory) { $ScrfdModelDirectory = Join-Path $rustRoot 'crates/feathertalk-scrfd/artifacts/scrfd_2_5g' }
-if (!$PfldModelDirectory) { $PfldModelDirectory = Join-Path $rustRoot 'crates/feathertalk-pfld/artifacts/pfld_ghost_one' }
-if (!$Vgg19ModelDirectory) { $Vgg19ModelDirectory = Join-Path $rustRoot 'target/installer/models/vgg19' }
+# Bundle the four prebuilt packages tracked under models/ directly. Each already
+# carries the manifest, weights, and license provenance the runtime loads, so no
+# source-checkpoint conversion or per-crate artifact staging happens here.
+if (!$ScrfdModelDirectory) { $ScrfdModelDirectory = Join-Path $rustRoot 'models/scrfd_2_5g' }
+if (!$PfldModelDirectory) { $PfldModelDirectory = Join-Path $rustRoot 'models/pfld_ghost_one' }
+if (!$HubertModelDirectory) { $HubertModelDirectory = Join-Path $rustRoot 'models/feather_hubert' }
+if (!$Vgg19ModelDirectory) { $Vgg19ModelDirectory = Join-Path $rustRoot 'models/vgg19' }
 $modelDefinitions = @(Get-BundledModelDefinitions)
 $modelSources = @{
     scrfd_2_5g = $ScrfdModelDirectory; pfld_ghost_one = $PfldModelDirectory
@@ -224,26 +229,10 @@ $modelSources = @{
 $modelRecords = @()
 foreach ($definition in $modelDefinitions) {
     $destination = Join-Path $stage "models/$($definition.directory)"
-    if ($definition.directory -eq 'feather_hubert' -and !$HubertModelDirectory) {
-        # Import through the production Rust worker. Keep conversion inputs outside the payload.
-        $checkpoint = Join-Path $repositoryRoot "demo/kanghui_training_video_featherhubert_188_latest/$($definition.source_file)"
-        if ((Get-FileHash -LiteralPath $checkpoint -Algorithm SHA256).Hash -ne $definition.source_sha256) {
-            throw "The FeatherHuBERT checkpoint does not match $($definition.source_file)."
-        }
-        $conversionInput = Join-Path $buildDirectory 'conversion-input'
-        New-Item -ItemType Directory -Path $conversionInput, (Split-Path -Parent $destination) -Force | Out-Null
-        $stagedCheckpoint = Join-Path $conversionInput $definition.source_file
-        Copy-Item -LiteralPath $checkpoint -Destination $stagedCheckpoint
-        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'feather-hubert-licenses.json') -Destination (Join-Path $conversionInput 'LICENSES.json')
-        Write-Host 'Converting the FeatherHuBERT checkpoint with the Rust worker...'
-        Invoke-Checked $cliExecutable @('--worker', $workerExecutable, '--backend', 'cpu', '--adapter', 'cpu-0',
-            'import-legacy-model', $stagedCheckpoint, 'feather-hubert', $destination)
-    } else {
-        $sourceDirectory = (Resolve-Path -LiteralPath $modelSources[$definition.directory]).Path
-        New-Item -ItemType Directory -Path $destination -Force | Out-Null
-        foreach ($name in $definition.files) {
-            Copy-Item -LiteralPath (Join-Path $sourceDirectory $name) -Destination (Join-Path $destination $name)
-        }
+    $sourceDirectory = (Resolve-Path -LiteralPath $modelSources[$definition.directory]).Path
+    New-Item -ItemType Directory -Path $destination -Force | Out-Null
+    foreach ($name in $definition.files) {
+        Copy-Item -LiteralPath (Join-Path $sourceDirectory $name) -Destination (Join-Path $destination $name)
     }
     $modelRecords += Assert-BundledModelPackage $destination $definition
 }
@@ -328,7 +317,11 @@ Invoke-Checked $dotnet @($wix, 'build', '-arch', 'x64', '-culture', 'zh-CN', '-e
     '-d', "ProductVersion=$version", '-d', "SourceDir=$stage", '-d', "LicenseRtf=$licenseRtf",
     '-pdbtype', 'none', '-intermediatefolder', (Join-Path $buildDirectory 'wix'),
     (Join-Path $PSScriptRoot 'Package.wxs'), $payloadSource, '-out', $msi)
-Invoke-Checked $dotnet @($wix, 'msi', 'validate', $msi)
+if ($SkipValidation) {
+    Write-Warning 'Skipping WiX ICE validation as requested.'
+} else {
+    Invoke-Checked $dotnet @($wix, 'msi', 'validate', $msi)
+}
 
 $payload = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Sort-Object FullName | ForEach-Object {
     $relative = $_.FullName.Substring($stage.Length + 1).Replace('\', '/')

@@ -4,7 +4,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use burn::tensor::backend::Backend;
 use feathertalk_audio::{FeatureMatrix, read_feature_file};
 use feathertalk_models::unet::TalkingHeadModel;
 use feathertalk_preprocess::{compute_face_bbox, read_landmarks};
@@ -144,14 +143,13 @@ impl OfflineRenderResult {
 
 pub fn execute_offline_render<B, M, R, F>(
     model: &M,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     request: &OfflineRenderRequest,
     frame_reader: &R,
     sink_factory: &F,
 ) -> Result<OfflineRenderResult, InferenceError>
 where
-    B: Backend,
-    M: TalkingHeadModel<B>,
+    M: TalkingHeadModel,
     R: FrameReader + ?Sized,
     F: RawVideoSinkFactory + ?Sized,
 {
@@ -208,7 +206,7 @@ where
         let bbox = compute_face_bbox(&landmarks).map_err(|error| {
             invalid_artifact("landmark_path", &landmark_path, error.to_string())
         })?;
-        let rendered = render_planned_frame::<B, M>(
+        let rendered = render_planned_frame::<M>(
             model,
             &frame,
             &bbox,

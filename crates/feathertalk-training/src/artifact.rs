@@ -2,13 +2,11 @@ use std::{
     collections::BTreeMap,
     fs::{self, File},
     io::{Read, Take},
-    path::Path,
-};
+    path::Path};
 
 use burn::{
     module::Module,
-    tensor::{DType, backend::Backend},
-};
+    tensor::{DType}};
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, ModuleStore, SafetensorsStore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -42,8 +40,7 @@ pub struct Vgg19PackageManifest {
     pub tensor_count: usize,
     pub total_elements: u64,
     pub model: Vgg19FileManifest,
-    pub licenses: Vgg19FileManifest,
-}
+    pub licenses: Vgg19FileManifest}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -51,8 +48,7 @@ pub struct Vgg19SourceManifest {
     pub framework: String,
     pub weight_id: String,
     pub url: String,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -60,23 +56,20 @@ pub struct Vgg19InputManifest {
     pub channels: usize,
     pub color_order: String,
     pub value_range: String,
-    pub normalization: String,
-}
+    pub normalization: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Vgg19FileManifest {
     pub file_name: String,
     pub bytes: u64,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Vgg19LicenseBundle {
     pub schema_version: u32,
-    pub entries: Vec<Vgg19LicenseEntry>,
-}
+    pub entries: Vec<Vgg19LicenseEntry>}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -84,8 +77,7 @@ pub struct Vgg19LicenseEntry {
     pub component: String,
     pub license_id: String,
     pub source_url: String,
-    pub notice: String,
-}
+    pub notice: String}
 
 impl Vgg19PackageManifest {
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -174,10 +166,10 @@ pub fn read_vgg19_manifest(
     Ok(manifest)
 }
 
-pub fn load_vgg19_package<B: Backend>(
+pub fn load_vgg19_package(
     directory: impl AsRef<Path>,
-    device: &B::Device,
-) -> Result<Vgg19Conv3_3<B>, TrainingError> {
+    device: &burn::tensor::Device,
+) -> Result<Vgg19Conv3_3, TrainingError> {
     let directory = directory.as_ref();
     let manifest = read_vgg19_manifest(directory)?;
 
@@ -194,16 +186,16 @@ pub fn load_vgg19_package<B: Backend>(
     load_strict_safetensors(&model_path, device)
 }
 
-fn load_strict_safetensors<B: Backend>(
+fn load_strict_safetensors(
     model_path: &Path,
-    device: &B::Device,
-) -> Result<Vgg19Conv3_3<B>, TrainingError> {
+    device: &burn::tensor::Device,
+) -> Result<Vgg19Conv3_3, TrainingError> {
     let mut store = SafetensorsStore::from_file(model_path)
         .allow_partial(true)
         .validate(false);
-    validate_store_snapshots(store.get_all_snapshots().map_err(store_error)?)?;
+    validate_store_snapshots(store.get_all_tensors().map_err(store_error)?)?;
 
-    let mut model = Vgg19Conv3_3::<B>::new_for_import(device);
+    let mut model = Vgg19Conv3_3::new_for_import(device);
     let result = model.load_from(&mut store).map_err(store_error)?;
     validate_apply_result(&result)?;
     validate_module_snapshots(&model)?;
@@ -291,8 +283,7 @@ fn validate_file_integrity(
         return Err(TrainingError::HashMismatch {
             file: declared.file_name.clone(),
             expected: declared.sha256.clone(),
-            actual,
-        });
+            actual});
     }
     Ok(())
 }
@@ -326,7 +317,7 @@ fn sha256_file(path: &Path) -> Result<String, TrainingError> {
 }
 
 fn validate_store_snapshots(
-    snapshots: &BTreeMap<String, burn_store::TensorSnapshot>,
+    snapshots: &BTreeMap<String, burn_store::burn_pack::Tensor>,
 ) -> Result<(), TrainingError> {
     let expected = expected_tensor_shapes();
     if let Some(path) = expected.keys().find(|path| !snapshots.contains_key(**path)) {
@@ -372,11 +363,11 @@ fn validate_store_snapshots(
     )
 }
 
-fn validate_module_snapshots<B: Backend>(model: &Vgg19Conv3_3<B>) -> Result<(), TrainingError> {
+fn validate_module_snapshots(model: &Vgg19Conv3_3) -> Result<(), TrainingError> {
     let snapshots = model
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), snapshot))
         .collect::<BTreeMap<_, _>>();
     validate_store_snapshots(&snapshots)
 }

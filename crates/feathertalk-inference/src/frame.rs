@@ -8,8 +8,7 @@ const UNET_OUTPUT_CHANNELS: usize = 3;
 pub struct BgrFrame {
     width: u32,
     height: u32,
-    bgr: Vec<u8>,
-}
+    bgr: Vec<u8>}
 
 impl BgrFrame {
     pub fn new(width: u32, height: u32, bgr: Vec<u8>) -> Result<Self, InferenceError> {
@@ -20,8 +19,7 @@ impl BgrFrame {
         if bgr.len() != expected {
             return Err(InferenceError::FrameBufferLengthMismatch {
                 expected,
-                actual: bgr.len(),
-            });
+                actual: bgr.len()});
         }
         Ok(Self { width, height, bgr })
     }
@@ -48,8 +46,7 @@ impl BgrFrame {
                 x,
                 y,
                 width: self.width,
-                height: self.height,
-            });
+                height: self.height});
         }
         let offset = pixel_offset(self.width, x, y)?;
         let pixel = self
@@ -90,8 +87,7 @@ pub fn crop_bgr(frame: &BgrFrame, bbox: &FaceBoundingBox) -> Result<BgrFrame, In
             xmax: bbox.xmax,
             ymax: bbox.ymax,
             frame_width: frame.width,
-            frame_height: frame.height,
-        });
+            frame_height: frame.height});
     }
     let width =
         u32::try_from(bbox.xmax - bbox.xmin).map_err(|_| InferenceError::ArithmeticOverflow)?;
@@ -175,8 +171,7 @@ fn pixel_offset(width: u32, x: u32, y: u32) -> Result<usize, InferenceError> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnetImageInput {
-    values: Vec<f32>,
-}
+    values: Vec<f32>}
 
 impl UnetImageInput {
     pub fn shape(&self) -> [usize; 4] {
@@ -191,13 +186,11 @@ impl UnetImageInput {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouthMasking {
     Keep,
-    Blackout,
-}
+    Blackout}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InnerImagePlanes {
-    values: Vec<f32>,
-}
+    values: Vec<f32>}
 
 impl InnerImagePlanes {
     pub fn shape(&self) -> [usize; 4] {
@@ -233,8 +226,7 @@ pub fn build_inner_image_planes(
     if mask_right > inner_size || mask_bottom > inner_size {
         return Err(InferenceError::InvalidField {
             field: "mouth_mask",
-            message: "mask rectangle exceeds the inner crop".into(),
-        });
+            message: "mask rectangle exceeds the inner crop".into()});
     }
     let plane = checked_elements(inner_size, inner_size)?;
     let elements = plane
@@ -281,8 +273,7 @@ pub fn build_unet_image_input(
     values
         .try_reserve_exact(tail.len())
         .map_err(|_| InferenceError::AllocationFailure {
-            bytes: total.saturating_mul(std::mem::size_of::<f32>()),
-        })?;
+            bytes: total.saturating_mul(std::mem::size_of::<f32>())})?;
     values.append(&mut tail);
     Ok(UnetImageInput { values })
 }
@@ -306,8 +297,7 @@ pub fn apply_unet_prediction(
                 inner_size as usize,
                 inner_size as usize,
             ],
-            actual: vec![prediction.len()],
-        });
+            actual: vec![prediction.len()]});
     }
     if let Some((index, _)) = prediction
         .iter()
@@ -350,8 +340,7 @@ pub fn paste_bgr(
             source_width: source.width,
             source_height: source.height,
             destination_width: destination.width,
-            destination_height: destination.height,
-        });
+            destination_height: destination.height});
     }
     let x = u32::try_from(x).map_err(|_| InferenceError::ArithmeticOverflow)?;
     let y = u32::try_from(y).map_err(|_| InferenceError::ArithmeticOverflow)?;
@@ -366,8 +355,7 @@ pub fn paste_bgr(
             source_width: source.width,
             source_height: source.height,
             destination_width: destination.width,
-            destination_height: destination.height,
-        });
+            destination_height: destination.height});
     }
     let row_bytes = checked_byte_len(source.width, 1)?;
     for row in 0..source.height {
@@ -428,8 +416,7 @@ fn validate_geometry_and_crop(
         return Err(InferenceError::TensorShapeMismatch {
             context: "render_geometry",
             expected: expected_geometry,
-            actual: actual_geometry,
-        });
+            actual: actual_geometry});
     }
     if face_crop.width() != geometry.crop_size() || face_crop.height() != geometry.crop_size() {
         return Err(InferenceError::TensorShapeMismatch {
@@ -439,8 +426,7 @@ fn validate_geometry_and_crop(
                 geometry.crop_size() as usize,
                 geometry.crop_size() as usize,
             ],
-            actual: vec![1, face_crop.height() as usize, face_crop.width() as usize],
-        });
+            actual: vec![1, face_crop.height() as usize, face_crop.width() as usize]});
     }
     Ok((
         geometry.crop_size(),

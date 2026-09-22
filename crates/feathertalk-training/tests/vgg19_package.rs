@@ -3,19 +3,17 @@ use std::{fs, path::PathBuf};
 use burn::{
     module::Module,
     nn::{Linear, LinearConfig, conv::Conv2d},
-    tensor::backend::Backend,
-};
+    tensor::Tensor};
 use burn_store::ModuleSnapshot;
 use feathertalk_training::{
     TrainingError, VGG19_ARCHITECTURE_VERSION, VGG19_MODEL_KIND, VGG19_PACKAGE_SCHEMA_VERSION,
     VGG19_SOURCE_URL, Vgg19Conv3_3, Vgg19FileManifest, Vgg19InputManifest, Vgg19LicenseBundle,
     Vgg19LicenseEntry, Vgg19PackageManifest, Vgg19SourceManifest, load_vgg19_package,
-    read_vgg19_manifest,
-};
+    read_vgg19_manifest};
 use feathertalk_weights::save_safetensors;
 use sha2::{Digest, Sha256};
 
-type CpuBackend = burn::backend::NdArray<f32>;
+type CpuBackend = burn::backend::Flex;
 
 const MODEL_FILE_NAME: &str = "model.safetensors";
 const LICENSE_FILE_NAME: &str = "LICENSES.json";
@@ -26,7 +24,7 @@ fn valid_three_file_package_loads_all_fourteen_tensors() {
     let fixture = valid_package();
 
     let manifest = read_vgg19_manifest(&fixture.directory).unwrap();
-    let loaded = load_vgg19_package::<CpuBackend>(&fixture.directory, &Default::default()).unwrap();
+    let loaded = load_vgg19_package(&fixture.directory, &Default::default()).unwrap();
 
     assert_eq!(manifest, fixture.manifest);
     assert_module_snapshots_equal(&fixture.original, &loaded);
@@ -35,7 +33,7 @@ fn valid_three_file_package_loads_all_fourteen_tensors() {
 #[test]
 fn loaded_vgg_parameters_are_marked_no_grad() {
     let fixture = valid_package();
-    let loaded = load_vgg19_package::<burn::backend::Autodiff<CpuBackend>>(
+    let loaded = load_vgg19_package(
         &fixture.directory,
         &Default::default(),
     )
@@ -126,8 +124,7 @@ fn symlink_model_file_is_rejected_when_symlinks_are_available() {
         {
             return;
         }
-        Err(error) => panic!("failed to create test symlink: {error}"),
-    }
+        Err(error) => panic!("failed to create test symlink: {error}")}
 
     assert_invalid_package_contains(&fixture.directory, "symbolic link");
 }
@@ -154,9 +151,8 @@ fn missing_safetensors_tensor_is_rejected() {
         conv2_1: model.conv2_1,
         conv2_2: model.conv2_2,
         conv3_1: model.conv3_1,
-        conv3_2: model.conv3_2,
-    };
-    save_safetensors::<CpuBackend, _>(&missing, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
+        conv3_2: model.conv3_2};
+    save_safetensors::<_>(&missing, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
     refresh_model_manifest(&fixture.directory, &mut fixture.manifest);
 
     assert_invalid_package_contains(&fixture.directory, "missing tensor conv3_3.bias");
@@ -174,9 +170,8 @@ fn extra_safetensors_tensor_is_rejected() {
         conv3_1: model.conv3_1,
         conv3_2: model.conv3_2,
         conv3_3: model.conv3_3,
-        extra: LinearConfig::new(1, 1).init(&Default::default()),
-    };
-    save_safetensors::<CpuBackend, _>(&extra, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
+        extra: LinearConfig::new(1, 1).init(&Default::default())};
+    save_safetensors::<_>(&extra, fixture.directory.join(MODEL_FILE_NAME)).unwrap();
     refresh_model_manifest(&fixture.directory, &mut fixture.manifest);
 
     assert_invalid_package_contains(&fixture.directory, "unexpected tensor extra.bias");
@@ -189,8 +184,7 @@ fn empty_license_bundle_is_rejected() {
         &fixture.directory,
         &Vgg19LicenseBundle {
             schema_version: 1,
-            entries: Vec::new(),
-        },
+            entries: Vec::new()},
     );
     refresh_license_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -208,9 +202,7 @@ fn blank_license_fields_are_rejected() {
                 component: " ".to_owned(),
                 license_id: "LicenseRef-Test".to_owned(),
                 source_url: "https://example.invalid/test".to_owned(),
-                notice: "local test only".to_owned(),
-            }],
-        },
+                notice: "local test only".to_owned()}]},
     );
     refresh_license_manifest(&fixture.directory, &mut fixture.manifest);
 
@@ -229,18 +221,17 @@ fn wrong_bgr_no_normalization_contract_is_rejected() {
 struct PackageFixture {
     _temp: tempfile::TempDir,
     directory: PathBuf,
-    original: Vgg19Conv3_3<CpuBackend>,
-    manifest: Vgg19PackageManifest,
-}
+    original: Vgg19Conv3_3,
+    manifest: Vgg19PackageManifest}
 
 fn valid_package() -> PackageFixture {
     let temp = tempfile::tempdir().unwrap();
     let directory = temp.path().join("package");
     fs::create_dir(&directory).unwrap();
     let device = Default::default();
-    let original = Vgg19Conv3_3::<CpuBackend>::new_for_import(&device);
+    let original = Vgg19Conv3_3::new_for_import(&device);
     let model_path = directory.join(MODEL_FILE_NAME);
-    save_safetensors::<CpuBackend, _>(&original, &model_path).unwrap();
+    save_safetensors::<_>(&original, &model_path).unwrap();
 
     let licenses = Vgg19LicenseBundle {
         schema_version: 1,
@@ -248,9 +239,7 @@ fn valid_package() -> PackageFixture {
             component: "local VGG19 test fixture".to_owned(),
             license_id: "LicenseRef-Test-Only".to_owned(),
             source_url: "https://example.invalid/vgg19".to_owned(),
-            notice: "Synthetic local package for loader tests only.".to_owned(),
-        }],
-    };
+            notice: "Synthetic local package for loader tests only.".to_owned()}]};
     write_license_bundle(&directory, &licenses);
 
     let manifest = Vgg19PackageManifest {
@@ -261,36 +250,31 @@ fn valid_package() -> PackageFixture {
             framework: "torchvision".to_owned(),
             weight_id: "VGG19_Weights.IMAGENET1K_V1".to_owned(),
             url: VGG19_SOURCE_URL.to_owned(),
-            sha256: "a".repeat(64),
-        },
+            sha256: "a".repeat(64)},
         input: Vgg19InputManifest {
             channels: 3,
             color_order: "bgr".to_owned(),
             value_range: "0..1".to_owned(),
-            normalization: "none".to_owned(),
-        },
+            normalization: "none".to_owned()},
         output_layer: "features.14".to_owned(),
         tensor_count: 14,
         total_elements: 1_735_488,
         model: file_manifest(&model_path),
-        licenses: file_manifest(&directory.join(LICENSE_FILE_NAME)),
-    };
+        licenses: file_manifest(&directory.join(LICENSE_FILE_NAME))};
     write_manifest(&directory, &manifest);
 
     PackageFixture {
         _temp: temp,
         directory,
         original,
-        manifest,
-    }
+        manifest}
 }
 
 fn file_manifest(path: &std::path::Path) -> Vgg19FileManifest {
     Vgg19FileManifest {
         file_name: path.file_name().unwrap().to_str().unwrap().to_owned(),
         bytes: fs::metadata(path).unwrap().len(),
-        sha256: sha256_file(path),
-    }
+        sha256: sha256_file(path)}
 }
 
 fn refresh_model_manifest(directory: &std::path::Path, manifest: &mut Vgg19PackageManifest) {
@@ -320,7 +304,7 @@ fn sha256_file(path: &std::path::Path) -> String {
 }
 
 fn load_error(directory: &std::path::Path) -> TrainingError {
-    load_vgg19_package::<CpuBackend>(directory, &Default::default()).unwrap_err()
+    load_vgg19_package(directory, &Default::default()).unwrap_err()
 }
 
 fn assert_invalid_package_contains(directory: &std::path::Path, expected: &str) {
@@ -335,37 +319,38 @@ fn assert_invalid_package_contains(directory: &std::path::Path, expected: &str) 
     );
 }
 
-fn assert_module_snapshots_equal<B: Backend, M: ModuleSnapshot<B>>(first: &M, second: &M) {
+fn assert_module_snapshots_equal<M: ModuleSnapshot>(first: &M, second: &M) {
     let first = first.collect(None, None, false);
     let second = second.collect(None, None, false);
     assert_eq!(first.len(), second.len());
 
     for (first, second) in first.iter().zip(second.iter()) {
-        assert_eq!(first.full_path(), second.full_path());
+        assert_eq!(first.name.clone(), second.name.clone());
         assert_eq!(first.shape, second.shape);
         assert_eq!(first.dtype, second.dtype);
-        assert_eq!(first.to_data().unwrap(), second.to_data().unwrap());
+        assert_eq!(
+            burn_store::bridge::to_data(&first).unwrap(),
+            burn_store::bridge::to_data(&second).unwrap()
+        );
     }
 }
 
 #[derive(Module, Debug)]
-struct MissingVgg<B: Backend> {
-    conv1_1: Conv2d<B>,
-    conv1_2: Conv2d<B>,
-    conv2_1: Conv2d<B>,
-    conv2_2: Conv2d<B>,
-    conv3_1: Conv2d<B>,
-    conv3_2: Conv2d<B>,
-}
+struct MissingVgg {
+    conv1_1: Conv2d,
+    conv1_2: Conv2d,
+    conv2_1: Conv2d,
+    conv2_2: Conv2d,
+    conv3_1: Conv2d,
+    conv3_2: Conv2d}
 
 #[derive(Module, Debug)]
-struct ExtraVgg<B: Backend> {
-    conv1_1: Conv2d<B>,
-    conv1_2: Conv2d<B>,
-    conv2_1: Conv2d<B>,
-    conv2_2: Conv2d<B>,
-    conv3_1: Conv2d<B>,
-    conv3_2: Conv2d<B>,
-    conv3_3: Conv2d<B>,
-    extra: Linear<B>,
-}
+struct ExtraVgg {
+    conv1_1: Conv2d,
+    conv1_2: Conv2d,
+    conv2_1: Conv2d,
+    conv2_2: Conv2d,
+    conv3_1: Conv2d,
+    conv3_2: Conv2d,
+    conv3_3: Conv2d,
+    extra: Linear}

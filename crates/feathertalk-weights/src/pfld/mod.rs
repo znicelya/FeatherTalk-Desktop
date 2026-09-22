@@ -1,23 +1,14 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    path::{Path, PathBuf},
-};
-
-use burn::{
-    backend::Autodiff,
-    module::{AutodiffModule, HasAutodiffModule},
-    tensor::DType,
-    tensor::backend::Backend,
-};
+    path::{Path, PathBuf}};
+use burn::{module::AutodiffModule, tensor::DType};
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, PytorchStore, pytorch::PytorchReader};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     WeightImportError,
     source::{
-        DEFAULT_MAX_FILE_BYTES, DEFAULT_MAX_TENSOR_COUNT, DEFAULT_MAX_TOTAL_ELEMENTS, SnapshotFile,
-    },
-};
+        DEFAULT_MAX_FILE_BYTES, DEFAULT_MAX_TENSOR_COUNT, DEFAULT_MAX_TOTAL_ELEMENTS, SnapshotFile}};
 
 mod artifact;
 mod envelope;
@@ -25,8 +16,7 @@ mod key_map;
 
 use artifact::{
     ensure_destination_absent, publish_staged_artifacts, verify_staged_artifacts,
-    write_staged_artifacts,
-};
+    write_staged_artifacts};
 use envelope::{PfldInspection, inspect_checkpoint, validate_envelope};
 use key_map::pfld_remapper;
 
@@ -39,8 +29,7 @@ pub struct PfldImportRequest {
     pub destination_dir: PathBuf,
     pub max_file_bytes: u64,
     pub max_tensor_count: usize,
-    pub max_total_elements: u64,
-}
+    pub max_total_elements: u64}
 
 impl Default for PfldImportRequest {
     fn default() -> Self {
@@ -49,8 +38,7 @@ impl Default for PfldImportRequest {
             destination_dir: PathBuf::new(),
             max_file_bytes: DEFAULT_MAX_FILE_BYTES,
             max_tensor_count: DEFAULT_MAX_TENSOR_COUNT,
-            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS,
-        }
+            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS}
     }
 }
 
@@ -59,22 +47,19 @@ impl Default for PfldImportRequest {
 pub struct TensorAudit {
     pub tensor_count: usize,
     pub total_elements: u64,
-    pub keys: Vec<String>,
-}
+    pub keys: Vec<String>}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TensorSummary {
     pub tensor_count: usize,
-    pub total_elements: u64,
-}
+    pub total_elements: u64}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PfldSourceManifest {
     pub file_name: String,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -83,16 +68,14 @@ pub struct PfldModelArtifact {
     pub file_name: String,
     pub sha256: String,
     pub tensor_count: usize,
-    pub total_elements: u64,
-}
+    pub total_elements: u64}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PfldIgnoredTensors {
     pub batch_norm_counters: TensorAudit,
     pub localization: TensorAudit,
-    pub auxiliarynet: Option<TensorAudit>,
-}
+    pub auxiliarynet: Option<TensorAudit>}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -104,27 +87,24 @@ pub struct PfldImportManifest {
     pub epoch: u64,
     pub backbone: TensorSummary,
     pub model: PfldModelArtifact,
-    pub ignored: PfldIgnoredTensors,
-}
+    pub ignored: PfldIgnoredTensors}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PfldImportReport {
     pub destination_dir: PathBuf,
     pub manifest: PfldImportManifest,
-    pub applied: Vec<String>,
-}
+    pub applied: Vec<String>}
 
 /// Strictly imports a PFLD checkpoint, verifies its staged artifacts, and then replaces the caller.
 ///
 /// The autodiff-module association is used only to construct an independent Burn module copy.
 /// Burn 0.21's ordinary `Clone` shares `RunningState` storage such as BatchNorm statistics.
-pub fn import_pfld_checkpoint<B, M>(
+pub fn import_pfld_checkpoint<M>(
     module: &mut M,
     request: &PfldImportRequest,
 ) -> Result<PfldImportReport, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B> + HasAutodiffModule<Autodiff<B>>,
+    M: ModuleSnapshot + AutodiffModule,
 {
     if request.destination_dir.as_os_str().is_empty() {
         return Err(WeightImportError::ArtifactValidation(
@@ -144,8 +124,8 @@ where
     }
 
     let snapshot = SnapshotFile::copy_from(&request.checkpoint, request.max_file_bytes)?;
-    let prepared = prepare_pfld_import::<B, M>(module, &snapshot, request)?;
-    let staged = write_staged_artifacts::<B, M>(
+    let prepared = prepare_pfld_import::<M>(module, &snapshot, request)?;
+    let staged = write_staged_artifacts::<M>(
         &prepared.candidate,
         snapshot.path(),
         &prepared.source_file_name,
@@ -153,7 +133,7 @@ where
         &prepared.inspection,
         parent,
     )?;
-    verify_staged_artifacts::<B, M>(
+    verify_staged_artifacts::<M>(
         module,
         &prepared.candidate,
         snapshot.path(),
@@ -166,8 +146,7 @@ where
     Ok(PfldImportReport {
         destination_dir: request.destination_dir.clone(),
         manifest,
-        applied: prepared.applied,
-    })
+        applied: prepared.applied})
 }
 
 #[derive(Debug)]
@@ -176,8 +155,7 @@ struct PreparedPfldImport<M> {
     source_file_name: String,
     source_sha256: String,
     inspection: PfldInspection,
-    applied: Vec<String>,
-}
+    applied: Vec<String>}
 
 fn configure_pfld_store(path: &Path) -> PytorchStore {
     PytorchStore::from_file(path)
@@ -192,10 +170,9 @@ fn configure_pfld_store(path: &Path) -> PytorchStore {
 // thread stack. Returning a Box keeps the large converted module out of the caller's return slot.
 const PFLD_DETACHED_CLONE_STACK_BYTES: usize = 64 * 1024 * 1024;
 
-fn clone_module_detached<B, M>(module: &mut M) -> Result<Box<M>, WeightImportError>
+fn clone_module_detached<M>(module: &mut M) -> Result<Box<M>, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B> + HasAutodiffModule<Autodiff<B>>,
+    M: ModuleSnapshot + AutodiffModule,
 {
     // A mutable scoped borrow is Send under Module's existing Send contract, so callers don't need
     // an additional Sync bound even though the conversion itself runs on a dedicated stack.
@@ -205,7 +182,7 @@ where
             .stack_size(PFLD_DETACHED_CLONE_STACK_BYTES)
             .spawn_scoped(scope, move || {
                 let cloned = (*module).clone();
-                Box::new(cloned.train::<Autodiff<B>>().valid())
+                Box::new(cloned.train().valid())
             })
             .map_err(|error| WeightImportError::Store(error.to_string()))?;
         handle
@@ -214,22 +191,21 @@ where
     })
 }
 
-fn prepare_pfld_import<B, M>(
+fn prepare_pfld_import<M>(
     module: &mut M,
     snapshot: &SnapshotFile,
     request: &PfldImportRequest,
 ) -> Result<PreparedPfldImport<M>, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B> + HasAutodiffModule<Autodiff<B>>,
+    M: ModuleSnapshot + AutodiffModule,
 {
     let pickle = PytorchReader::read_pickle_data(snapshot.path(), None)
         .map_err(|error| WeightImportError::InvalidPfldEnvelope(error.to_string()))?;
     let envelope = validate_envelope(pickle)?;
     let inspection = inspect_checkpoint(snapshot.path(), envelope, request)?;
-    validate_target_contract::<B, M>(module, &inspection)?;
+    validate_target_contract::<M>(module, &inspection)?;
     let mut store = configure_pfld_store(snapshot.path());
-    let mut candidate = clone_module_detached::<B, M>(module)?;
+    let mut candidate = clone_module_detached::<M>(module)?;
     let result = candidate
         .load_from(&mut store)
         .map_err(|error| WeightImportError::Store(error.to_string()))?;
@@ -248,22 +224,20 @@ where
         source_file_name,
         source_sha256: snapshot.sha256().to_owned(),
         inspection,
-        applied,
-    })
+        applied})
 }
 
-fn validate_target_contract<B, M>(
+fn validate_target_contract<M>(
     module: &M,
     inspection: &PfldInspection,
 ) -> Result<(), WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let target = module
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
         .collect::<BTreeMap<_, _>>();
     let target_keys = target.keys().cloned().collect::<BTreeSet<_>>();
 
@@ -334,13 +308,9 @@ fn validate_pfld_apply_result(
 mod tests {
     use std::{
         collections::BTreeMap,
-        path::{Path, PathBuf},
-    };
+        path::{Path, PathBuf}};
 
-    use burn::{
-        nn::{BatchNormConfig, LinearConfig},
-        tensor::{Tensor, backend::Backend},
-    };
+    use burn::{nn::{BatchNormConfig, LinearConfig}, tensor::Tensor};
     use burn_store::ModuleSnapshot;
     use feathertalk_models::{PFLD_GhostOne, PfldConfig, backend::CpuBackend};
 
@@ -361,17 +331,17 @@ mod tests {
         }
     }
 
-    fn capture_module_data<B: Backend, M: ModuleSnapshot<B>>(
+    fn capture_module_data<M: ModuleSnapshot>(
         module: &M,
     ) -> BTreeMap<String, burn::tensor::TensorData> {
         module
             .collect(None, None, false)
             .into_iter()
-            .map(|snapshot| (snapshot.full_path(), snapshot.to_data().unwrap()))
+            .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
             .collect()
     }
 
-    fn assert_module_data_unchanged<B: Backend, M: ModuleSnapshot<B>>(
+    fn assert_module_data_unchanged<M: ModuleSnapshot>(
         before: &BTreeMap<String, burn::tensor::TensorData>,
         module: &M,
     ) {
@@ -388,29 +358,23 @@ mod tests {
     #[test]
     fn detached_clone_keeps_batch_norm_running_state_independent() {
         let device = Default::default();
-        let mut original = BatchNormConfig::new(2).init::<CpuBackend>(&device);
-        let candidate = clone_module_detached::<CpuBackend, _>(&mut original).unwrap();
+        let mut original = BatchNormConfig::new(2).init(&device);
+        let candidate = clone_module_detached::<_>(&mut original).unwrap();
 
         candidate
             .running_mean
-            .update(Tensor::<CpuBackend, 1>::ones([2], &device));
-        let candidate_mean = candidate.running_mean.value_sync().to_data();
-        let original_mean = original.running_mean.value_sync().to_data();
+            .update(Tensor::<1>::ones([2], &device));
+        let candidate_mean = candidate.running_mean.value_sync();
+        let original_mean = original.running_mean.value_sync();
 
-        assert_eq!(
-            candidate_mean,
-            Tensor::<CpuBackend, 1>::ones([2], &device).to_data()
-        );
-        assert_eq!(
-            original_mean,
-            Tensor::<CpuBackend, 1>::zeros([2], &device).to_data()
-        );
+        assert!(candidate_mean.into_data().as_slice::<f32>().unwrap() == [1.0, 1.0]);
+        assert!(original_mean.into_data().as_slice::<f32>().unwrap() == [0.0, 0.0]);
     }
 
     #[test]
     fn real_checkpoint_prepares_a_complete_candidate_without_mutating_source_model() {
         let device = Default::default();
-        let mut model = PFLD_GhostOne::<CpuBackend>::new(PfldConfig::production(), &device);
+        let mut model = PFLD_GhostOne::new(PfldConfig::production(), &device);
         let before = capture_module_data(&model);
         let snapshot = SnapshotFile::copy_from(
             &checkpoint_path(),
@@ -420,9 +384,9 @@ mod tests {
         let request = request_for(checkpoint_path(), PathBuf::from("unused"));
 
         let prepared =
-            prepare_pfld_import::<CpuBackend, _>(&mut model, &snapshot, &request).unwrap();
+            prepare_pfld_import::<_>(&mut model, &snapshot, &request).unwrap();
 
-        assert_module_data_unchanged::<CpuBackend, _>(&before, &model);
+        assert_module_data_unchanged::<_>(&before, &model);
         assert_eq!(prepared.applied.len(), 1_735);
         assert_eq!(
             prepared.inspection.applied,
@@ -437,7 +401,7 @@ mod tests {
     #[test]
     fn incompatible_module_fails_before_any_caller_mutation() {
         let device = Default::default();
-        let mut model = LinearConfig::new(2, 2).init::<CpuBackend>(&device);
+        let mut model = LinearConfig::new(2, 2).init(&device);
         let before = capture_module_data(&model);
         let snapshot = SnapshotFile::copy_from(
             &checkpoint_path(),
@@ -447,12 +411,12 @@ mod tests {
         let request = request_for(checkpoint_path(), PathBuf::from("unused"));
 
         let error =
-            prepare_pfld_import::<CpuBackend, _>(&mut model, &snapshot, &request).unwrap_err();
+            prepare_pfld_import::<_>(&mut model, &snapshot, &request).unwrap_err();
 
         assert!(matches!(
             error,
             WeightImportError::MissingTensor(_) | WeightImportError::UnexpectedTensor(_)
         ));
-        assert_module_data_unchanged::<CpuBackend, _>(&before, &model);
+        assert_module_data_unchanged::<_>(&before, &model);
     }
 }

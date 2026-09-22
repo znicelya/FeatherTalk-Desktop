@@ -13,6 +13,5 @@ use feathertalk_image::jpeg_dimensions;
 pub fn probe_jpeg_geometry(path: &Path, bytes: &[u8]) -> Result<(u32, u32), PipelineError> {
     jpeg_dimensions(bytes).map_err(|error| PipelineError::FrameUndecodable {
         path: path.to_path_buf(),
-        message: error.to_string(),
-    })
+        message: error.to_string()})
 }

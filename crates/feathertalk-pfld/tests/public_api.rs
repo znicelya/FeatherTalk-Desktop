@@ -1,8 +1,7 @@
 use feathertalk_pfld::{
     CropGeometry, LandmarkPoint, MEAN_FACE, MeanFace, PFLD_LANDMARK_COUNT, PFLD_OUTPUT_VALUE_COUNT,
     PFLDLandmarks, PfldError, decode_landmarks, decode_landmarks_with_default_mean_face,
-    decode_landmarks_with_mean_face, read_mean_face,
-};
+    decode_landmarks_with_mean_face, read_mean_face};
 
 #[test]
 fn crate_root_exposes_pfld_contract() {
@@ -18,8 +17,7 @@ fn crate_root_exposes_pfld_contract() {
             width: 1,
             height: 1,
             offset_x: 0,
-            offset_y: 0,
-        },
+            offset_y: 0},
     )
     .unwrap();
     let _: &PFLDLandmarks = &output;

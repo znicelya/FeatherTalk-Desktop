@@ -6,12 +6,10 @@ use std::path::Path;
 use feathertalk_inference::MouthMasking;
 use feathertalk_training::{TrainingDataset, TrainingSample};
 use feathertalk_training_data::{
-    FrameSample, ProjectTrainingDataset, TrainingDataError, TrainingItem,
-};
+    FrameSample, ProjectTrainingDataset, TrainingDataError, TrainingItem};
 use support::{
     GradientFrameReader, INNER_SIZE, downgrade_to_preparing, inner_planes, locked_project,
-    mouth_rect, write_features,
-};
+    mouth_rect, write_features};
 
 fn open_dataset(project_dir: &Path) -> ProjectTrainingDataset<GradientFrameReader> {
     ProjectTrainingDataset::open_with_reader(project_dir, GradientFrameReader).unwrap()
@@ -20,30 +18,26 @@ fn open_dataset(project_dir: &Path) -> ProjectTrainingDataset<GradientFrameReade
 fn single_frame(item: &TrainingItem) -> &FrameSample {
     match item {
         TrainingItem::SingleFrame(sample) => sample,
-        TrainingItem::TemporalPair { .. } => panic!("expected a single-frame item"),
-    }
+        TrainingItem::TemporalPair { .. } => panic!("expected a single-frame item")}
 }
 
 fn temporal_pair(item: &TrainingItem) -> (&FrameSample, &FrameSample) {
     match item {
         TrainingItem::TemporalPair { first, second } => (first, second),
-        TrainingItem::SingleFrame(_) => panic!("expected a temporal-pair item"),
-    }
+        TrainingItem::SingleFrame(_) => panic!("expected a temporal-pair item")}
 }
 
 fn single_frame_sample(target_index: u64, reference_index: u64) -> TrainingSample {
     TrainingSample::SingleFrame {
         target_index,
-        reference_index,
-    }
+        reference_index}
 }
 
 fn temporal_sample(first: u64, second: u64, reference_index: u64) -> TrainingSample {
     TrainingSample::TemporalPair {
         first_target_index: first,
         second_target_index: second,
-        reference_index,
-    }
+        reference_index}
 }
 
 #[test]

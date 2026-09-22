@@ -22,15 +22,13 @@ fn real_frame_spec(manifest_width: u32, manifest_height: u32) -> FixtureSpec {
         face_xmax: 710,
         face_ymin: 194,
         mouth_x: 600,
-        mouth_y: 230,
-    }
+        mouth_y: 230}
 }
 
 fn target_one() -> TrainingSample {
     TrainingSample::SingleFrame {
         target_index: 1,
-        reference_index: 0,
-    }
+        reference_index: 0}
 }
 
 #[test]

@@ -5,20 +5,17 @@ use std::time::Duration;
 use burn::optim::AdamConfig;
 use feathertalk_domain::{
     ErrorCode, Progress, RenderParams, TaskError, TaskStage, TrainParams,
-    TrainingMode as DomainTrainingMode, UnetVariant,
-};
+    TrainingMode as DomainTrainingMode, UnetVariant};
 use feathertalk_export::ModelConfiguration;
 use feathertalk_media::{CancellationToken, MediaToolchain};
 use feathertalk_models::unet::OriginalUnetConfig;
 use feathertalk_training::{
     CheckpointDescriptor, DATA_LOADER_STATE_SCHEMA_VERSION, DataLoaderConfig, DataLoaderState,
     Provenance, RandomAlgorithm, SamplingConfig, SamplingKind, TRAINING_STATE_SCHEMA_VERSION,
-    TrainingCheckpointState, save_training_checkpoint,
-};
+    TrainingCheckpointState, save_training_checkpoint};
 use feathertalk_worker::{
-    CommandOutcome, RenderDevice, RenderJob, TRAINING_SEED, TrainBackend, TrainDevice,
-    checkpoint_descriptor, execute_render, render_job, run_render, training_config,
-};
+    CommandOutcome, RenderDevice, RenderJob, TRAINING_SEED, TrainDevice,
+    checkpoint_descriptor, execute_render, render_job, run_render, training_config};
 use serde_json::Value;
 
 #[path = "support/mod.rs"]
@@ -26,8 +23,7 @@ mod support;
 
 use support::{
     MemorySinkFactory, Recorder, StubFrameReader, lock_render_tree, model, render_audio,
-    render_model, render_tree,
-};
+    render_model, render_tree};
 
 /// The request a render command carries.
 fn render_params(
@@ -41,8 +37,7 @@ fn render_params(
         checkpoint,
         audio: render_audio(project_dir),
         output,
-        max_output_frames,
-    }
+        max_output_frames}
 }
 
 /// A job over a fixture project, carrying the checkpoint identity a real
@@ -74,15 +69,13 @@ fn job(
 fn completed(outcome: CommandOutcome) -> Value {
     match outcome {
         CommandOutcome::Completed(Some(payload)) => payload,
-        other => panic!("expected a completed outcome, got {other:?}"),
-    }
+        other => panic!("expected a completed outcome, got {other:?}")}
 }
 
 fn failed(outcome: CommandOutcome) -> TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failed outcome, got {other:?}"),
-    }
+        other => panic!("expected a failed outcome, got {other:?}")}
 }
 
 /// One reported frame, with the progress that goes with it.
@@ -91,8 +84,7 @@ fn frame_event(frame: u64, total: u64) -> (TaskStage, Option<Progress>) {
         TaskStage::Rendering { frame, total },
         Some(Progress {
             completed: frame,
-            total: Some(total),
-        }),
+            total: Some(total)}),
     )
 }
 
@@ -317,8 +309,7 @@ fn state(project_dir: &Path, frame_count: u64) -> TrainingCheckpointState {
         variant: UnetVariant::OriginalUnet,
         epochs: 1,
         batch_size: 1,
-        resume: false,
-    };
+        resume: false};
     let config = training_config(&params);
     let batch_size = config.batch_size;
     let temporal_stride = config.temporal_stride;
@@ -335,21 +326,15 @@ fn state(project_dir: &Path, frame_count: u64) -> TrainingCheckpointState {
                 seed: TRAINING_SEED,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride,
-                },
-            },
+                    temporal_stride}},
             frame_count,
             epoch: 1,
-            next_position: 0,
-        },
+            next_position: 0},
         training_config: config,
         asset_provenance: Provenance {
-            entries: BTreeMap::new(),
-        },
+            entries: BTreeMap::new()},
         model_provenance: Provenance {
-            entries: BTreeMap::new(),
-        },
-    }
+            entries: BTreeMap::new()}}
 }
 
 /// Writes a real checkpoint whose manifest names a model kind this worker cannot
@@ -360,7 +345,7 @@ fn state(project_dir: &Path, frame_count: u64) -> TrainingCheckpointState {
 /// those agree.
 fn unknown_kind_checkpoint(directory: &Path, project_dir: &Path, frame_count: u64) {
     let device = TrainDevice::default();
-    save_training_checkpoint::<TrainBackend, _, _>(
+    save_training_checkpoint::<_, _>(
         directory,
         &model(&device),
         &AdamConfig::new().init(),

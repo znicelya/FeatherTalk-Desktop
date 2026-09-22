@@ -4,8 +4,7 @@ use burn_store::{KeyRemapper, PytorchStore};
 pub enum LegacyModelKind {
     FeatherHubert,
     OriginalUnet,
-    Vgg19Conv3_3,
-}
+    Vgg19Conv3_3}
 
 pub fn is_known_ignored_key(key: &str) -> bool {
     key.ends_with(".num_batches_tracked")
@@ -22,8 +21,7 @@ pub fn is_known_ignored_key_for(kind: LegacyModelKind, key: &str) -> bool {
 fn is_vgg19_truncated_key(key: &str) -> bool {
     let (prefix, parameter) = match key.rsplit_once('.') {
         Some(value) => value,
-        None => return false,
-    };
+        None => return false};
     if !matches!(parameter, "weight" | "bias") {
         return false;
     }
@@ -53,8 +51,7 @@ pub(crate) fn configure_store(
 
     match top_level_key {
         Some(key) => store.with_top_level_key(key),
-        None => store,
-    }
+        None => store}
 }
 
 pub(crate) fn map_key(kind: LegacyModelKind, key: &str) -> String {
@@ -125,8 +122,7 @@ fn remapper_for(kind: LegacyModelKind) -> KeyRemapper {
             .add_pattern(r"^features\.12\.", "conv3_2.")
             .expect("reviewed literal regex")
             .add_pattern(r"^features\.14\.", "conv3_3.")
-            .expect("reviewed literal regex"),
-    }
+            .expect("reviewed literal regex")}
 }
 
 #[cfg(test)]

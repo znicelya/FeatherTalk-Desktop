@@ -3,14 +3,12 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::Mutex,
-};
+    sync::Mutex};
 
 use feathertalk_audio::{FeatureMatrix, read_feature_file, write_feature_file_no_clobber};
 use feathertalk_domain::{ErrorCode, Progress, ProjectDirParams, TaskError, TaskStage};
 use feathertalk_frame_pipeline::{
-    AnomalyCode, FrameAnomaly, FrameQuality, QualityReport, RecoveryAction,
-};
+    AnomalyCode, FrameAnomaly, FrameQuality, QualityReport, RecoveryAction};
 use feathertalk_media::CancellationToken;
 use feathertalk_pfld::PFLD_MODEL_SHA256;
 use feathertalk_worker::{CommandOutcome, NoReporter, TaskReporter, execute_lock_asset_package};
@@ -33,8 +31,7 @@ const DIMS: usize = 1_024;
 
 #[derive(Default)]
 struct Recorder {
-    events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
-}
+    events: Mutex<Vec<(TaskStage, Option<Progress>)>>}
 
 impl Recorder {
     fn events(&self) -> Vec<(TaskStage, Option<Progress>)> {
@@ -150,22 +147,19 @@ fn run(
 fn progress(completed: u64) -> Option<Progress> {
     Some(Progress {
         completed,
-        total: Some(FRAME_COUNT),
-    })
+        total: Some(FRAME_COUNT)})
 }
 
 fn expect_completed(outcome: CommandOutcome) -> Value {
     match outcome {
         CommandOutcome::Completed(Some(result)) => result,
-        other => panic!("expected a completed command, got {other:?}"),
-    }
+        other => panic!("expected a completed command, got {other:?}")}
 }
 
 fn expect_failure(outcome: CommandOutcome) -> TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failure, got {other:?}"),
-    }
+        other => panic!("expected a failure, got {other:?}")}
 }
 
 fn manifest_path(params: &ProjectDirParams) -> PathBuf {
@@ -241,8 +235,7 @@ fn every_frame_reports_progress_under_one_stage() {
 #[test]
 fn a_relative_project_dir_is_rejected() {
     let relative = ProjectDirParams {
-        project_dir: PathBuf::from("project"),
-    };
+        project_dir: PathBuf::from("project")};
 
     let error = expect_failure(run(&relative, &CancellationToken::new(), &NoReporter));
 

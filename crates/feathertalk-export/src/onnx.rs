@@ -3,7 +3,6 @@
 use std::{borrow::Borrow, collections::BTreeMap};
 
 use burn::tensor::DType;
-use burn_store::TensorSnapshot;
 use prost::Message;
 
 pub use crate::onnx_feather_hubert::export_feather_hubert_onnx;
@@ -16,13 +15,11 @@ pub const ONNX_FLOAT_DATA_TYPE: i32 = 1;
 
 pub use proto::{
     AttributeProto as OnnxAttributeProto, GraphProto as OnnxGraphProto,
-    ModelProto as OnnxModelProto, NodeProto as OnnxNodeProto, TensorProto as OnnxTensorProto,
-};
+    ModelProto as OnnxModelProto, NodeProto as OnnxNodeProto, TensorProto as OnnxTensorProto};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct InitializerSet {
-    tensors: BTreeMap<String, OnnxTensorProto>,
-}
+    tensors: BTreeMap<String, OnnxTensorProto>}
 
 impl InitializerSet {
     pub fn new() -> Self {
@@ -61,16 +58,14 @@ impl InitializerSet {
 pub enum OnnxModelKind {
     FeatherHubert,
     OriginalUnet,
-    MobileOneUnet,
-}
+    MobileOneUnet}
 
 impl OnnxModelKind {
     fn graph_name(self) -> &'static str {
         match self {
             Self::FeatherHubert => "feathertalk.feather_hubert",
             Self::OriginalUnet => "feathertalk.original_unet",
-            Self::MobileOneUnet => "feathertalk.mobileone_unet.reparameterized",
-        }
+            Self::MobileOneUnet => "feathertalk.mobileone_unet.reparameterized"}
     }
 
     pub fn public_contract(self) -> OnnxModelContract {
@@ -87,23 +82,20 @@ impl OnnxModelKind {
                     OnnxTensorContract::new("audio", vec![1, 16, 32, 32]),
                 ],
                 vec![OnnxTensorContract::new("output", vec![1, 3, 160, 160])],
-            ),
-        }
+            )}
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OnnxTensorContract {
     pub name: String,
-    pub shape: Vec<i64>,
-}
+    pub shape: Vec<i64>}
 
 impl OnnxTensorContract {
     pub fn new(name: impl Into<String>, shape: Vec<i64>) -> Self {
         Self {
             name: name.into(),
-            shape,
-        }
+            shape}
     }
 }
 
@@ -111,8 +103,7 @@ impl OnnxTensorContract {
 pub struct OnnxModelContract {
     pub kind: OnnxModelKind,
     pub inputs: Vec<OnnxTensorContract>,
-    pub outputs: Vec<OnnxTensorContract>,
-}
+    pub outputs: Vec<OnnxTensorContract>}
 
 impl OnnxModelContract {
     pub fn new(
@@ -123,8 +114,7 @@ impl OnnxModelContract {
         Self {
             kind,
             inputs,
-            outputs,
-        }
+            outputs}
     }
 }
 
@@ -132,16 +122,14 @@ impl OnnxModelContract {
 pub struct OnnxValue {
     pub name: String,
     pub shape: Vec<i64>,
-    pub dtype: i32,
-}
+    pub dtype: i32}
 
 impl From<OnnxTensorContract> for OnnxValue {
     fn from(contract: OnnxTensorContract) -> Self {
         Self {
             name: contract.name,
             shape: contract.shape,
-            dtype: ONNX_FLOAT_DATA_TYPE,
-        }
+            dtype: ONNX_FLOAT_DATA_TYPE}
     }
 }
 
@@ -151,16 +139,14 @@ pub struct OnnxGraph {
     pub inputs: Vec<OnnxValue>,
     pub outputs: Vec<OnnxValue>,
     pub nodes: Vec<OnnxNodeProto>,
-    pub initializers: InitializerSet,
-}
+    pub initializers: InitializerSet}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OnnxModel {
     pub ir_version: i64,
     pub opset_version: i64,
     pub graph_present: bool,
-    pub graph: OnnxGraph,
-}
+    pub graph: OnnxGraph}
 
 impl OnnxModel {
     pub fn new(kind: OnnxModelKind) -> Self {
@@ -174,9 +160,7 @@ impl OnnxModel {
                 inputs: contract.inputs.into_iter().map(Into::into).collect(),
                 outputs: contract.outputs.into_iter().map(Into::into).collect(),
                 nodes: Vec::new(),
-                initializers: InitializerSet::new(),
-            },
-        }
+                initializers: InitializerSet::new()}}
     }
 }
 
@@ -194,14 +178,12 @@ pub enum OnnxExportError {
     SnapshotShapeMismatch {
         name: String,
         expected: Vec<i64>,
-        actual: Vec<i64>,
-    },
+        actual: Vec<i64>},
     #[error("initializer {name} element count mismatch: expected {expected}, got {actual}")]
     ElementCountMismatch {
         name: String,
         expected: usize,
-        actual: usize,
-    },
+        actual: usize},
     #[error("duplicate ONNX initializer {name}")]
     DuplicateInitializer { name: String },
     #[error("initializer {name} shape dimension exceeds i64")]
@@ -215,21 +197,19 @@ pub enum OnnxExportError {
     #[error("ONNX graph value {name} is defined more than once")]
     DuplicateGraphValue { name: String },
     #[error("invalid ONNX graph: {0}")]
-    InvalidGraph(String),
-}
+    InvalidGraph(String)}
 
 pub fn initializer_from_snapshot(
-    snapshot: &TensorSnapshot,
+    snapshot: &burn_store::burn_pack::Tensor,
 ) -> Result<OnnxTensorProto, OnnxExportError> {
-    let name = snapshot.full_path();
+    let name = snapshot.name.clone();
     if name.is_empty() {
         return Err(OnnxExportError::EmptyInitializerName);
     }
     if snapshot.dtype != DType::F32 {
         return Err(OnnxExportError::NonF32Initializer {
             name,
-            dtype: snapshot.dtype,
-        });
+            dtype: snapshot.dtype});
     }
 
     let expected_shape = snapshot
@@ -240,12 +220,10 @@ pub fn initializer_from_snapshot(
                 .map_err(|_| OnnxExportError::InitializerDimensionOverflow { name: name.clone() })
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let data = snapshot
-        .to_data()
+    let data = burn_store::bridge::to_data(&snapshot)
         .map_err(|error| OnnxExportError::SnapshotData {
             name: name.clone(),
-            message: error.to_string(),
-        })?;
+            message: error.to_string()})?;
     let actual_shape = data
         .shape
         .iter()
@@ -255,15 +233,13 @@ pub fn initializer_from_snapshot(
         return Err(OnnxExportError::SnapshotShapeMismatch {
             name,
             expected: expected_shape,
-            actual: actual_shape,
-        });
+            actual: actual_shape});
     }
     let values = data
         .as_slice::<f32>()
         .map_err(|error| OnnxExportError::SnapshotData {
             name: name.clone(),
-            message: error.to_string(),
-        })?;
+            message: error.to_string()})?;
     let expected_elements = expected_shape.iter().try_fold(1usize, |total, dimension| {
         usize::try_from(*dimension)
             .ok()
@@ -273,14 +249,12 @@ pub fn initializer_from_snapshot(
         expected_elements.ok_or_else(|| OnnxExportError::ElementCountMismatch {
             name: name.clone(),
             expected: 0,
-            actual: values.len(),
-        })?;
+            actual: values.len()})?;
     if values.len() != expected_elements {
         return Err(OnnxExportError::ElementCountMismatch {
             name,
             expected: expected_elements,
-            actual: values.len(),
-        });
+            actual: values.len()});
     }
     let mut raw_data = Vec::with_capacity(std::mem::size_of_val(values));
     for value in values {
@@ -291,8 +265,7 @@ pub fn initializer_from_snapshot(
         data_type: ONNX_FLOAT_DATA_TYPE,
         name,
         raw_data,
-        doc_string: String::new(),
-    })
+        doc_string: String::new()})
 }
 
 pub fn add_snapshot_initializers<I, S>(
@@ -301,7 +274,7 @@ pub fn add_snapshot_initializers<I, S>(
 ) -> Result<(), OnnxExportError>
 where
     I: IntoIterator<Item = S>,
-    S: Borrow<TensorSnapshot>,
+    S: Borrow<burn_store::burn_pack::Tensor>,
 {
     let mut pending = BTreeMap::new();
     for snapshot in snapshots {
@@ -331,15 +304,13 @@ pub enum OnnxValidationError {
     TensorCount {
         role: &'static str,
         expected: usize,
-        actual: usize,
-    },
+        actual: usize},
     #[error("unexpected {role} tensor {index} name: expected {expected}, got {actual}")]
     TensorName {
         role: &'static str,
         index: usize,
         expected: String,
-        actual: String,
-    },
+        actual: String},
     #[error("{role} tensor {name} is missing tensor type metadata")]
     MissingTensorType { role: &'static str, name: String },
     #[error("{role} tensor {name} is missing shape metadata")]
@@ -349,30 +320,26 @@ pub enum OnnxValidationError {
         role: &'static str,
         name: String,
         expected: i32,
-        actual: i32,
-    },
+        actual: i32},
     #[error("{role} tensor {name} rank mismatch: expected {expected}, got {actual}")]
     Rank {
         role: &'static str,
         name: String,
         expected: usize,
-        actual: usize,
-    },
+        actual: usize},
     #[error("{role} tensor {name} dimension {index} is invalid: expected {expected}, got {actual}")]
     Dimension {
         role: &'static str,
         name: String,
         index: usize,
         expected: String,
-        actual: String,
-    },
+        actual: String},
     #[error("ONNX graph initializer {name} is never consumed")]
     UnusedInitializer { name: String },
     #[error("ONNX graph node input {name} is not defined before use")]
     UndefinedNodeInput { name: String },
     #[error("ONNX graph value {name} is defined more than once")]
-    DuplicateGraphValue { name: String },
-}
+    DuplicateGraphValue { name: String }}
 
 pub fn serialize_model(model: &OnnxModel) -> Result<Vec<u8>, OnnxExportError> {
     let graph = model.graph_present.then(|| graph_proto(&model.graph));
@@ -380,16 +347,14 @@ pub fn serialize_model(model: &OnnxModel) -> Result<Vec<u8>, OnnxExportError> {
         ir_version: model.ir_version,
         opset_import: vec![proto::OperatorSetIdProto {
             domain: String::new(),
-            version: model.opset_version,
-        }],
+            version: model.opset_version}],
         producer_name: "FeatherTalk".to_owned(),
         producer_version: env!("CARGO_PKG_VERSION").to_owned(),
         domain: "ai.feathertalk".to_owned(),
         model_version: 1,
         doc_string: String::new(),
         graph,
-        metadata_props: Vec::new(),
-    };
+        metadata_props: Vec::new()};
     let mut bytes = Vec::with_capacity(proto.encoded_len());
     proto.encode(&mut bytes)?;
     Ok(bytes)
@@ -404,8 +369,7 @@ pub fn validate_model_contract(
     if model.ir_version != ONNX_IR_VERSION {
         return Err(OnnxValidationError::IrVersion {
             expected: ONNX_IR_VERSION,
-            actual: model.ir_version,
-        });
+            actual: model.ir_version});
     }
     if model.opset_import.len() != 1
         || !model.opset_import[0].domain.is_empty()
@@ -419,16 +383,14 @@ pub fn validate_model_contract(
             .join(", ");
         return Err(OnnxValidationError::Opset {
             expected: ONNX_OPSET_VERSION,
-            actual,
-        });
+            actual});
     }
     let graph = model.graph.ok_or(OnnxValidationError::MissingGraph)?;
     let expected_graph_name = expected.kind.graph_name();
     if graph.name != expected_graph_name {
         return Err(OnnxValidationError::ModelKind {
             expected: expected_graph_name.to_owned(),
-            actual: graph.name,
-        });
+            actual: graph.name});
     }
     validate_values("input", &graph.input, &expected.inputs)?;
     validate_values("output", &graph.output, &expected.outputs)?;
@@ -456,13 +418,11 @@ fn validate_graph_proto_integrity(graph: &proto::GraphProto) -> Result<(), OnnxV
     for initializer in &graph.initializer {
         if !initializer_names.insert(initializer.name.clone()) {
             return Err(OnnxValidationError::DuplicateGraphValue {
-                name: initializer.name.clone(),
-            });
+                name: initializer.name.clone()});
         }
         if !defined.insert(initializer.name.clone()) {
             return Err(OnnxValidationError::DuplicateGraphValue {
-                name: initializer.name.clone(),
-            });
+                name: initializer.name.clone()});
         }
     }
     let mut consumed = std::collections::BTreeSet::new();
@@ -473,8 +433,7 @@ fn validate_graph_proto_integrity(graph: &proto::GraphProto) -> Result<(), OnnxV
             }
             if !defined.contains(input) {
                 return Err(OnnxValidationError::UndefinedNodeInput {
-                    name: input.clone(),
-                });
+                    name: input.clone()});
             }
             if initializer_names.contains(input) {
                 consumed.insert(input.clone());
@@ -486,16 +445,14 @@ fn validate_graph_proto_integrity(graph: &proto::GraphProto) -> Result<(), OnnxV
             }
             if !defined.insert(output.clone()) {
                 return Err(OnnxValidationError::DuplicateGraphValue {
-                    name: output.clone(),
-                });
+                    name: output.clone()});
             }
         }
     }
     for output in &graph.output {
         if !defined.contains(&output.name) {
             return Err(OnnxValidationError::UndefinedNodeInput {
-                name: output.name.clone(),
-            });
+                name: output.name.clone()});
         }
     }
     for initializer in initializer_names {
@@ -514,8 +471,7 @@ fn graph_proto(graph: &OnnxGraph) -> proto::GraphProto {
         doc_string: String::new(),
         input: graph.inputs.iter().map(value_info_proto).collect(),
         output: graph.outputs.iter().map(value_info_proto).collect(),
-        value_info: Vec::new(),
-    }
+        value_info: Vec::new()}
 }
 
 fn value_info_proto(value: &OnnxValue) -> proto::ValueInfoProto {
@@ -531,19 +487,15 @@ fn value_info_proto(value: &OnnxValue) -> proto::ValueInfoProto {
                 )))
             } else {
                 Some(proto::dimension_proto::Value::DimValue(*dimension))
-            },
-        })
+            }})
         .collect();
     proto::ValueInfoProto {
         name: value.name.clone(),
         r#type: Some(proto::TypeProto {
             tensor_type: Some(proto::TensorTypeProto {
                 elem_type: value.dtype,
-                shape: Some(proto::TensorShapeProto { dim: dimensions }),
-            }),
-        }),
-        doc_string: String::new(),
-    }
+                shape: Some(proto::TensorShapeProto { dim: dimensions })})}),
+        doc_string: String::new()}
 }
 
 fn validate_values(
@@ -555,8 +507,7 @@ fn validate_values(
         return Err(OnnxValidationError::TensorCount {
             role,
             expected: expected.len(),
-            actual: actual.len(),
-        });
+            actual: actual.len()});
     }
     for (index, (actual, expected)) in actual.iter().zip(expected).enumerate() {
         if actual.name != expected.name {
@@ -564,8 +515,7 @@ fn validate_values(
                 role,
                 index,
                 expected: expected.name.clone(),
-                actual: actual.name.clone(),
-            });
+                actual: actual.name.clone()});
         }
         let tensor = actual
             .r#type
@@ -573,30 +523,26 @@ fn validate_values(
             .and_then(|value| value.tensor_type.as_ref())
             .ok_or_else(|| OnnxValidationError::MissingTensorType {
                 role,
-                name: actual.name.clone(),
-            })?;
+                name: actual.name.clone()})?;
         if tensor.elem_type != ONNX_FLOAT_DATA_TYPE {
             return Err(OnnxValidationError::DType {
                 role,
                 name: actual.name.clone(),
                 expected: ONNX_FLOAT_DATA_TYPE,
-                actual: tensor.elem_type,
-            });
+                actual: tensor.elem_type});
         }
         let shape = tensor
             .shape
             .as_ref()
             .ok_or_else(|| OnnxValidationError::MissingShape {
                 role,
-                name: actual.name.clone(),
-            })?;
+                name: actual.name.clone()})?;
         if shape.dim.len() != expected.shape.len() {
             return Err(OnnxValidationError::Rank {
                 role,
                 name: actual.name.clone(),
                 expected: expected.shape.len(),
-                actual: shape.dim.len(),
-            });
+                actual: shape.dim.len()});
         }
         for (dimension_index, (actual_dimension, expected_dimension)) in
             shape.dim.iter().zip(&expected.shape).enumerate()
@@ -606,16 +552,14 @@ fn validate_values(
                 (expected, Some(proto::dimension_proto::Value::DimValue(actual))) => {
                     *expected > 0 && *actual == *expected
                 }
-                _ => false,
-            };
+                _ => false};
             if !valid {
                 return Err(OnnxValidationError::Dimension {
                     role,
                     name: actual.name.clone(),
                     index: dimension_index,
                     expected: expected_dimension.to_string(),
-                    actual: dimension_string(actual_dimension),
-                });
+                    actual: dimension_string(actual_dimension)});
             }
         }
     }
@@ -626,8 +570,7 @@ fn dimension_string(dimension: &proto::DimensionProto) -> String {
     match &dimension.value {
         Some(proto::dimension_proto::Value::DimValue(value)) => value.to_string(),
         Some(proto::dimension_proto::Value::DimParam(value)) => format!("symbolic({value})"),
-        None => "unknown".to_owned(),
-    }
+        None => "unknown".to_owned()}
 }
 
 mod proto {
@@ -650,24 +593,21 @@ mod proto {
         #[prost(message, optional, tag = "7")]
         pub graph: Option<GraphProto>,
         #[prost(message, repeated, tag = "14")]
-        pub metadata_props: Vec<StringStringEntryProto>,
-    }
+        pub metadata_props: Vec<StringStringEntryProto>}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct OperatorSetIdProto {
         #[prost(string, tag = "1")]
         pub domain: String,
         #[prost(int64, tag = "2")]
-        pub version: i64,
-    }
+        pub version: i64}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct StringStringEntryProto {
         #[prost(string, tag = "1")]
         pub key: String,
         #[prost(string, tag = "2")]
-        pub value: String,
-    }
+        pub value: String}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct GraphProto {
@@ -684,8 +624,7 @@ mod proto {
         #[prost(message, repeated, tag = "12")]
         pub output: Vec<ValueInfoProto>,
         #[prost(message, repeated, tag = "13")]
-        pub value_info: Vec<ValueInfoProto>,
-    }
+        pub value_info: Vec<ValueInfoProto>}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct NodeProto {
@@ -702,8 +641,7 @@ mod proto {
         #[prost(string, tag = "6")]
         pub doc_string: String,
         #[prost(string, tag = "7")]
-        pub domain: String,
-    }
+        pub domain: String}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct AttributeProto {
@@ -722,8 +660,7 @@ mod proto {
         #[prost(string, tag = "13")]
         pub doc_string: String,
         #[prost(int32, tag = "20")]
-        pub r#type: i32,
-    }
+        pub r#type: i32}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct TensorProto {
@@ -736,8 +673,7 @@ mod proto {
         #[prost(bytes = "vec", tag = "9")]
         pub raw_data: Vec<u8>,
         #[prost(string, tag = "12")]
-        pub doc_string: String,
-    }
+        pub doc_string: String}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct ValueInfoProto {
@@ -746,34 +682,29 @@ mod proto {
         #[prost(message, optional, tag = "2")]
         pub r#type: Option<TypeProto>,
         #[prost(string, tag = "3")]
-        pub doc_string: String,
-    }
+        pub doc_string: String}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct TypeProto {
         #[prost(message, optional, tag = "1")]
-        pub tensor_type: Option<TensorTypeProto>,
-    }
+        pub tensor_type: Option<TensorTypeProto>}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct TensorTypeProto {
         #[prost(int32, tag = "1")]
         pub elem_type: i32,
         #[prost(message, optional, tag = "2")]
-        pub shape: Option<TensorShapeProto>,
-    }
+        pub shape: Option<TensorShapeProto>}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct TensorShapeProto {
         #[prost(message, repeated, tag = "1")]
-        pub dim: Vec<DimensionProto>,
-    }
+        pub dim: Vec<DimensionProto>}
 
     #[derive(Clone, PartialEq, prost::Message)]
     pub struct DimensionProto {
         #[prost(oneof = "dimension_proto::Value", tags = "1, 2")]
-        pub value: Option<dimension_proto::Value>,
-    }
+        pub value: Option<dimension_proto::Value>}
 
     pub mod dimension_proto {
         #[derive(Clone, PartialEq, prost::Oneof)]
@@ -781,7 +712,6 @@ mod proto {
             #[prost(int64, tag = "1")]
             DimValue(i64),
             #[prost(string, tag = "2")]
-            DimParam(String),
-        }
+            DimParam(String)}
     }
 }

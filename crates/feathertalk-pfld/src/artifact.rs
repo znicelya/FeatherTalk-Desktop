@@ -1,23 +1,20 @@
 use std::{
     fs::{self, File},
     io::{Read, Seek},
-    path::Path,
-};
+    path::Path};
 
-use burn::tensor::backend::Backend;
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, SafetensorsStore};
 use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 use sha2::{Digest, Sha256};
 
 use crate::{
     MAX_MANIFEST_BYTES, MAX_WEIGHT_BYTES, PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS,
-    PFLD_MODEL_BYTES, PfldRuntimeError, PfldRuntimeManifest,
-};
+    PFLD_MODEL_BYTES, PfldRuntimeError, PfldRuntimeManifest};
 
-pub(crate) fn load_artifact<B: Backend>(
+pub(crate) fn load_artifact(
     directory: &Path,
-    device: &B::Device,
-) -> Result<(PFLD_GhostOne<B>, PfldRuntimeManifest), PfldRuntimeError> {
+    device: &burn::tensor::Device,
+) -> Result<(PFLD_GhostOne, PfldRuntimeManifest), PfldRuntimeError> {
     validate_directory(directory)?;
     let manifest_path = directory.join("manifest.json");
     let manifest_bytes = read_bounded(&manifest_path, MAX_MANIFEST_BYTES, "read manifest")?;
@@ -29,26 +26,23 @@ pub(crate) fn load_artifact<B: Backend>(
     if weights_path.file_name().and_then(|name| name.to_str()) != Some("model.safetensors") {
         return Err(PfldRuntimeError::InvalidManifest {
             field: "model.file_name".to_owned(),
-            message: "must be model.safetensors".to_owned(),
-        });
+            message: "must be model.safetensors".to_owned()});
     }
     let weight_bytes = read_bounded(&weights_path, MAX_WEIGHT_BYTES, "read weights")?;
     if weight_bytes.len() as u64 != PFLD_MODEL_BYTES {
         return Err(PfldRuntimeError::WeightSizeMismatch {
             expected: PFLD_MODEL_BYTES,
-            actual: weight_bytes.len() as u64,
-        });
+            actual: weight_bytes.len() as u64});
     }
     let actual_hash = hex::encode(Sha256::digest(&weight_bytes));
     if actual_hash != manifest.model.sha256 {
         return Err(PfldRuntimeError::HashMismatch {
             artifact: "weights",
             expected: manifest.model.sha256,
-            actual: actual_hash,
-        });
+            actual: actual_hash});
     }
 
-    let mut model = PFLD_GhostOne::<B>::new(PfldConfig::production(), device);
+    let mut model = PFLD_GhostOne::new(PfldConfig::production(), device);
     let mut store = SafetensorsStore::from_bytes(Some(weight_bytes))
         .allow_partial(true)
         .validate(false);
@@ -56,14 +50,13 @@ pub(crate) fn load_artifact<B: Backend>(
         .load_from(&mut store)
         .map_err(|error| PfldRuntimeError::Store(error.to_string()))?;
     validate_apply_result(&result)?;
-    let summary = module_summary::<B, _>(&model)?;
+    let summary = module_summary::<_>(&model)?;
     if summary != (PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS)
         || summary != (manifest.model.tensor_count, manifest.model.total_elements)
     {
         return Err(PfldRuntimeError::InvalidManifest {
             field: "model".to_owned(),
-            message: format!("loaded tensor summary mismatch: {summary:?}"),
-        });
+            message: format!("loaded tensor summary mismatch: {summary:?}")});
     }
     Ok((model, manifest))
 }
@@ -72,31 +65,26 @@ fn validate_directory(directory: &Path) -> Result<(), PfldRuntimeError> {
     let metadata = fs::symlink_metadata(directory).map_err(|source| PfldRuntimeError::Io {
         operation: "inspect artifact directory",
         path: directory.to_owned(),
-        source,
-    })?;
+        source})?;
     if !metadata.is_dir() || metadata.file_type().is_symlink() {
         return Err(PfldRuntimeError::InvalidManifest {
             field: "artifact_directory".to_owned(),
-            message: "must be a real directory".to_owned(),
-        });
+            message: "must be a real directory".to_owned()});
     }
     let mut names = Vec::new();
     for entry in fs::read_dir(directory).map_err(|source| PfldRuntimeError::Io {
         operation: "read artifact directory",
         path: directory.to_owned(),
-        source,
-    })? {
+        source})? {
         let entry = entry.map_err(|source| PfldRuntimeError::Io {
             operation: "read artifact directory entry",
             path: directory.to_owned(),
-            source,
-        })?;
+            source})?;
         let path = entry.path();
         let metadata = fs::symlink_metadata(&path).map_err(|source| PfldRuntimeError::Io {
             operation: "inspect artifact entry",
             path: path.clone(),
-            source,
-        })?;
+            source})?;
         if !metadata.is_file() || metadata.file_type().is_symlink() {
             return Err(PfldRuntimeError::UnexpectedArtifactEntry(
                 entry.file_name().to_string_lossy().into_owned(),
@@ -121,59 +109,50 @@ fn read_bounded(
     let mut file = File::open(path).map_err(|source| PfldRuntimeError::Io {
         operation,
         path: path.to_owned(),
-        source,
-    })?;
+        source})?;
     let size = file
         .metadata()
         .map_err(|source| PfldRuntimeError::Io {
             operation: "inspect artifact file",
             path: path.to_owned(),
-            source,
-        })?
+            source})?
         .len();
     if size > limit {
         return if operation == "read manifest" {
             Err(PfldRuntimeError::ManifestTooLarge {
                 limit,
-                actual: size,
-            })
+                actual: size})
         } else {
             Err(PfldRuntimeError::WeightsTooLarge {
                 limit,
-                actual: size,
-            })
+                actual: size})
         };
     }
     let capacity = usize::try_from(size).map_err(|_| PfldRuntimeError::Io {
         operation,
         path: path.to_owned(),
-        source: std::io::Error::new(std::io::ErrorKind::InvalidData, "file size exceeds usize"),
-    })?;
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, "file size exceeds usize")})?;
     let mut bytes = Vec::with_capacity(capacity);
     file.seek(std::io::SeekFrom::Start(0))
         .map_err(|source| PfldRuntimeError::Io {
             operation,
             path: path.to_owned(),
-            source,
-        })?;
+            source})?;
     file.take(limit + 1)
         .read_to_end(&mut bytes)
         .map_err(|source| PfldRuntimeError::Io {
             operation,
             path: path.to_owned(),
-            source,
-        })?;
+            source})?;
     if bytes.len() as u64 > limit {
         return if operation == "read manifest" {
             Err(PfldRuntimeError::ManifestTooLarge {
                 limit,
-                actual: bytes.len() as u64,
-            })
+                actual: bytes.len() as u64})
         } else {
             Err(PfldRuntimeError::WeightsTooLarge {
                 limit,
-                actual: bytes.len() as u64,
-            })
+                actual: bytes.len() as u64})
         };
     }
     Ok(bytes)
@@ -201,10 +180,9 @@ fn validate_apply_result(result: &ApplyResult) -> Result<(), PfldRuntimeError> {
     Ok(())
 }
 
-fn module_summary<B, M>(module: &M) -> Result<(usize, u64), PfldRuntimeError>
+fn module_summary<M>(module: &M) -> Result<(usize, u64), PfldRuntimeError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let mut count = 0usize;
     let mut elements = 0u64;

@@ -12,8 +12,7 @@ use crate::{InspectedFile, ModelSourceKind};
 #[derive(Debug)]
 pub enum InspectedModel<'a> {
     Package(&'a ModelPackageManifest),
-    Checkpoint(&'a TrainingCheckpointMetadata),
-}
+    Checkpoint(&'a TrainingCheckpointMetadata)}
 
 /// What an inspected model has to say for itself.
 ///
@@ -27,8 +26,7 @@ pub struct InspectSummary<'a> {
     pub model: InspectedModel<'a>,
     pub files: &'a [InspectedFile],
     /// The reason codes from `inspecting`; empty means usable by this build.
-    pub incompatibilities: &'a [&'static str],
-}
+    pub incompatibilities: &'a [&'static str]}
 
 /// Shapes the payload the `completed` event of an inspect task carries.
 ///
@@ -62,8 +60,7 @@ pub fn inspect_to_json(summary: &InspectSummary<'_>) -> Value {
             "minimum_app_version": manifest.minimum_app_version.as_str(),
             "files": files,
             "compatible": compatible,
-            "incompatibilities": summary.incompatibilities,
-        }),
+            "incompatibilities": summary.incompatibilities}),
         InspectedModel::Checkpoint(checkpoint) => json!({
             "source_kind": summary.source_kind.as_slug(),
             "source_path": source_path,
@@ -86,9 +83,7 @@ pub fn inspect_to_json(summary: &InspectSummary<'_>) -> Value {
             "minimum_app_version": Value::Null,
             "files": files,
             "compatible": compatible,
-            "incompatibilities": summary.incompatibilities,
-        }),
-    }
+            "incompatibilities": summary.incompatibilities})}
 }
 
 fn specs_json(specs: &[TensorSpec]) -> Value {
@@ -100,8 +95,7 @@ fn specs_json(specs: &[TensorSpec]) -> Value {
                     "name": spec.name.as_str(),
                     // A dynamic axis is -1 in the manifest and stays -1 here.
                     "shape": spec.shape,
-                    "dtype": spec.dtype.as_str(),
-                })
+                    "dtype": spec.dtype.as_str()})
             })
             .collect(),
     )
@@ -116,8 +110,7 @@ fn files_json(files: &[InspectedFile]) -> Value {
                     "file_name": file.file_name.as_str(),
                     "bytes": file.bytes,
                     "sha256": file.sha256.as_str(),
-                    "bytes_on_disk": file.bytes_on_disk,
-                })
+                    "bytes_on_disk": file.bytes_on_disk})
             })
             .collect(),
     )
@@ -130,8 +123,7 @@ pub(crate) fn package_mode_slug(mode: PackageTrainingMode) -> &'static str {
         PackageTrainingMode::Inference => "inference",
         PackageTrainingMode::Baseline => "baseline",
         PackageTrainingMode::MouthRoi => "mouth_roi",
-        PackageTrainingMode::MouthRoiTemporal => "mouth_roi_temporal",
-    }
+        PackageTrainingMode::MouthRoiTemporal => "mouth_roi_temporal"}
 }
 
 /// The checkpoint enum has no `Inference`: a checkpoint is by definition
@@ -140,8 +132,7 @@ fn checkpoint_mode_slug(mode: CheckpointTrainingMode) -> &'static str {
     match mode {
         CheckpointTrainingMode::Baseline => "baseline",
         CheckpointTrainingMode::MouthRoi => "mouth_roi",
-        CheckpointTrainingMode::MouthRoiTemporal => "mouth_roi_temporal",
-    }
+        CheckpointTrainingMode::MouthRoiTemporal => "mouth_roi_temporal"}
 }
 
 fn path_text(path: &Path) -> String {

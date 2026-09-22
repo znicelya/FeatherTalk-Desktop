@@ -1,4 +1,4 @@
-use burn::{tensor::Tensor, tensor::backend::Backend};
+use burn::tensor::Tensor;
 
 use crate::{
     ScrfdArtifactManifest, ScrfdArtifactPaths, ScrfdError,
@@ -7,23 +7,23 @@ use crate::{
     output::{GeneratedOutput, ScrfdRawOutput, assemble},
 };
 
-pub struct ScrfdModel<B: Backend> {
-    pub(crate) model: scrfd_2_5g::Model<B>,
+pub struct ScrfdModel {
+    pub(crate) model: scrfd_2_5g::Model,
     pub(crate) manifest: ScrfdArtifactManifest,
 }
 
-impl<B: Backend> ScrfdModel<B> {
-    pub fn load(paths: &ScrfdArtifactPaths, device: &B::Device) -> Result<Self, ScrfdError> {
+impl ScrfdModel {
+    pub fn load(paths: &ScrfdArtifactPaths, device: &burn::tensor::Device) -> Result<Self, ScrfdError> {
         let (model, manifest) = load_model(paths, device)?;
         Ok(Self { model, manifest })
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Result<ScrfdRawOutput<B>, ScrfdError> {
+    pub fn forward(&self, input: Tensor<4>) -> Result<ScrfdRawOutput, ScrfdError> {
         let actual = input.dims();
         if actual != crate::SCRFD_INPUT_SHAPE {
             return Err(ScrfdError::InvalidInputShape { actual });
         }
-        let outputs: GeneratedOutput<B> = self.model.forward(input);
+        let outputs: GeneratedOutput = self.model.forward(input);
         assemble(outputs)
     }
 

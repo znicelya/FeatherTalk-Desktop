@@ -2,18 +2,15 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
-    process::Command,
-};
+    process::Command};
 
 use clap::Parser;
 use feathertalk_scrfd::{
     ScrfdArtifactManifest, ScrfdFileManifest, ScrfdGeneratorManifest, ScrfdInputManifest,
     ScrfdLevelManifest, ScrfdLicenseManifest, ScrfdOutputManifest, ScrfdSourceManifest,
-    ScrfdWeightManifest,
-};
+    ScrfdWeightManifest};
 use feathertalk_scrfd_import::{
-    GeneratedBurnFiles, ToolError, ensure_destination_absent, generate_burn_files, inspect_source,
-};
+    GeneratedBurnFiles, ToolError, ensure_destination_absent, generate_burn_files, inspect_source};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Parser)]
@@ -31,8 +28,7 @@ struct Args {
         conflicts_with = "destination",
         required_unless_present = "destination"
     )]
-    verify_against: Option<PathBuf>,
-}
+    verify_against: Option<PathBuf>}
 
 fn main() {
     if let Err(error) = run(Args::parse()) {
@@ -139,8 +135,7 @@ fn run_converter(
     if !output.status.success() {
         return Err(ToolError::ConversionProcess {
             status: output.status.code(),
-            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-        });
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned()});
     }
     Ok(())
 }
@@ -154,8 +149,7 @@ fn build_manifest(
     let output = |name: &str, source: &[usize], public: &[usize]| ScrfdOutputManifest {
         onnx_name: name.to_owned(),
         source_shape: source.to_vec(),
-        public_shape: public.to_vec(),
-    };
+        public_shape: public.to_vec()};
     ScrfdArtifactManifest {
         schema_version: 1,
         model_kind: "scrfd_2.5g_kps".to_owned(),
@@ -170,62 +164,52 @@ fn build_manifest(
             output_names: [
                 "out0", "out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8",
             ]
-            .map(str::to_owned),
-        },
+            .map(str::to_owned)},
         generator: ScrfdGeneratorManifest {
             burn: "0.21.0".to_owned(),
             burn_onnx: "0.21.0".to_owned(),
             burn_store: "0.21.0".to_owned(),
             simplify: true,
-            load_strategy: "none".to_owned(),
-        },
+            load_strategy: "none".to_owned()},
         input: ScrfdInputManifest {
             dtype: "float32".to_owned(),
             shape: [1, 3, 640, 640],
             scale: 1.0 / 128.0,
             mean: [127.5; 3],
-            swap_rb: true,
-        },
+            swap_rb: true},
         levels: [
             ScrfdLevelManifest {
                 stride: 8,
                 anchors: 12_800,
                 score: output("out0", &[1, 12_800, 1], &[1, 12_800]),
                 bbox: output("out3", &[1, 12_800, 4], &[1, 12_800, 4]),
-                keypoints: output("out6", &[1, 12_800, 10], &[1, 12_800, 10]),
-            },
+                keypoints: output("out6", &[1, 12_800, 10], &[1, 12_800, 10])},
             ScrfdLevelManifest {
                 stride: 16,
                 anchors: 3_200,
                 score: output("out1", &[1, 3_200, 1], &[1, 3_200]),
                 bbox: output("out4", &[1, 3_200, 4], &[1, 3_200, 4]),
-                keypoints: output("out7", &[1, 3_200, 10], &[1, 3_200, 10]),
-            },
+                keypoints: output("out7", &[1, 3_200, 10], &[1, 3_200, 10])},
             ScrfdLevelManifest {
                 stride: 32,
                 anchors: 800,
                 score: output("out2", &[1, 800, 1], &[1, 800]),
                 bbox: output("out5", &[1, 800, 4], &[1, 800, 4]),
-                keypoints: output("out8", &[1, 800, 10], &[1, 800, 10]),
-            },
+                keypoints: output("out8", &[1, 800, 10], &[1, 800, 10])},
         ],
         generated_source: ScrfdFileManifest {
             file_name: "scrfd_2_5g.rs".to_owned(),
             file_bytes: source_bytes,
-            sha256: source_hash.to_owned(),
-        },
+            sha256: source_hash.to_owned()},
         weights: ScrfdWeightManifest {
             format: "safetensors".to_owned(),
             file_name: "model.safetensors".to_owned(),
             file_bytes: weight_bytes,
-            sha256: weight_hash.to_owned(),
-        },
+            sha256: weight_hash.to_owned()},
         license: ScrfdLicenseManifest {
             license_id: "NOASSERTION".to_owned(),
             redistribution_approved: false,
-            evidence: "repository does not provide a verifiable model-weight license".to_owned(),
-        },
-    }
+            evidence: "repository does not provide a verifiable model-weight license".to_owned()}}
 }
 
 fn write_constants(
@@ -342,8 +326,7 @@ fn io_error(operation: &'static str, path: &Path, source: std::io::Error) -> Too
     ToolError::Io {
         operation,
         path: path.to_owned(),
-        source,
-    }
+        source}
 }
 
 #[cfg(test)]

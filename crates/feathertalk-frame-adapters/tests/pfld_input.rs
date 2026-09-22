@@ -26,12 +26,10 @@ fn handmade_geometry(source: RectI, size: u32) -> FaceCropGeometry {
             left: 0,
             top: 0,
             right: 0,
-            bottom: 0,
-        },
+            bottom: 0},
         size,
         origin_x: source.x,
-        origin_y: source.y,
-    }
+        origin_y: source.y}
 }
 
 #[test]
@@ -44,8 +42,7 @@ fn both_crop_cases_are_byte_exact_against_opencv() {
         let geometry = compute_face_crop_geometry(
             ImageSize {
                 width: image.width(),
-                height: image.height(),
-            },
+                height: image.height()},
             case.bbox,
         )
         .unwrap();
@@ -65,8 +62,7 @@ fn the_crop_geometry_matches_the_recorded_cases() {
     let fixture = support::load_and_verify_fixture().unwrap();
     let size = ImageSize {
         width: 640,
-        height: 640,
-    };
+        height: 640};
 
     for name in support::CROP_CASES {
         let case = support::crop_case(&fixture, name);
@@ -84,8 +80,7 @@ fn the_crop_geometry_matches_the_recorded_cases() {
                 left: case.padding[0],
                 top: case.padding[1],
                 right: case.padding[2],
-                bottom: case.padding[3],
-            },
+                bottom: case.padding[3]},
             "{name} padding"
         );
         assert_eq!(
@@ -94,8 +89,7 @@ fn the_crop_geometry_matches_the_recorded_cases() {
                 x: i32::try_from(case.source[0]).unwrap(),
                 y: i32::try_from(case.source[1]).unwrap(),
                 width: u32::try_from(case.source[2]).unwrap(),
-                height: u32::try_from(case.source[3]).unwrap(),
-            },
+                height: u32::try_from(case.source[3]).unwrap()},
             "{name} source"
         );
     }
@@ -110,8 +104,7 @@ fn a_zero_sized_crop_is_rejected() {
             x: 0,
             y: 0,
             width: 0,
-            height: 0,
-        },
+            height: 0},
         0,
     );
 
@@ -120,8 +113,7 @@ fn a_zero_sized_crop_is_rejected() {
             assert_eq!(component, "pfld");
             assert_eq!(message, "crop size must be non-zero");
         }
-        other => panic!("expected an adapter error, got {other}"),
-    }
+        other => panic!("expected an adapter error, got {other}")}
 }
 
 #[test]
@@ -133,8 +125,7 @@ fn a_source_rectangle_past_the_frame_is_rejected() {
             x: 600,
             y: 600,
             width: 100,
-            height: 100,
-        },
+            height: 100},
         100,
     );
 
@@ -146,6 +137,5 @@ fn a_source_rectangle_past_the_frame_is_rejected() {
                 "source rectangle 100x100 at (600, 600) exceeds the 640x640 frame"
             );
         }
-        other => panic!("expected an adapter error, got {other}"),
-    }
+        other => panic!("expected an adapter error, got {other}")}
 }

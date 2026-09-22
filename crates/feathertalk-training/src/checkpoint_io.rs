@@ -2,26 +2,21 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Take, Write},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
-};
+    sync::atomic::{AtomicU64, Ordering}};
 
 use burn::{
     module::AutodiffModule,
-    optim::Optimizer,
-    record::{BinFileRecorder, FullPrecisionSettings, Recorder},
-    tensor::backend::AutodiffBackend,
+    optim::OptimizerRecord,
 };
+use crate::checkpoint::CheckpointableOptimizer;
 use sha2::{Digest, Sha256};
 
 use crate::{
     CHECKPOINT_MANIFEST_FILE_NAME, CHECKPOINT_MODEL_FILE_NAME, CHECKPOINT_OPTIMIZER_FILE_NAME,
-    CHECKPOINT_STATE_FILE_NAME, CheckpointFileManifest, TrainingError,
-};
+    CHECKPOINT_STATE_FILE_NAME, CheckpointFileManifest, TrainingError};
 
 pub(crate) const MANIFEST_MAX_BYTES: u64 = 64 * 1024;
 pub(crate) const STATE_MAX_BYTES: u64 = 256 * 1024;
-
-pub(crate) type FullRecorder = BinFileRecorder<FullPrecisionSettings>;
 
 static NEXT_STAGING_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -29,8 +24,7 @@ static NEXT_STAGING_ID: AtomicU64 = AtomicU64::new(1);
 /// transferred to the published checkpoint directory.
 pub(crate) struct StagingDirectory {
     path: PathBuf,
-    armed: bool,
-}
+    armed: bool}
 
 impl StagingDirectory {
     pub(crate) fn path(&self) -> &Path {
@@ -63,8 +57,7 @@ pub(crate) fn create_staging_directory(parent: &Path) -> Result<StagingDirectory
                 return Ok(StagingDirectory { path, armed: true });
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
     }
 
     Err(TrainingError::CheckpointDirectory(
@@ -85,79 +78,53 @@ pub(crate) fn reject_symlink_components(path: &Path) -> Result<(), TrainingError
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
     }
     Ok(())
 }
 
-pub(crate) fn write_model_record<B, M>(model: &M, stem: &Path) -> Result<PathBuf, TrainingError>
+pub(crate) fn write_model_record<M>(model: &M, stem: &Path) -> Result<PathBuf, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B> + Clone,
+    M: AutodiffModule + Clone,
 {
-    let recorder = FullRecorder::default();
-    <FullRecorder as Recorder<B>>::record(
-        &recorder,
-        model.clone().into_record(),
-        stem.to_path_buf(),
-    )
-    .map_err(|error| TrainingError::Store(format!("write model record: {error}")))?;
+    model
+        .clone()
+        .save_file(stem)
+        .map_err(|error| TrainingError::Store(format!("write model record: {error}")))?;
     Ok(with_recorder_extension(stem))
 }
 
-pub(crate) fn write_optimizer_record<B, M, O>(
-    optimizer: &O,
-    stem: &Path,
-) -> Result<PathBuf, TrainingError>
+pub(crate) fn write_optimizer_record<M, O>(optimizer: &O, stem: &Path) -> Result<PathBuf, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B>,
-    O: Optimizer<M, B> + Clone,
+    M: AutodiffModule,
+    O: CheckpointableOptimizer + Clone,
 {
-    let recorder = FullRecorder::default();
-    <FullRecorder as Recorder<B>>::record(
-        &recorder,
-        optimizer.clone().to_record(),
-        stem.to_path_buf(),
-    )
-    .map_err(|error| TrainingError::Store(format!("write optimizer record: {error}")))?;
+    optimizer
+        .clone()
+        .checkpoint_record()
+        .save(stem)
+        .map_err(|error| TrainingError::Store(format!("write optimizer record: {error}")))?;
     Ok(with_recorder_extension(stem))
 }
 
-pub(crate) fn load_model_record<B, M>(
-    model: M,
-    path: &Path,
-    device: &B::Device,
-) -> Result<M, TrainingError>
+pub(crate) fn load_model_record<M>(model: M, path: &Path) -> Result<M, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B> + Clone,
+    M: AutodiffModule + Clone,
 {
-    let recorder = FullRecorder::default();
-    let record =
-        <FullRecorder as Recorder<B>>::load::<M::Record>(&recorder, path.to_path_buf(), device)
-            .map_err(|error| TrainingError::Store(format!("load model record: {error}")))?;
-    Ok(model.load_record(record))
+    model
+        .try_load_file(path)
+        .map_err(|error| TrainingError::Store(format!("load model record: {error}")))
 }
 
-pub(crate) fn load_optimizer_record<B, M, O>(
-    optimizer: O,
-    path: &Path,
-    device: &B::Device,
-) -> Result<O, TrainingError>
+pub(crate) fn load_optimizer_record<M, O>(optimizer: O, path: &Path) -> Result<O, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B>,
-    O: Optimizer<M, B> + Clone,
+    M: AutodiffModule,
+    O: CheckpointableOptimizer + Clone,
 {
-    let recorder = FullRecorder::default();
-    let record =
-        <FullRecorder as Recorder<B>>::load::<O::Record>(&recorder, path.to_path_buf(), device)
-            .map_err(|error| TrainingError::Store(format!("load optimizer record: {error}")))?;
-    Ok(optimizer.load_record(record))
+    let record = OptimizerRecord::load(path)
+        .map_err(|error| TrainingError::Store(format!("load optimizer record: {error}")))?;
+    Ok(optimizer.restore_record(record))
 }
-
 pub(crate) fn write_synced_bytes(path: &Path, bytes: &[u8]) -> Result<(), TrainingError> {
     let mut file = OpenOptions::new().write(true).create_new(true).open(path)?;
     file.write_all(bytes)?;
@@ -236,8 +203,7 @@ pub(crate) fn validate_declared_file(
         return Err(TrainingError::HashMismatch {
             file: declared.file_name.clone(),
             expected: declared.sha256.clone(),
-            actual: sha256,
-        });
+            actual: sha256});
     }
     Ok(())
 }
@@ -307,6 +273,6 @@ pub(crate) fn validate_checkpoint_directory(path: &Path) -> Result<(), TrainingE
 
 pub(crate) fn with_recorder_extension(stem: &Path) -> PathBuf {
     let mut path = stem.to_path_buf();
-    path.set_extension("bin");
+    path.set_extension("bpk");
     path
 }

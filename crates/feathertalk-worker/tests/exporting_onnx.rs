@@ -3,12 +3,10 @@
 use std::{fs, path::Path};
 
 use feathertalk_domain::{
-    ErrorCode, ExportOnnxParams, OnnxExportKind, Progress, Request, TaskStage,
-};
+    ErrorCode, ExportOnnxParams, OnnxExportKind, Progress, Request, TaskStage};
 use feathertalk_export::{
     onnx::{ONNX_OPSET_VERSION, OnnxModelKind, validate_model_contract},
-    read_package_manifest,
-};
+    read_package_manifest};
 use feathertalk_media::CancellationToken;
 use feathertalk_training::CheckpointDescriptor;
 use feathertalk_worker::{CommandOutcome, NoReporter, WorkerConfig, execute, execute_export_onnx};
@@ -18,8 +16,7 @@ mod support;
 
 use support::{
     Recorder, published_mobileone_package, published_onnx_hubert_package, published_package,
-    published_unet_package, write_checkpoint,
-};
+    published_unet_package, write_checkpoint};
 
 /// The version `published_package` publishes under, which is also the version
 /// `WorkerConfig` reports.
@@ -29,8 +26,7 @@ fn params(source: &Path, kind: OnnxExportKind, destination: &Path) -> ExportOnnx
     ExportOnnxParams {
         source: source.to_path_buf(),
         kind,
-        destination: destination.to_path_buf(),
-    }
+        destination: destination.to_path_buf()}
 }
 
 #[test]
@@ -85,15 +81,13 @@ fn a_micro_feather_hubert_package_becomes_an_onnx_model() {
                 TaskStage::Exporting,
                 Some(Progress {
                     completed: 0,
-                    total: Some(1),
-                }),
+                    total: Some(1)}),
             ),
             (
                 TaskStage::Exporting,
                 Some(Progress {
                     completed: 1,
-                    total: Some(1),
-                }),
+                    total: Some(1)}),
             ),
         ]
     );

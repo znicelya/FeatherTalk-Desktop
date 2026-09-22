@@ -3,41 +3,39 @@
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     path::Path,
-    sync::Arc,
-};
+    sync::Arc};
 
 use burn::{
-    backend::wgpu::CubeBackend,
+    backend::{DispatchDevice, wgpu::CubeBackend},
     cubecl::{
         Runtime,
         cuda::{CudaDevice, CudaRuntime},
-        future::block_on,
-    },
-    tensor::Tensor,
-};
+        future::block_on},
+    tensor::{Device, Tensor}};
 use cudarc::driver::CudaContext as DriverContext;
 use feathertalk_domain::{AdapterInfo, AdapterKind, Backend};
-use feathertalk_models::backend::CudaBackend;
 
 use super::{FaultState, GpuFailure, diagnostic, panic_detail, server_failure};
 
 /// The UUID-selected device and its retained primary driver context.
 #[derive(Clone, Debug)]
 pub struct CudaContext {
-    pub device: CudaDevice,
+    pub device: Device,
     _driver: Arc<DriverContext>,
-    faults: Arc<FaultState>,
-}
+    faults: Arc<FaultState>}
 
 impl CudaContext {
     pub fn check(&self) -> Result<(), GpuFailure> {
         self.faults.check()?;
         let result = catch_unwind(AssertUnwindSafe(|| {
+            let native = cuda_device(&self.device).ok_or_else(|| {
+                GpuFailure::Other("CudaContext holds a non-CUDA device".into())
+            })?;
             // Fusion and CubeCL each buffer operations on the calling thread's
             // stream. Flush both before publishing or leaving a loader thread.
-            burn_fusion::get_client::<CubeBackend<CudaRuntime, f32, i32, u8>>(&self.device)
+            burn_fusion::get_client::<CubeBackend<CudaRuntime>>(native)
                 .sync(|| ());
-            let client = CudaRuntime::client(&self.device);
+            let client = CudaRuntime::client(native);
             client.flush().map_err(server_failure)?;
             block_on(client.sync()).map_err(server_failure)
         }));
@@ -47,13 +45,25 @@ impl CudaContext {
             Err(payload) => self.faults.record(GpuFailure::Other(format!(
                 "CUDA synchronization failed: {}",
                 panic_detail(payload)
-            ))),
-        }
+            )))}
         self.faults.check()
     }
 }
 
-pub(crate) fn memory_usage_bytes(device: &CudaDevice) -> Option<u64> {
+/// Extract the native CUDA device from the unified [`Device`], or `None` when
+/// the device belongs to another backend.
+fn cuda_device(device: &Device) -> Option<&CudaDevice> {
+    let mut dispatch = device.as_dispatch();
+    while let DispatchDevice::Autodiff(inner) = dispatch {
+        dispatch = inner;
+    }
+    match dispatch {
+        DispatchDevice::Cuda(native) => Some(native),
+        _ => None}
+}
+
+pub(crate) fn memory_usage_bytes(device: &Device) -> Option<u64> {
+    let device = cuda_device(device)?;
     catch_unwind(AssertUnwindSafe(|| {
         CudaRuntime::client(device)
             .memory_usage()
@@ -132,8 +142,7 @@ fn discover_checked() -> Result<Vec<(AdapterInfo, CudaContext)>, String> {
             Err(payload) => diagnostic(format_args!(
                 "CUDA device {index} failed its runtime probe: {}",
                 panic_detail(payload)
-            )),
-        }
+            ))}
     }
     Ok(adapters)
 }
@@ -158,15 +167,14 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, CudaContext), String> {
         .map_err(|error| error.to_string())?
         != 0;
     let context = CudaContext {
-        device: CudaDevice::new(index),
+        device: Device::new(CudaDevice::new(index)),
         _driver: driver,
-        faults: Arc::new(FaultState::default()),
-    };
+        faults: Arc::new(FaultState::default())};
     // A driver or nvcc version alone does not prove that NVRTC, its builtins,
     // headers and the installed driver can compile and run CubeCL kernels.
-    let values = (Tensor::<CudaBackend, 1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
+    let values = (Tensor::<1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| format!("CUDA readback failed: {error:?}"))?;
     context.check().map_err(|error| error.to_string())?;
     if values != [2.0, 4.0, 6.0] {
@@ -183,8 +191,7 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, CudaContext), String> {
                 AdapterKind::Discrete
             },
             certified: true,
-            vram_bytes,
-        },
+            vram_bytes},
         context,
     ))
 }

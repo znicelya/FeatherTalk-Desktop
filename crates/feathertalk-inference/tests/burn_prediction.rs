@@ -2,24 +2,21 @@ use burn::tensor::{Tensor, TensorData};
 use feathertalk_audio::FeatureMatrix;
 use feathertalk_inference::{
     BgrFrame, InferenceError, InferenceFramePlan, RenderGeometry, build_unet_audio_input,
-    build_unet_image_input, run_unet_prediction,
-};
+    build_unet_image_input, run_unet_prediction};
 use feathertalk_models::{
     backend::CpuBackend,
-    unet::{MobileOneUnetConfig, OriginalUnetConfig, TalkingHeadModel},
-};
+    unet::{MobileOneUnetConfig, OriginalUnetConfig, TalkingHeadModel}};
 
 struct OutputModel {
     shape: [usize; 4],
-    value: f32,
-}
+    value: f32}
 
-impl TalkingHeadModel<CpuBackend> for OutputModel {
+impl TalkingHeadModel for OutputModel {
     fn forward_talking_head(
         &self,
-        image: Tensor<CpuBackend, 4>,
-        _audio: Tensor<CpuBackend, 4>,
-    ) -> Tensor<CpuBackend, 4> {
+        image: Tensor<4>,
+        _audio: Tensor<4>,
+    ) -> Tensor<4> {
         let device = image.device();
         let elements = self.shape.into_iter().product();
         Tensor::from_data(
@@ -40,8 +37,7 @@ fn valid_inputs() -> (
         output_index: 0,
         source_frame_index: 0,
         reference_frame_index: 0,
-        audio_window: [None, None, None, None, Some(0), None, None, None],
-    };
+        audio_window: [None, None, None, None, Some(0), None, None, None]};
     let audio = build_unet_audio_input(&features, &plan).unwrap();
     (image, audio)
 }
@@ -50,11 +46,10 @@ fn valid_inputs() -> (
 fn prediction_returns_validated_channel_first_values() {
     let device = Default::default();
     let (image, audio) = valid_inputs();
-    let values = run_unet_prediction::<CpuBackend, _>(
+    let values = run_unet_prediction::<_>(
         &OutputModel {
             shape: [1, 3, 160, 160],
-            value: 0.25,
-        },
+            value: 0.25},
         &image,
         &audio,
         &device,
@@ -72,27 +67,24 @@ fn prediction_rejects_wrong_shape_non_finite_and_out_of_range_outputs() {
         (
             OutputModel {
                 shape: [1, 3, 80, 80],
-                value: 0.5,
-            },
+                value: 0.5},
             "shape",
         ),
         (
             OutputModel {
                 shape: [1, 3, 160, 160],
-                value: f32::NAN,
-            },
+                value: f32::NAN},
             "finite",
         ),
         (
             OutputModel {
                 shape: [1, 3, 160, 160],
-                value: 1.01,
-            },
+                value: 1.01},
             "range",
         ),
     ] {
         let error =
-            run_unet_prediction::<CpuBackend, _>(&model, &image, &audio, &device).unwrap_err();
+            run_unet_prediction::<_>(&model, &image, &audio, &device).unwrap_err();
         match expected {
             "shape" => assert!(matches!(error, InferenceError::TensorShapeMismatch { .. })),
             "finite" => assert!(matches!(error, InferenceError::NonFiniteModelOutput { .. })),
@@ -100,8 +92,7 @@ fn prediction_rejects_wrong_shape_non_finite_and_out_of_range_outputs() {
                 error,
                 InferenceError::ModelOutputOutOfRange { .. }
             )),
-            _ => unreachable!(),
-        }
+            _ => unreachable!()}
     }
 }
 
@@ -109,9 +100,9 @@ fn prediction_rejects_wrong_shape_non_finite_and_out_of_range_outputs() {
 fn original_and_reparameterized_mobileone_run_through_the_same_adapter() {
     let device = Default::default();
     let (image, audio) = valid_inputs();
-    let original = OriginalUnetConfig::parity_micro().init::<CpuBackend>(&device);
+    let original = OriginalUnetConfig::parity_micro().init(&device);
     let original_values =
-        run_unet_prediction::<CpuBackend, _>(&original, &image, &audio, &device).unwrap();
+        run_unet_prediction::<_>(&original, &image, &audio, &device).unwrap();
     assert!(
         original_values
             .iter()
@@ -119,10 +110,10 @@ fn original_and_reparameterized_mobileone_run_through_the_same_adapter() {
     );
 
     let mobile = MobileOneUnetConfig::parity_micro()
-        .init::<CpuBackend>(&device)
+        .init(&device)
         .reparameterize();
     let mobile_values =
-        run_unet_prediction::<CpuBackend, _>(&mobile, &image, &audio, &device).unwrap();
+        run_unet_prediction::<_>(&mobile, &image, &audio, &device).unwrap();
     assert!(
         mobile_values
             .iter()

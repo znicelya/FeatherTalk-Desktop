@@ -2,18 +2,15 @@ use feathertalk_domain::{ExtractFramesParams, Progress, TaskKind, TaskStage};
 use feathertalk_frame_pipeline::{
     FaceDetector, FrameDecoder, FrameExtractor, FramePipelineSpec, LandmarkPredictor,
     PipelineError, PipelineObserver, PipelinePhase, evaluate_frames_observed,
-    extract_frames_observed, publish_frame_artifacts,
-};
+    extract_frames_observed, publish_frame_artifacts};
 use feathertalk_media::{
-    CancellationToken, MediaInput, MediaToolchain, probe_video_with_runner, validate_input,
-};
+    CancellationToken, MediaInput, MediaToolchain, probe_video_with_runner, validate_input};
 
 use crate::{
     CommandOutcome, GpuFailure, TaskReporter, WorkerConfig,
     admission::{check_project_dir, invalid_request},
     commands::{media_failure, unsupported},
-    is_pipeline_cancellation, pipeline_task_error, quality_task_error, quality_to_json,
-};
+    is_pipeline_cancellation, pipeline_task_error, quality_task_error, quality_to_json};
 
 /// The frame rate `normalize_media` fixes for a project video.
 const TARGET_FRAME_RATE: (u32, u32) = (25, 1);
@@ -54,22 +51,18 @@ where
     reporter.report(TaskStage::Preparing, None);
     let spec = match frame_spec(params, media, media_runner) {
         Ok(spec) => spec,
-        Err(outcome) => return outcome,
-    };
+        Err(outcome) => return outcome};
     let extractor = match FrameExtractor::new(media.ffmpeg().to_owned(), media.timeout()) {
         Ok(extractor) => extractor.with_cuda_device(cuda_device),
-        Err(error) => return pipeline_failure(&error),
-    };
+        Err(error) => return pipeline_failure(&error)};
     let observer = FrameProgress { reporter, token };
     let mut batch = match extract_frames_observed(&spec, &extractor, frame_runner, &observer) {
         Ok(batch) => batch,
-        Err(error) => return pipeline_failure(&error),
-    };
+        Err(error) => return pipeline_failure(&error)};
     let evaluation = match evaluate_frames_observed(&batch, decoder, detector, predictor, &observer)
     {
         Ok(evaluation) => evaluation,
-        Err(error) => return pipeline_failure(&error),
-    };
+        Err(error) => return pipeline_failure(&error)};
     if !evaluation.is_success() {
         // Staging is still armed, so the batch destructor removes the frames
         // this run wrote and the project keeps whatever it had before.
@@ -80,15 +73,13 @@ where
     }
     match publish_frame_artifacts(&spec, &mut batch, &evaluation) {
         Ok(report) => CommandOutcome::Completed(Some(quality_to_json(&spec, &report))),
-        Err(error) => pipeline_failure(&error),
-    }
+        Err(error) => pipeline_failure(&error)}
 }
 
 /// Bridges the pipeline's observer onto the worker's reporter and token.
 struct FrameProgress<'a> {
     reporter: &'a dyn TaskReporter,
-    token: &'a CancellationToken,
-}
+    token: &'a CancellationToken}
 
 impl PipelineObserver for FrameProgress<'_> {
     fn phase(&self, phase: PipelinePhase) {
@@ -104,8 +95,7 @@ impl PipelineObserver for FrameProgress<'_> {
             stage,
             Some(Progress {
                 completed,
-                total: Some(total),
-            }),
+                total: Some(total)}),
         );
     }
 
@@ -132,8 +122,7 @@ where
         )));
     }
     let input = validate_input(&MediaInput {
-        source: params.video.clone(),
-    })
+        source: params.video.clone()})
     .map_err(|error| media_failure(&error))?;
     // A video-only probe, because that is what `normalize_media` produces: the
     // audio lives in `audio_16k_mono.wav`, and the audio/video probe would

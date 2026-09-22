@@ -1,7 +1,6 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use clap::{Parser, Subcommand, ValueEnum};
 use feathertalk_export::{
@@ -10,18 +9,12 @@ use feathertalk_export::{
     export_feather_hubert_onnx, export_mobileone_unet_onnx, export_original_unet_onnx,
     load_model_package,
     onnx::{ONNX_OPSET_VERSION, OnnxModelKind, validate_model_contract},
-    publish_onnx_model,
-};
-use feathertalk_models::{
-    backend::CpuBackend,
-    unet::{
+    publish_onnx_model};
+use feathertalk_models::unet::{
         MobileOneUnet, MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet,
-        OriginalUnetConfig,
-    },
-};
+        OriginalUnetConfig};
 use feathertalk_weights::{
-    LegacyImportRequest, LegacyModelKind, import_into, load_feather_hubert_checkpoint,
-};
+    LegacyImportRequest, LegacyModelKind, import_into, load_feather_hubert_checkpoint};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
@@ -38,8 +31,7 @@ use migrate::{ModelMigrationKind, ModelMigrationRequest, migrate_features, migra
 )]
 struct Arguments {
     #[command(subcommand)]
-    command: Command,
-}
+    command: Command}
 
 #[derive(Debug, Subcommand)]
 enum Command {
@@ -54,13 +46,11 @@ enum Command {
         #[arg(long)]
         created_at: String,
         #[arg(long)]
-        minimum_app_version: String,
-    },
+        minimum_app_version: String},
     #[command(subcommand)]
     Onnx(OnnxCommand),
     #[command(subcommand)]
-    Migrate(MigrateCommand),
-}
+    Migrate(MigrateCommand)}
 
 #[derive(Debug, Subcommand)]
 enum MigrateCommand {
@@ -76,28 +66,23 @@ enum MigrateCommand {
         #[arg(long)]
         created_at: String,
         #[arg(long)]
-        minimum_app_version: String,
-    },
+        minimum_app_version: String},
     Features {
         #[arg(long)]
         source: PathBuf,
         #[arg(long)]
-        destination: PathBuf,
-    },
-}
+        destination: PathBuf}}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum MigratableModelKind {
     FeatherHubert,
-    OriginalUnet,
-}
+    OriginalUnet}
 
 impl From<MigratableModelKind> for ModelMigrationKind {
     fn from(value: MigratableModelKind) -> Self {
         match value {
             MigratableModelKind::FeatherHubert => Self::FeatherHubert,
-            MigratableModelKind::OriginalUnet => Self::OriginalUnet,
-        }
+            MigratableModelKind::OriginalUnet => Self::OriginalUnet}
     }
 }
 
@@ -107,44 +92,37 @@ enum OnnxCommand {
         #[arg(long)]
         source: PathBuf,
         #[arg(long)]
-        destination: PathBuf,
-    },
+        destination: PathBuf},
     Unet {
         #[arg(long)]
         source: PathBuf,
         #[arg(long, value_enum)]
         variant: UnetVariant,
         #[arg(long)]
-        destination: PathBuf,
-    },
+        destination: PathBuf},
     Validate {
         #[arg(long)]
         source: PathBuf,
         #[arg(long, value_enum)]
-        kind: OnnxKind,
-    },
-}
+        kind: OnnxKind}}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum UnetVariant {
     Original,
-    Mobileone,
-}
+    Mobileone}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum OnnxKind {
     FeatherHubert,
     OriginalUnet,
-    MobileoneUnet,
-}
+    MobileoneUnet}
 
 impl From<OnnxKind> for OnnxModelKind {
     fn from(value: OnnxKind) -> Self {
         match value {
             OnnxKind::FeatherHubert => Self::FeatherHubert,
             OnnxKind::OriginalUnet => Self::OriginalUnet,
-            OnnxKind::MobileoneUnet => Self::MobileOneUnet,
-        }
+            OnnxKind::MobileoneUnet => Self::MobileOneUnet}
     }
 }
 
@@ -153,8 +131,7 @@ struct OnnxReport {
     model_kind: &'static str,
     opset: i64,
     bytes: usize,
-    sha256: String,
-}
+    sha256: String}
 
 fn main() -> CliResult<()> {
     match Arguments::parse().command {
@@ -163,8 +140,7 @@ fn main() -> CliResult<()> {
             licenses,
             destination,
             created_at,
-            minimum_app_version,
-        } => package_feather_hubert(
+            minimum_app_version} => package_feather_hubert(
             source,
             licenses,
             destination,
@@ -172,8 +148,7 @@ fn main() -> CliResult<()> {
             minimum_app_version,
         ),
         Command::Onnx(command) => run_onnx(command),
-        Command::Migrate(command) => run_migrate(command),
-    }
+        Command::Migrate(command) => run_migrate(command)}
 }
 
 fn run_migrate(command: MigrateCommand) -> CliResult<()> {
@@ -184,8 +159,7 @@ fn run_migrate(command: MigrateCommand) -> CliResult<()> {
             licenses,
             destination,
             created_at,
-            minimum_app_version,
-        } => {
+            minimum_app_version} => {
             ensure_destination_absent(&destination)?;
             reject_protected_source(&source)?;
             let manifest = migrate_model(&ModelMigrationRequest {
@@ -194,8 +168,7 @@ fn run_migrate(command: MigrateCommand) -> CliResult<()> {
                 licenses,
                 destination: destination.clone(),
                 created_at,
-                minimum_app_version,
-            })?;
+                minimum_app_version})?;
             println!(
                 "{}",
                 serde_json::to_string(&serde_json::json!({
@@ -205,15 +178,13 @@ fn run_migrate(command: MigrateCommand) -> CliResult<()> {
                     "source_sha256": manifest.source.sha256,
                     "model_sha256": manifest.model.sha256,
                     "tensor_count": manifest.tensors.tensor_count,
-                    "total_elements": manifest.tensors.total_elements,
-                }))?
+                    "total_elements": manifest.tensors.total_elements}))?
             );
             Ok(())
         }
         MigrateCommand::Features {
             source,
-            destination,
-        } => {
+            destination} => {
             ensure_destination_absent(&destination)?;
             reject_protected_source(&source)?;
             let report = migrate_features(&source, &destination)?;
@@ -226,8 +197,7 @@ fn run_migrate(command: MigrateCommand) -> CliResult<()> {
                     "tokens": report.artifact.tokens(),
                     "dims": report.artifact.dims(),
                     "bytes": report.artifact.bytes(),
-                    "sha256": report.artifact.sha256(),
-                }))?
+                    "sha256": report.artifact.sha256()}))?
             );
             Ok(())
         }
@@ -246,8 +216,7 @@ fn package_feather_hubert(
         licenses,
         destination: destination.clone(),
         created_at,
-        minimum_app_version,
-    })?;
+        minimum_app_version})?;
     println!("destination={}", destination.display());
     println!("source_sha256={}", report.manifest.source.sha256);
     println!("model_sha256={}", report.manifest.model.sha256);
@@ -258,8 +227,7 @@ fn package_feather_hubert(
         expansion,
         num_blocks,
         output_dim,
-        dropout,
-    } = report.manifest.configuration
+        dropout} = report.manifest.configuration
     {
         println!(
             "configuration=channels:{channels},expansion:{expansion},num_blocks:{num_blocks},output_dim:{output_dim},dropout:{dropout}"
@@ -272,21 +240,19 @@ fn run_onnx(command: OnnxCommand) -> CliResult<()> {
     match command {
         OnnxCommand::FeatherHubert {
             source,
-            destination,
-        } => {
+            destination} => {
             ensure_destination_absent(&destination)?;
             reject_protected_source(&source)?;
             let device = Default::default();
             let (model, checkpoint) =
-                load_feather_hubert_checkpoint::<CpuBackend>(&source, &device)?;
+                load_feather_hubert_checkpoint(&source, &device)?;
             let bytes = export_feather_hubert_onnx(&model, checkpoint.config())?;
             publish_onnx(&destination, OnnxModelKind::FeatherHubert, &bytes)
         }
         OnnxCommand::Unet {
             source,
             variant,
-            destination,
-        } => {
+            destination} => {
             ensure_destination_absent(&destination)?;
             reject_protected_source(&source)?;
             let (kind, bytes) = export_unet(&source, variant)?;
@@ -313,11 +279,11 @@ fn export_unet(source: &Path, variant: UnetVariant) -> CliResult<(OnnxModelKind,
                 };
                 let config = OriginalUnetConfig { channels };
                 let expected = ModelDescription::original_unet(config.clone());
-                let (model, _) = load_model_package::<CpuBackend, OriginalUnet<CpuBackend>, _>(
+                let (model, _) = load_model_package::<OriginalUnet, _>(
                     source,
                     &expected,
                     &device,
-                    |device| config.init::<CpuBackend>(device),
+                    |device| config.init(device),
                 )?;
                 Ok((
                     OnnxModelKind::OriginalUnet,
@@ -325,8 +291,8 @@ fn export_unet(source: &Path, variant: UnetVariant) -> CliResult<(OnnxModelKind,
                 ))
             } else {
                 let config = OriginalUnetConfig::production();
-                let mut model = config.init::<CpuBackend>(&device);
-                import_into::<CpuBackend, _>(
+                let mut model = config.init(&device);
+                import_into::<_>(
                     &mut model,
                     &LegacyImportRequest {
                         path: source.to_owned(),
@@ -340,8 +306,7 @@ fn export_unet(source: &Path, variant: UnetVariant) -> CliResult<(OnnxModelKind,
                 ))
             }
         }
-        UnetVariant::Mobileone => export_mobileone_package(source),
-    }
+        UnetVariant::Mobileone => export_mobileone_package(source)}
 }
 
 fn export_mobileone_package(source: &Path) -> CliResult<(OnnxModelKind, Vec<u8>)> {
@@ -352,32 +317,30 @@ fn export_mobileone_package(source: &Path) -> CliResult<(OnnxModelKind, Vec<u8>)
     let ModelConfiguration::MobileOneUnet {
         channels,
         num_conv_branches,
-        reparameterized,
-    } = manifest.configuration
+        reparameterized} = manifest.configuration
     else {
         return Err("package is not a MobileOne UNet model".into());
     };
     let config = MobileOneUnetConfig {
         channels,
-        num_conv_branches,
-    };
+        num_conv_branches};
     let device = Default::default();
     let inference = if reparameterized {
         let expected = ModelDescription::mobileone_unet(config.clone(), true);
-        load_model_package::<CpuBackend, MobileOneUnetInference<CpuBackend>, _>(
+        load_model_package::<MobileOneUnetInference, _>(
             source,
             &expected,
             &device,
-            |device| config.init::<CpuBackend>(device).reparameterize(),
+            |device| config.init(device).reparameterize(),
         )?
         .0
     } else {
         let expected = ModelDescription::mobileone_unet(config.clone(), false);
-        let (training, _) = load_model_package::<CpuBackend, MobileOneUnet<CpuBackend>, _>(
+        let (training, _) = load_model_package::<MobileOneUnet, _>(
             source,
             &expected,
             &device,
-            |device| config.init::<CpuBackend>(device),
+            |device| config.init(device),
         )?;
         training.reparameterize()
     };
@@ -405,12 +368,10 @@ fn print_report(kind: OnnxModelKind, bytes: &[u8]) -> CliResult<()> {
         model_kind: match kind {
             OnnxModelKind::FeatherHubert => "feather_hubert",
             OnnxModelKind::OriginalUnet => "original_unet",
-            OnnxModelKind::MobileOneUnet => "mobileone_unet",
-        },
+            OnnxModelKind::MobileOneUnet => "mobileone_unet"},
         opset: ONNX_OPSET_VERSION,
         bytes: bytes.len(),
-        sha256: hex::encode(Sha256::digest(bytes)),
-    };
+        sha256: hex::encode(Sha256::digest(bytes))};
     println!("{}", serde_json::to_string(&report)?);
     Ok(())
 }

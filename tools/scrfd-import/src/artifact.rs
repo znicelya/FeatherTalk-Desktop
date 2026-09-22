@@ -71,9 +71,7 @@ pub fn ensure_destination_absent(path: &Path) -> Result<(), ToolError> {
         Err(source) => Err(ToolError::Io {
             operation: "inspect destination",
             path: path.to_owned(),
-            source,
-        }),
-    }
+            source})}
 }
 
 pub fn validate_apply_result(result: &burn_store::ApplyResult) -> Result<(), ToolError> {
@@ -92,16 +90,16 @@ pub fn validate_apply_result(result: &burn_store::ApplyResult) -> Result<(), Too
     Ok(())
 }
 
-pub fn snapshot_map<B, M>(
+pub fn snapshot_map<M>(
     module: &M,
-) -> Result<BTreeMap<String, burn_store::TensorSnapshot>, ToolError>
+) -> Result<BTreeMap<String, burn_store::burn_store::burn_pack::Tensor>, ToolError>
 where
-    B: burn::tensor::backend::Backend,
-    M: burn_store::ModuleSnapshot<B>,
+    B: burn::tensor::,
+    M: burn_store::ModuleSnapshot,
 {
     let mut snapshots = BTreeMap::new();
     for snapshot in module.collect(None, None, false) {
-        let path = snapshot.full_path();
+        let path = snapshot.name.clone();
         if snapshots.insert(path.clone(), snapshot).is_some() {
             return Err(ToolError::Snapshot(format!(
                 "duplicate tensor path: {path}"
@@ -111,13 +109,13 @@ where
     Ok(snapshots)
 }
 
-pub fn compare_snapshots<B, M>(expected: &M, actual: &M) -> Result<(), ToolError>
+pub fn compare_snapshots<M>(expected: &M, actual: &M) -> Result<(), ToolError>
 where
-    B: burn::tensor::backend::Backend,
-    M: burn_store::ModuleSnapshot<B>,
+    B: burn::tensor::,
+    M: burn_store::ModuleSnapshot,
 {
-    let expected = snapshot_map::<B, M>(expected)?;
-    let actual = snapshot_map::<B, M>(actual)?;
+    let expected = snapshot_map::<M>(expected)?;
+    let actual = snapshot_map::<M>(actual)?;
     let expected_keys = expected.keys().collect::<Vec<_>>();
     let actual_keys = actual.keys().collect::<Vec<_>>();
     if expected_keys != actual_keys {
@@ -168,8 +166,7 @@ mod tests {
             skipped: Vec::new(),
             missing: Vec::new(),
             unused: Vec::new(),
-            errors: Vec::new(),
-        };
+            errors: Vec::new()};
         let mut missing = empty();
         missing
             .missing
@@ -182,24 +179,20 @@ mod tests {
         shape.errors.push(ApplyError::ShapeMismatch {
             path: "neck.weight".to_owned(),
             expected: Shape::new([1, 2]),
-            found: Shape::new([2, 1]),
-        });
+            found: Shape::new([2, 1])});
         let mut dtype = empty();
         dtype.errors.push(ApplyError::DTypeMismatch {
             path: "score.bias".to_owned(),
             expected: DType::F32,
-            found: DType::I32,
-        });
+            found: DType::I32});
         let mut adapter = empty();
         adapter.errors.push(ApplyError::AdapterError {
             path: "neck.weight".to_owned(),
-            message: "adapter failed".to_owned(),
-        });
+            message: "adapter failed".to_owned()});
         let mut load = empty();
         load.errors.push(ApplyError::LoadError {
             path: "head.weight".to_owned(),
-            message: "load failed".to_owned(),
-        });
+            message: "load failed".to_owned()});
 
         for result in [missing, unused, skipped, shape, dtype, adapter, load] {
             assert!(validate_apply_result(&result).is_err());

@@ -2,18 +2,16 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use burn::{backend::Autodiff, tensor::Device};
+use burn::tensor::Device;
 use feathertalk_domain::{AdapterInfo, Backend, Metrics, Progress, Request, TaskError, TaskStage};
 use feathertalk_frame_pipeline::SystemProcessRunner as FrameProcessRunner;
 use feathertalk_inference::{JpegFrameReader, SystemRawVideoSinkFactory};
 use feathertalk_media::{CancellationToken, ProcessRunner};
-use feathertalk_models::backend::{CpuBackend, GpuBackend};
 
 use crate::{
-    CommandOutcome, FeatureModel, FrameModels, GpuContext, GpuFailure, TaskReporter, WorkerBackend,
-    WorkerConfig, execute_extract_features, execute_extract_frames, execute_render_on,
-    execute_train_on, package_task_error, pipeline_task_error,
-};
+    CommandOutcome, FeatureModel, FrameModels, GpuContext, GpuFailure, TaskReporter, WorkerConfig,
+    execute_extract_features, execute_extract_frames, execute_render_on, execute_train_on,
+    execution_name, package_task_error, pipeline_task_error};
 use crate::{commands::unsupported, error_map::panic_task_error, reporter::TrackedReporter};
 
 pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
@@ -32,20 +30,23 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
         }
     };
     match adapter.backend {
-        Backend::Cpu => with_device_metadata(
-            execute_on::<CpuBackend, R>(
-                request,
-                config,
-                token,
-                reporter,
-                runner,
-                &Default::default(),
+        Backend::Cpu => {
+            let device = crate::cpu_device();
+            with_device_metadata(
+                execute_on::<R>(
+                    request,
+                    config,
+                    token,
+                    reporter,
+                    runner,
+                    &device,
+                    None,
+                ),
+                &adapter,
+                execution_name(&device),
                 None,
-            ),
-            &adapter,
-            CpuBackend::EXECUTION_NAME,
-            None,
-        ),
+            )
+        }
         Backend::Wgpu => {
             let context = match config.compute().open_wgpu(&adapter.id) {
                 Ok(context) => context,
@@ -54,7 +55,7 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 }
             };
             let device = context.device.clone();
-            execute_gpu::<GpuBackend, R>(
+            execute_gpu::<R>(
                 request,
                 config,
                 token,
@@ -74,7 +75,7 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 }
             };
             let device = context.device.clone();
-            execute_gpu::<feathertalk_models::backend::CudaBackend, R>(
+            execute_gpu::<R>(
                 request,
                 config,
                 token,
@@ -94,7 +95,7 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 }
             };
             let device = context.device.clone();
-            execute_gpu::<feathertalk_models::backend::RocmBackend, R>(
+            execute_gpu::<R>(
                 request,
                 config,
                 token,
@@ -111,19 +112,18 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 adapter.backend
             ))
             .task_error(TaskStage::Preparing),
-        ),
-    }
+        )}
 }
 
 #[allow(clippy::too_many_arguments)]
-fn execute_gpu<B: WorkerBackend, R: ProcessRunner + ?Sized>(
+fn execute_gpu<R: ProcessRunner + ?Sized>(
     request: &Request,
     config: &WorkerConfig,
     token: &CancellationToken,
     reporter: &dyn TaskReporter,
     runner: &R,
     adapter: &AdapterInfo,
-    device: &Device<B>,
+    device: &Device,
     context: GpuContext,
 ) -> CommandOutcome {
     let tracked = TrackedReporter::new(reporter);
@@ -133,10 +133,9 @@ fn execute_gpu<B: WorkerBackend, R: ProcessRunner + ?Sized>(
     }
     let guarded = ComputeReporter {
         inner: &tracked,
-        context: &context,
-    };
+        context: &context};
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        execute_on::<B, R>(
+        execute_on::<R>(
             request,
             config,
             token,
@@ -157,20 +156,19 @@ fn execute_gpu<B: WorkerBackend, R: ProcessRunner + ?Sized>(
         Ok(outcome) => with_device_metadata(
             outcome,
             adapter,
-            B::EXECUTION_NAME,
+            execution_name(device),
             Some(context.graphics_api()),
         ),
-        Err(payload) => CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage())),
-    }
+        Err(payload) => CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage()))}
 }
 
-fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
+fn execute_on<R: ProcessRunner + ?Sized>(
     request: &Request,
     config: &WorkerConfig,
     token: &CancellationToken,
     reporter: &dyn TaskReporter,
     runner: &R,
-    device: &Device<B>,
+    device: &Device,
     context: Option<&GpuContext>,
 ) -> CommandOutcome {
     if token.is_cancelled() {
@@ -181,13 +179,13 @@ fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
             let Some(training) = config.training() else {
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
-            execute_train_on::<Autodiff<B>>(params, token, reporter, training, device)
+            execute_train_on(params, token, reporter, training, device)
         }
         Request::Render(params) => {
             let Some(media) = config.media() else {
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
-            execute_render_on::<B, _, _>(
+            execute_render_on(
                 params,
                 token,
                 reporter,
@@ -203,10 +201,9 @@ fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
             };
             reporter.report(TaskStage::Preparing, None);
             let models =
-                match FrameModels::<B>::load_checked(models, device.clone(), context.cloned()) {
+                match FrameModels::load_checked(models, device.clone(), context.cloned()) {
                     Ok(models) => models,
-                    Err(error) => return CommandOutcome::Failed(pipeline_task_error(&error)),
-                };
+                    Err(error) => return CommandOutcome::Failed(pipeline_task_error(&error))};
             // The frame pipeline checks cancellation between chunks and bounds
             // each extractor process with its existing timeout.
             execute_extract_frames(
@@ -226,23 +223,20 @@ fn execute_on<B: WorkerBackend, R: ProcessRunner + ?Sized>(
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
             reporter.report(TaskStage::Preparing, None);
-            let model = match FeatureModel::<B>::load_on(features, device.clone()) {
+            let model = match FeatureModel::load_on(features, device.clone()) {
                 Ok(model) => model,
-                Err(error) => return CommandOutcome::Failed(package_task_error(&error)),
-            };
+                Err(error) => return CommandOutcome::Failed(package_task_error(&error))};
             let (mut encoder, model_sha256) = model.into_parts();
             execute_extract_features(params, token, reporter, &mut encoder, &model_sha256)
         }
-        _ => CommandOutcome::Failed(unsupported(request.kind())),
-    }
+        _ => CommandOutcome::Failed(unsupported(request.kind()))}
 }
 
 /// Combines progress observation with the final GPU check while keeping the
 /// public CPU command helpers independent of a native graphics context.
 struct ComputeReporter<'a> {
     inner: &'a TrackedReporter<'a>,
-    context: &'a GpuContext,
-}
+    context: &'a GpuContext}
 
 impl TaskReporter for ComputeReporter<'_> {
     fn report(&self, stage: TaskStage, progress: Option<Progress>) {

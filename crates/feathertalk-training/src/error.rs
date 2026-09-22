@@ -16,14 +16,12 @@ pub enum TrainingError {
     PermutationAllocation {
         samples: u64,
         #[source]
-        source: std::collections::TryReserveError,
-    },
+        source: std::collections::TryReserveError},
     #[error("unable to allocate prepared batch buffers for {items} items")]
     BatchAllocation {
         items: u64,
         #[source]
-        source: std::collections::TryReserveError,
-    },
+        source: std::collections::TryReserveError},
     #[error("prepared batch is stale or belongs to another data loader")]
     StalePreparedBatch,
     #[error("invalid VGG19 package: {0}")]
@@ -32,8 +30,7 @@ pub enum TrainingError {
     HashMismatch {
         file: String,
         expected: String,
-        actual: String,
-    },
+        actual: String},
     #[error("Burn store error: {0}")]
     Store(String),
     #[error("invalid training checkpoint: {0}")]
@@ -41,5 +38,4 @@ pub enum TrainingError {
     #[error("training checkpoint compatibility error: {0}")]
     CheckpointCompatibility(String),
     #[error("training checkpoint directory error: {0}")]
-    CheckpointDirectory(String),
-}
+    CheckpointDirectory(String)}

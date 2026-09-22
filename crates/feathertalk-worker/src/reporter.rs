@@ -36,15 +36,13 @@ impl TaskReporter for NoReporter {
 /// Retains the last stage even when a model unwinds before returning an error.
 pub(crate) struct TrackedReporter<'a> {
     inner: &'a dyn TaskReporter,
-    stage: RefCell<TaskStage>,
-}
+    stage: RefCell<TaskStage>}
 
 impl<'a> TrackedReporter<'a> {
     pub(crate) fn new(inner: &'a dyn TaskReporter) -> Self {
         Self {
             inner,
-            stage: RefCell::new(TaskStage::Preparing),
-        }
+            stage: RefCell::new(TaskStage::Preparing)}
     }
 
     pub(crate) fn stage(&self) -> TaskStage {

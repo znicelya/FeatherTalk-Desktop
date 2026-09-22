@@ -2,17 +2,14 @@ use std::{
     collections::BTreeMap,
     fs::{self, OpenOptions},
     io::Write,
-    path::Path,
-};
-
-use burn::{backend::Autodiff, module::HasAutodiffModule, tensor::backend::Backend};
+    path::Path};
+use burn::module::AutodiffModule;
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, SafetensorsStore};
 
 use crate::{
     PFLD_ARCHITECTURE_VERSION, PFLD_CHECKPOINT_EPOCH, PfldImportManifest, PfldModelArtifact,
     PfldSourceManifest, TensorAudit, TensorSummary, WeightImportError,
-    source::{sha256_file, tensor_elements},
-};
+    source::{sha256_file, tensor_elements}};
 
 use super::{PfldInspection, clone_module_detached};
 
@@ -21,8 +18,7 @@ const MANIFEST_FILE_NAME: &str = "manifest.json";
 
 pub(super) struct StagedArtifacts {
     directory: tempfile::TempDir,
-    manifest: PfldImportManifest,
-}
+    manifest: PfldImportManifest}
 
 impl StagedArtifacts {
     fn path(&self) -> &Path {
@@ -30,7 +26,7 @@ impl StagedArtifacts {
     }
 }
 
-pub(super) fn write_staged_artifacts<B, M>(
+pub(super) fn write_staged_artifacts<M>(
     candidate: &M,
     source_path: &Path,
     source_file_name: &str,
@@ -39,8 +35,7 @@ pub(super) fn write_staged_artifacts<B, M>(
     parent: &Path,
 ) -> Result<StagedArtifacts, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let directory = tempfile::Builder::new()
         .prefix(".feathertalk-pfld-")
@@ -58,7 +53,7 @@ where
         .save_into(&mut store)
         .map_err(|error| WeightImportError::Store(error.to_string()))?;
     let model_sha256 = sha256_file(&model_path)?;
-    let candidate_summary = module_summary::<B, M>(candidate)?;
+    let candidate_summary = module_summary::<M>(candidate)?;
     if candidate_summary != inspection.applied {
         return Err(WeightImportError::ArtifactValidation(format!(
             "candidate tensor summary mismatch: expected {:?}, got {:?}",
@@ -72,8 +67,7 @@ where
         architecture_version: PFLD_ARCHITECTURE_VERSION.to_owned(),
         source: PfldSourceManifest {
             file_name: source_file_name.to_owned(),
-            sha256: source_sha256.to_owned(),
-        },
+            sha256: source_sha256.to_owned()},
         epoch: PFLD_CHECKPOINT_EPOCH,
         backbone: inspection.backbone.clone(),
         model: PfldModelArtifact {
@@ -81,10 +75,8 @@ where
             file_name: MODEL_FILE_NAME.to_owned(),
             sha256: model_sha256,
             tensor_count: inspection.applied.tensor_count,
-            total_elements: inspection.applied.total_elements,
-        },
-        ignored: inspection.ignored.clone(),
-    };
+            total_elements: inspection.applied.total_elements},
+        ignored: inspection.ignored.clone()};
     let mut manifest_bytes = serde_json::to_vec_pretty(&manifest)
         .map_err(|error| WeightImportError::Manifest(error.to_string()))?;
     manifest_bytes.push(b'\n');
@@ -98,11 +90,10 @@ where
 
     Ok(StagedArtifacts {
         directory,
-        manifest,
-    })
+        manifest})
 }
 
-pub(super) fn verify_staged_artifacts<B, M>(
+pub(super) fn verify_staged_artifacts<M>(
     original: &mut M,
     candidate: &M,
     source_path: &Path,
@@ -110,11 +101,10 @@ pub(super) fn verify_staged_artifacts<B, M>(
     staged: &StagedArtifacts,
 ) -> Result<(), WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B> + HasAutodiffModule<Autodiff<B>>,
+    M: ModuleSnapshot + AutodiffModule,
 {
     let model_path = staged.path().join(MODEL_FILE_NAME);
-    let mut reloaded = clone_module_detached::<B, M>(original)?;
+    let mut reloaded = clone_module_detached::<M>(original)?;
     let mut store = SafetensorsStore::from_file(&model_path)
         .allow_partial(true)
         .validate(false);
@@ -122,7 +112,7 @@ where
         .load_from(&mut store)
         .map_err(|error| WeightImportError::Store(error.to_string()))?;
     validate_artifact_apply_result(&result, inspection)?;
-    compare_module_snapshots::<B, M>(candidate, &reloaded)?;
+    compare_module_snapshots::<M>(candidate, &reloaded)?;
 
     let manifest_path = staged.path().join(MANIFEST_FILE_NAME);
     let manifest_bytes = fs::read(manifest_path)?;
@@ -149,11 +139,10 @@ where
     validate_lower_hex_sha256("source", &manifest.source.sha256)?;
     validate_lower_hex_sha256("model", &manifest.model.sha256)?;
 
-    let reloaded_summary = module_summary::<B, M>(&reloaded)?;
+    let reloaded_summary = module_summary::<M>(&reloaded)?;
     let manifest_summary = TensorSummary {
         tensor_count: manifest.model.tensor_count,
-        total_elements: manifest.model.total_elements,
-    };
+        total_elements: manifest.model.total_elements};
     if reloaded_summary != manifest_summary || reloaded_summary != inspection.applied {
         return Err(WeightImportError::ArtifactValidation(format!(
             "reloaded tensor summary mismatch: expected {:?}, manifest {:?}, got {:?}",
@@ -210,14 +199,12 @@ pub(super) fn ensure_destination_absent(path: &Path) -> Result<(), WeightImportE
             path.to_owned(),
         )),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(WeightImportError::Io(error)),
-    }
+        Err(error) => Err(WeightImportError::Io(error))}
 }
 
-fn module_summary<B, M>(module: &M) -> Result<TensorSummary, WeightImportError>
+fn module_summary<M>(module: &M) -> Result<TensorSummary, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let mut tensor_count = 0usize;
     let mut total_elements = 0u64;
@@ -235,17 +222,15 @@ where
     }
     Ok(TensorSummary {
         tensor_count,
-        total_elements,
-    })
+        total_elements})
 }
 
-fn compare_module_snapshots<B, M>(expected: &M, actual: &M) -> Result<(), WeightImportError>
+fn compare_module_snapshots<M>(expected: &M, actual: &M) -> Result<(), WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
-    let expected = collect_snapshot_map::<B, M>(expected)?;
-    let actual = collect_snapshot_map::<B, M>(actual)?;
+    let expected = collect_snapshot_map::<M>(expected)?;
+    let actual = collect_snapshot_map::<M>(actual)?;
     if let Some(path) = expected.keys().find(|path| !actual.contains_key(*path)) {
         return Err(WeightImportError::ArtifactValidation(format!(
             "reloaded module is missing tensor {path}"
@@ -266,12 +251,8 @@ where
         if expected.dtype != actual.dtype {
             return Err(WeightImportError::DTypeMismatch(path));
         }
-        let expected_data = expected
-            .to_data()
-            .map_err(|error| WeightImportError::ArtifactValidation(error.to_string()))?;
-        let actual_data = actual
-            .to_data()
-            .map_err(|error| WeightImportError::ArtifactValidation(error.to_string()))?;
+        let expected_data = burn_store::bridge::to_data(&expected).map_err(|error| WeightImportError::ArtifactValidation(error.to_string()))?;
+        let actual_data = burn_store::bridge::to_data(&actual).map_err(|error| WeightImportError::ArtifactValidation(error.to_string()))?;
         if expected_data != actual_data {
             return Err(WeightImportError::ArtifactValidation(format!(
                 "reloaded tensor data mismatch: {path}"
@@ -281,16 +262,15 @@ where
     Ok(())
 }
 
-fn collect_snapshot_map<B, M>(
+fn collect_snapshot_map<M>(
     module: &M,
-) -> Result<BTreeMap<String, burn_store::TensorSnapshot>, WeightImportError>
+) -> Result<BTreeMap<String, burn_store::burn_pack::Tensor>, WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let mut snapshots = BTreeMap::new();
     for snapshot in module.collect(None, None, false) {
-        let path = snapshot.full_path();
+        let path = snapshot.name.clone();
         if snapshots.insert(path.clone(), snapshot).is_some() {
             return Err(WeightImportError::ArtifactValidation(format!(
                 "duplicate module tensor path: {path}"
@@ -377,8 +357,7 @@ mod tests {
     use feathertalk_models::backend::CpuBackend;
 
     use crate::{
-        PfldIgnoredTensors, TensorAudit, TensorSummary, WeightImportError, source::sha256_file,
-    };
+        PfldIgnoredTensors, TensorAudit, TensorSummary, WeightImportError, source::sha256_file};
 
     use super::{PfldInspection, verify_staged_artifacts, write_staged_artifacts};
 
@@ -388,10 +367,9 @@ mod tests {
         source_path: PathBuf,
         source_file_name: String,
         source_sha256: String,
-        original: burn::nn::Linear<CpuBackend>,
-        candidate: burn::nn::Linear<CpuBackend>,
-        inspection: PfldInspection,
-    }
+        original: burn::nn::Linear,
+        candidate: burn::nn::Linear,
+        inspection: PfldInspection}
 
     fn artifact_fixture() -> ArtifactFixture {
         let parent = tempfile::tempdir().unwrap();
@@ -400,32 +378,27 @@ mod tests {
         std::fs::write(&source_path, b"immutable-source").unwrap();
         let source_sha256 = sha256_file(&source_path).unwrap();
         let device = Default::default();
-        let original = LinearConfig::new(2, 2).init::<CpuBackend>(&device);
+        let original = LinearConfig::new(2, 2).init(&device);
         let candidate = original.clone();
         let summary = TensorSummary {
             tensor_count: 2,
-            total_elements: 6,
-        };
+            total_elements: 6};
         let ignored = PfldIgnoredTensors {
             batch_norm_counters: TensorAudit {
                 tensor_count: 0,
                 total_elements: 0,
-                keys: Vec::new(),
-            },
+                keys: Vec::new()},
             localization: TensorAudit {
                 tensor_count: 0,
                 total_elements: 0,
-                keys: Vec::new(),
-            },
-            auxiliarynet: None,
-        };
+                keys: Vec::new()},
+            auxiliarynet: None};
         let inspection = PfldInspection {
             backbone: summary.clone(),
             applied: summary,
             ignored,
             expected_applied: ["bias", "weight"].into_iter().map(str::to_owned).collect(),
-            expected_unused: BTreeSet::new(),
-        };
+            expected_unused: BTreeSet::new()};
 
         ArtifactFixture {
             parent,
@@ -435,14 +408,13 @@ mod tests {
             source_sha256,
             original,
             candidate,
-            inspection,
-        }
+            inspection}
     }
 
     #[test]
     fn corrupt_safetensors_never_publishes_destination() {
         let mut fixture = artifact_fixture();
-        let staged = write_staged_artifacts::<CpuBackend, _>(
+        let staged = write_staged_artifacts::<_>(
             &fixture.candidate,
             &fixture.source_path,
             &fixture.source_file_name,
@@ -454,7 +426,7 @@ mod tests {
         std::fs::write(staged.path().join("model.safetensors"), b"broken").unwrap();
 
         assert!(matches!(
-            verify_staged_artifacts::<CpuBackend, _>(
+            verify_staged_artifacts::<_>(
                 &mut fixture.original,
                 &fixture.candidate,
                 &fixture.source_path,
@@ -469,7 +441,7 @@ mod tests {
     #[test]
     fn corrupt_manifest_never_publishes_destination() {
         let mut fixture = artifact_fixture();
-        let staged = write_staged_artifacts::<CpuBackend, _>(
+        let staged = write_staged_artifacts::<_>(
             &fixture.candidate,
             &fixture.source_path,
             &fixture.source_file_name,
@@ -481,7 +453,7 @@ mod tests {
         std::fs::write(staged.path().join("manifest.json"), b"{not-json").unwrap();
 
         assert!(matches!(
-            verify_staged_artifacts::<CpuBackend, _>(
+            verify_staged_artifacts::<_>(
                 &mut fixture.original,
                 &fixture.candidate,
                 &fixture.source_path,

@@ -1,7 +1,6 @@
 use feathertalk_models::{
     feather_hubert::FeatherHubertConfig,
-    unet::{MobileOneUnetConfig, OriginalUnetConfig},
-};
+    unet::{MobileOneUnetConfig, OriginalUnetConfig}};
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
@@ -27,24 +26,21 @@ pub const MAX_MODEL_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 pub struct TensorSpec {
     pub name: String,
     pub shape: Vec<i64>,
-    pub dtype: String,
-}
+    pub dtype: String}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TensorContract {
     pub tensor_count: usize,
     pub total_elements: u64,
-    pub entries: Vec<TensorSpec>,
-}
+    pub entries: Vec<TensorSpec>}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FileManifest {
     pub file_name: String,
     pub bytes: u64,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -54,8 +50,7 @@ pub struct SourceManifest {
     pub version: String,
     pub file_name: String,
     pub sha256: String,
-    pub url: Option<String>,
-}
+    pub url: Option<String>}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -63,8 +58,7 @@ pub enum TrainingMode {
     Inference,
     Baseline,
     MouthRoi,
-    MouthRoiTemporal,
-}
+    MouthRoiTemporal}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -73,8 +67,7 @@ pub struct TrainingManifest {
     pub mouth_weight: f64,
     pub temporal_weight: f64,
     pub temporal_mouth_weight: f64,
-    pub perceptual_weight: f64,
-}
+    pub perceptual_weight: f64}
 
 impl Default for TrainingManifest {
     fn default() -> Self {
@@ -83,8 +76,7 @@ impl Default for TrainingManifest {
             mouth_weight: 0.0,
             temporal_weight: 0.0,
             temporal_mouth_weight: 0.0,
-            perceptual_weight: 0.0,
-        }
+            perceptual_weight: 0.0}
     }
 }
 
@@ -96,17 +88,13 @@ pub enum ModelConfiguration {
         expansion: usize,
         num_blocks: usize,
         output_dim: usize,
-        dropout: f64,
-    },
+        dropout: f64},
     OriginalUnet {
-        channels: [usize; 5],
-    },
+        channels: [usize; 5]},
     MobileOneUnet {
         channels: [usize; 5],
         num_conv_branches: usize,
-        reparameterized: bool,
-    },
-}
+        reparameterized: bool}}
 
 impl ModelConfiguration {
     pub fn feather_hubert(config: &FeatherHubertConfig) -> Self {
@@ -115,38 +103,33 @@ impl ModelConfiguration {
             expansion: config.expansion,
             num_blocks: config.num_blocks,
             output_dim: config.output_dim,
-            dropout: config.dropout,
-        }
+            dropout: config.dropout}
     }
 
     pub fn original_unet(config: &OriginalUnetConfig) -> Self {
         Self::OriginalUnet {
-            channels: config.channels,
-        }
+            channels: config.channels}
     }
 
     pub fn mobileone_unet(config: &MobileOneUnetConfig, reparameterized: bool) -> Self {
         Self::MobileOneUnet {
             channels: config.channels,
             num_conv_branches: config.num_conv_branches,
-            reparameterized,
-        }
+            reparameterized}
     }
 
     pub fn model_type(&self) -> &'static str {
         match self {
             Self::FeatherHubert { .. } => "feather_hubert",
             Self::OriginalUnet { .. } => "original_unet",
-            Self::MobileOneUnet { .. } => "mobileone_unet",
-        }
+            Self::MobileOneUnet { .. } => "mobileone_unet"}
     }
 
     pub fn architecture_version(&self) -> &'static str {
         match self {
             Self::FeatherHubert { .. } => FEATHER_HUBERT_ARCHITECTURE_VERSION,
             Self::OriginalUnet { .. } => ORIGINAL_UNET_ARCHITECTURE_VERSION,
-            Self::MobileOneUnet { .. } => MOBILEONE_UNET_ARCHITECTURE_VERSION,
-        }
+            Self::MobileOneUnet { .. } => MOBILEONE_UNET_ARCHITECTURE_VERSION}
     }
 
     fn expected_io(&self) -> (Vec<TensorSpec>, Vec<TensorSpec>) {
@@ -161,8 +144,7 @@ impl ModelConfiguration {
                     TensorSpec::new("audio", vec![1, 16, 32, 32]),
                 ],
                 vec![TensorSpec::new("output", vec![1, 3, 160, 160])],
-            ),
-        }
+            )}
     }
 
     pub fn validate(&self) -> Result<(), PackageError> {
@@ -172,8 +154,7 @@ impl ModelConfiguration {
                 expansion,
                 num_blocks,
                 output_dim,
-                dropout,
-            } => {
+                dropout} => {
                 require_positive("configuration.channels", *channels)?;
                 require_positive("configuration.expansion", *expansion)?;
                 require_positive("configuration.num_blocks", *num_blocks)?;
@@ -209,8 +190,7 @@ pub struct ModelDescription {
     pub architecture_version: String,
     pub configuration: ModelConfiguration,
     pub inputs: Vec<TensorSpec>,
-    pub outputs: Vec<TensorSpec>,
-}
+    pub outputs: Vec<TensorSpec>}
 
 impl ModelDescription {
     pub fn feather_hubert(config: FeatherHubertConfig) -> Self {
@@ -232,8 +212,7 @@ impl ModelDescription {
             architecture_version: configuration.architecture_version().to_owned(),
             configuration,
             inputs,
-            outputs,
-        }
+            outputs}
     }
 
     pub fn validate(&self) -> Result<(), PackageError> {
@@ -267,8 +246,7 @@ impl ModelDescription {
 #[serde(deny_unknown_fields)]
 pub struct LicenseBundle {
     pub schema_version: u32,
-    pub entries: Vec<LicenseEntry>,
-}
+    pub entries: Vec<LicenseEntry>}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -276,8 +254,7 @@ pub struct LicenseEntry {
     pub component: String,
     pub license_id: String,
     pub source_url: String,
-    pub notice: String,
-}
+    pub notice: String}
 
 impl LicenseBundle {
     pub fn validate(&self) -> Result<(), PackageError> {
@@ -317,8 +294,7 @@ pub struct ModelPackageManifest {
     pub model: FileManifest,
     pub licenses: FileManifest,
     pub optimizer: Option<FileManifest>,
-    pub training_state: Option<FileManifest>,
-}
+    pub training_state: Option<FileManifest>}
 
 impl ModelPackageManifest {
     pub fn validate(&self) -> Result<(), PackageError> {
@@ -333,8 +309,7 @@ impl ModelPackageManifest {
             architecture_version: self.architecture_version.clone(),
             configuration: self.configuration.clone(),
             inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-        };
+            outputs: self.outputs.clone()};
         description.validate()?;
         validate_training(&self.training)?;
         validate_source(&self.source)?;
@@ -365,8 +340,7 @@ impl ModelPackageManifest {
             architecture_version: self.architecture_version.clone(),
             configuration: self.configuration.clone(),
             inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-        }
+            outputs: self.outputs.clone()}
     }
 }
 
@@ -375,8 +349,7 @@ impl TensorSpec {
         Self {
             name: name.into(),
             shape,
-            dtype: "f32".to_owned(),
-        }
+            dtype: "f32".to_owned()}
     }
 
     pub fn validate(&self, field: &str, allow_dynamic: bool) -> Result<(), PackageError> {

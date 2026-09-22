@@ -1,16 +1,11 @@
 use std::{fs, path::PathBuf};
 
 use feathertalk_audio::{
-    FeatureArtifact, FeatureMatrix, MAX_FEATURE_FILE_BYTES, write_feature_file_no_clobber,
-};
+    FeatureArtifact, FeatureMatrix, MAX_FEATURE_FILE_BYTES, write_feature_file_no_clobber};
 use feathertalk_export::{
     FeatherHubertPackageRequest, ModelDescription, ModelPackageManifest, PackageBuildRequest,
-    SourceManifest, TrainingManifest, build_feather_hubert_package, write_model_package,
-};
-use feathertalk_models::{
-    backend::CpuBackend,
-    unet::{OriginalUnet, OriginalUnetConfig},
-};
+    SourceManifest, TrainingManifest, build_feather_hubert_package, write_model_package};
+use feathertalk_models::unet::{OriginalUnet, OriginalUnetConfig};
 use feathertalk_weights::{LegacyImportRequest, LegacyModelKind, import_into};
 use ndarray::{ArrayD, Ix3};
 use ndarray_npy::ReadNpyExt;
@@ -22,8 +17,7 @@ const SOURCE_FORMAT: &str = "pytorch-pickle-restricted";
 #[derive(Debug, Clone, Copy)]
 pub enum ModelMigrationKind {
     FeatherHubert,
-    OriginalUnet,
-}
+    OriginalUnet}
 
 #[derive(Debug)]
 pub struct ModelMigrationRequest {
@@ -32,14 +26,12 @@ pub struct ModelMigrationRequest {
     pub licenses: PathBuf,
     pub destination: PathBuf,
     pub created_at: String,
-    pub minimum_app_version: String,
-}
+    pub minimum_app_version: String}
 
 #[derive(Debug)]
 pub struct FeatureMigrationReport {
     pub source_shape: [usize; 3],
-    pub artifact: FeatureArtifact,
-}
+    pub artifact: FeatureArtifact}
 
 pub fn migrate_model(request: &ModelMigrationRequest) -> CliResult<ModelPackageManifest> {
     validate_legacy_extension(&request.source)?;
@@ -50,12 +42,10 @@ pub fn migrate_model(request: &ModelMigrationRequest) -> CliResult<ModelPackageM
                 licenses: request.licenses.clone(),
                 destination: request.destination.clone(),
                 created_at: request.created_at.clone(),
-                minimum_app_version: request.minimum_app_version.clone(),
-            })?
+                minimum_app_version: request.minimum_app_version.clone()})?
             .manifest)
         }
-        ModelMigrationKind::OriginalUnet => migrate_original_unet(request),
-    }
+        ModelMigrationKind::OriginalUnet => migrate_original_unet(request)}
 }
 
 pub fn migrate_features(
@@ -109,15 +99,14 @@ pub fn migrate_features(
     let artifact = write_feature_file_no_clobber(destination, &matrix)?;
     Ok(FeatureMigrationReport {
         source_shape,
-        artifact,
-    })
+        artifact})
 }
 
 fn migrate_original_unet(request: &ModelMigrationRequest) -> CliResult<ModelPackageManifest> {
     let device = Default::default();
     let config = OriginalUnetConfig::production();
-    let mut model = config.clone().init::<CpuBackend>(&device);
-    let import = import_into::<CpuBackend, OriginalUnet<CpuBackend>>(
+    let mut model = config.clone().init(&device);
+    let import = import_into::<OriginalUnet>(
         &mut model,
         &LegacyImportRequest {
             path: request.source.clone(),
@@ -136,19 +125,17 @@ fn migrate_original_unet(request: &ModelMigrationRequest) -> CliResult<ModelPack
             version: legacy_version(&file_name)?.to_owned(),
             file_name,
             sha256: import.source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path: request.licenses.clone(),
         created_at: request.created_at.clone(),
         minimum_app_version: request.minimum_app_version.clone(),
-        training: TrainingManifest::default(),
-    };
+        training: TrainingManifest::default()};
     Ok(
-        write_model_package::<CpuBackend, _, _>(
+        write_model_package::<_, _>(
             &package_request,
             &model,
             &device,
-            move |device| config.clone().init::<CpuBackend>(device),
+            move |device| config.clone().init(device),
         )?
         .manifest,
     )

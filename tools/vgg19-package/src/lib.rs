@@ -2,23 +2,18 @@ use std::{
     collections::BTreeMap,
     fs::{self, File, OpenOptions},
     io::{Read, Write},
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
-use burn::{backend::NdArray, tensor::backend::Backend};
+use burn::{backend::Flex};
 use burn_store::ModuleSnapshot;
 use feathertalk_training::{
     VGG19_ARCHITECTURE_VERSION, VGG19_MODEL_KIND, VGG19_PACKAGE_SCHEMA_VERSION, VGG19_SOURCE_URL,
     Vgg19FileManifest, Vgg19InputManifest, Vgg19LicenseBundle, Vgg19PackageManifest,
-    Vgg19SourceManifest, load_vgg19_package, read_vgg19_manifest,
-};
+    Vgg19SourceManifest, load_vgg19_package, read_vgg19_manifest};
 use feathertalk_weights::{
-    LegacyImportRequest, LegacyModelKind, WeightImportError, import_into, save_safetensors,
-};
+    LegacyImportRequest, LegacyModelKind, WeightImportError, import_into, save_safetensors};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
-
-type CpuBackend = NdArray<f32>;
 
 const SOURCE_MAX_BYTES: u64 = 1024 * 1024 * 1024;
 const LICENSE_MAX_BYTES: u64 = 1024 * 1024;
@@ -32,13 +27,11 @@ const MANIFEST_FILE_NAME: &str = "manifest.json";
 pub struct Vgg19PackageRequest {
     pub source: PathBuf,
     pub licenses: PathBuf,
-    pub destination: PathBuf,
-}
+    pub destination: PathBuf}
 
 #[derive(Debug, Clone)]
 pub struct Vgg19PackageReport {
-    pub manifest: Vgg19PackageManifest,
-}
+    pub manifest: Vgg19PackageManifest}
 
 #[derive(Debug, Error)]
 pub enum PackageError {
@@ -51,8 +44,7 @@ pub enum PackageError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
     #[error("package publication error: {0}")]
-    Publication(String),
-}
+    Publication(String)}
 
 pub fn build_vgg19_package(
     request: &Vgg19PackageRequest,
@@ -86,8 +78,8 @@ where
 
     let source_snapshot = Snapshot::create(&request.source, SOURCE_MAX_BYTES)?;
     let device = Default::default();
-    let mut candidate = feathertalk_training::Vgg19Conv3_3::<CpuBackend>::new_for_import(&device);
-    let report = import_into::<CpuBackend, _>(
+    let mut candidate = feathertalk_training::Vgg19Conv3_3::new_for_import(&device);
+    let report = import_into::<_>(
         &mut candidate,
         &LegacyImportRequest {
             path: source_snapshot.path.clone(),
@@ -95,8 +87,7 @@ where
             top_level_key: None,
             max_file_bytes: SOURCE_MAX_BYTES,
             max_tensor_count: MAX_TENSOR_COUNT,
-            max_total_elements: MAX_TOTAL_ELEMENTS,
-        },
+            max_total_elements: MAX_TOTAL_ELEMENTS},
     )?;
     if report.applied.len() != 14
         || report.ignored.len() != 24
@@ -117,7 +108,7 @@ where
         .tempdir_in(parent)?;
     let staging_path = staging.path().to_owned();
     let model_path = staging_path.join(MODEL_FILE_NAME);
-    save_safetensors::<CpuBackend, _>(&candidate, &model_path)?;
+    save_safetensors::<_>(&candidate, &model_path)?;
     let model_manifest = file_manifest(&model_path, MODEL_FILE_NAME)?;
 
     let license_path = staging_path.join(LICENSE_FILE_NAME);
@@ -132,20 +123,17 @@ where
             framework: "torchvision".to_owned(),
             weight_id: "VGG19_Weights.IMAGENET1K_V1".to_owned(),
             url: VGG19_SOURCE_URL.to_owned(),
-            sha256: source_snapshot.sha256.clone(),
-        },
+            sha256: source_snapshot.sha256.clone()},
         input: Vgg19InputManifest {
             channels: 3,
             color_order: "bgr".to_owned(),
             value_range: "0..1".to_owned(),
-            normalization: "none".to_owned(),
-        },
+            normalization: "none".to_owned()},
         output_layer: "features.14".to_owned(),
         tensor_count: report.tensor_count,
         total_elements: report.total_elements,
         model: model_manifest,
-        licenses: license_manifest,
-    };
+        licenses: license_manifest};
     write_manifest(&staging_path, &manifest)?;
     validation_hook(&staging_path).map_err(|error| {
         PackageError::Publication(format!("staging validation hook failed: {error}"))
@@ -158,7 +146,7 @@ where
         ));
     }
 
-    let reloaded = load_vgg19_package::<CpuBackend>(&staging_path, &device)?;
+    let reloaded = load_vgg19_package(&staging_path, &device)?;
     compare_module_snapshots(&candidate, &reloaded).map_err(PackageError::Publication)?;
     let entries = exact_entries(&staging_path)?;
     if entries
@@ -190,8 +178,7 @@ where
 struct Snapshot {
     _directory: tempfile::TempDir,
     path: PathBuf,
-    sha256: String,
-}
+    sha256: String}
 
 impl Snapshot {
     fn create(source: &Path, max_bytes: u64) -> Result<Self, PackageError> {
@@ -242,8 +229,7 @@ impl Snapshot {
         Ok(Self {
             _directory: directory,
             path,
-            sha256: hex::encode(digest.finalize()),
-        })
+            sha256: hex::encode(digest.finalize())})
     }
 }
 
@@ -290,8 +276,7 @@ fn ensure_destination_absent(path: &Path) -> Result<(), PackageError> {
             path.display()
         ))),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(PackageError::Io(error)),
-    }
+        Err(error) => Err(PackageError::Io(error))}
 }
 
 fn read_bounded_regular(path: &Path, max_bytes: u64) -> Result<Vec<u8>, PackageError> {
@@ -350,8 +335,7 @@ fn file_manifest(path: &Path, file_name: &str) -> Result<Vgg19FileManifest, Pack
     Ok(Vgg19FileManifest {
         file_name: file_name.to_owned(),
         bytes: metadata.len(),
-        sha256: hex::encode(digest.finalize()),
-    })
+        sha256: hex::encode(digest.finalize())})
 }
 
 fn write_manifest(directory: &Path, manifest: &Vgg19PackageManifest) -> Result<(), PackageError> {
@@ -384,19 +368,19 @@ fn exact_entries(directory: &Path) -> Result<Vec<String>, PackageError> {
     Ok(entries)
 }
 
-fn compare_module_snapshots<B: Backend, M: ModuleSnapshot<B>>(
+fn compare_module_snapshots<M: ModuleSnapshot>(
     expected: &M,
     actual: &M,
 ) -> Result<(), String> {
     let expected = expected
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), snapshot))
         .collect::<BTreeMap<_, _>>();
     let actual = actual
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), snapshot))
         .collect::<BTreeMap<_, _>>();
     if expected.len() != actual.len() {
         return Err(format!(
@@ -412,8 +396,8 @@ fn compare_module_snapshots<B: Backend, M: ModuleSnapshot<B>>(
         if expected.shape != actual.shape || expected.dtype != actual.dtype {
             return Err(format!("reloaded tensor metadata mismatch: {path}"));
         }
-        if expected.to_data().map_err(|error| error.to_string())?
-            != actual.to_data().map_err(|error| error.to_string())?
+        if burn_store::bridge::to_data(&expected).map_err(|error| error.to_string())?
+            != burn_store::bridge::to_data(&actual).map_err(|error| error.to_string())?
         {
             return Err(format!("reloaded tensor data mismatch: {path}"));
         }
@@ -443,9 +427,7 @@ mod tests {
                     component: "synthetic VGG19 import fixture".to_owned(),
                     license_id: "LicenseRef-Test-Only".to_owned(),
                     source_url: "https://example.invalid/vgg19".to_owned(),
-                    notice: "Synthetic test fixture only.".to_owned(),
-                }],
-            })
+                    notice: "Synthetic test fixture only.".to_owned()}]})
             .unwrap(),
         )
         .unwrap();
@@ -455,8 +437,7 @@ mod tests {
             &Vgg19PackageRequest {
                 source,
                 licenses,
-                destination: destination.clone(),
-            },
+                destination: destination.clone()},
             |staging| fs::write(staging.join("manifest.json"), b"{broken-json"),
         )
         .unwrap_err();

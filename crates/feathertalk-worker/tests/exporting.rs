@@ -5,17 +5,14 @@ use std::{fs, path::Path};
 use feathertalk_domain::{ErrorCode, ExportModelPackageParams, Progress, Request, TaskStage};
 use feathertalk_export::{
     LICENSE_FILE_NAME, LicenseBundle, LicenseEntry, MANIFEST_FILE_NAME, MODEL_FILE_NAME,
-    ModelConfiguration, TrainingMode as PackageTrainingMode, read_package_manifest,
-};
+    ModelConfiguration, TrainingMode as PackageTrainingMode, read_package_manifest};
 use feathertalk_media::CancellationToken;
 use feathertalk_models::unet::OriginalUnetConfig;
 use feathertalk_training::{
-    CHECKPOINT_MODEL_FILE_NAME, CheckpointDescriptor, read_training_checkpoint,
-};
+    CHECKPOINT_MODEL_FILE_NAME, CheckpointDescriptor, read_training_checkpoint};
 use feathertalk_worker::{
     CommandOutcome, NoReporter, RenderVariant, WorkerConfig, checkpoint_descriptor, execute,
-    execute_export_model_package, export_plan, publish_checkpoint_package,
-};
+    execute_export_model_package, export_plan, publish_checkpoint_package};
 
 #[path = "support/mod.rs"]
 mod support;
@@ -30,8 +27,7 @@ const WORKER_VERSION: &str = "0.1.0";
 fn params(source: &Path, destination: &Path) -> ExportModelPackageParams {
     ExportModelPackageParams {
         source: source.to_path_buf(),
-        destination: destination.to_path_buf(),
-    }
+        destination: destination.to_path_buf()}
 }
 
 /// The descriptor the micro fixture checkpoint carries.
@@ -56,9 +52,7 @@ fn write_licenses(directory: &Path) {
             component: "synthetic UNet fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/original-unet".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(
         directory.join(LICENSE_FILE_NAME),
         serde_json::to_vec(&bundle).expect("the bundle serialises"),
@@ -316,15 +310,13 @@ fn a_micro_checkpoint_becomes_a_published_package() {
                 TaskStage::Exporting,
                 Some(Progress {
                     completed: 0,
-                    total: Some(1),
-                }),
+                    total: Some(1)}),
             ),
             (
                 TaskStage::Exporting,
                 Some(Progress {
                     completed: 1,
-                    total: Some(1),
-                }),
+                    total: Some(1)}),
             ),
         ]
     );

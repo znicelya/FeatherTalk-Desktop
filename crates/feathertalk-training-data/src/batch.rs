@@ -1,4 +1,4 @@
-use burn::tensor::{Tensor, TensorData, backend::Backend};
+use burn::tensor::{Tensor, TensorData};
 
 use crate::{FrameSample, TrainingDataError, TrainingItem};
 
@@ -10,21 +10,19 @@ const AUDIO_SIZE: usize = 32;
 
 /// One batch of single-frame items, ready for a U-Net forward pass.
 #[derive(Debug, Clone)]
-pub struct SingleFrameBatch<B: Backend> {
-    pub image: Tensor<B, 4>,
-    pub audio: Tensor<B, 4>,
-    pub target: Tensor<B, 4>,
-    pub mouth_mask: Tensor<B, 4>,
-}
+pub struct SingleFrameBatch {
+    pub image: Tensor<4>,
+    pub audio: Tensor<4>,
+    pub target: Tensor<4>,
+    pub mouth_mask: Tensor<4>}
 
 /// One batch of temporal pairs: the inputs are flattened, the targets keep the pair axis.
 #[derive(Debug, Clone)]
-pub struct TemporalBatch<B: Backend> {
-    pub image: Tensor<B, 4>,
-    pub audio: Tensor<B, 4>,
-    pub target: Tensor<B, 5>,
-    pub mouth_mask: Tensor<B, 5>,
-}
+pub struct TemporalBatch {
+    pub image: Tensor<4>,
+    pub audio: Tensor<4>,
+    pub target: Tensor<5>,
+    pub mouth_mask: Tensor<5>}
 
 fn batch_error(message: String) -> TrainingDataError {
     TrainingDataError::Batch { message }
@@ -94,19 +92,19 @@ fn gather(
     Ok(values)
 }
 
-fn tensor4<B: Backend>(values: Vec<f32>, shape: [usize; 4], device: &B::Device) -> Tensor<B, 4> {
-    Tensor::<B, 4>::from_data(TensorData::new(values, shape), device)
+fn tensor4(values: Vec<f32>, shape: [usize; 4], device: &burn::tensor::Device) -> Tensor<4> {
+    Tensor::<4>::from_data(TensorData::new(values, shape), device)
 }
 
-fn tensor5<B: Backend>(values: Vec<f32>, shape: [usize; 5], device: &B::Device) -> Tensor<B, 5> {
-    Tensor::<B, 5>::from_data(TensorData::new(values, shape), device)
+fn tensor5(values: Vec<f32>, shape: [usize; 5], device: &burn::tensor::Device) -> Tensor<5> {
+    Tensor::<5>::from_data(TensorData::new(values, shape), device)
 }
 
 /// Stacks single-frame items in the order they were given.
-pub fn stack_single_frame_batch<B: Backend>(
+pub fn stack_single_frame_batch(
     items: &[TrainingItem],
-    device: &B::Device,
-) -> Result<SingleFrameBatch<B>, TrainingDataError> {
+    device: &burn::tensor::Device,
+) -> Result<SingleFrameBatch, TrainingDataError> {
     let samples = single_frame_samples(items)?;
     let count = samples.len();
     let plane = INNER_SIZE * INNER_SIZE;
@@ -123,15 +121,14 @@ pub fn stack_single_frame_batch<B: Backend>(
         image: tensor4(image_values, image_shape, device),
         audio: tensor4(audio_values, audio_shape, device),
         target: tensor4(target_values, target_shape, device),
-        mouth_mask: tensor4(mask_values, mask_shape, device),
-    })
+        mouth_mask: tensor4(mask_values, mask_shape, device)})
 }
 
 /// Stacks temporal pairs sample-major, so `temporal_loss` can reshape the flattened rows back.
-pub fn stack_temporal_batch<B: Backend>(
+pub fn stack_temporal_batch(
     items: &[TrainingItem],
-    device: &B::Device,
-) -> Result<TemporalBatch<B>, TrainingDataError> {
+    device: &burn::tensor::Device,
+) -> Result<TemporalBatch, TrainingDataError> {
     let samples = temporal_samples(items)?;
     let pairs = items.len();
     let halves = samples.len();
@@ -149,6 +146,5 @@ pub fn stack_temporal_batch<B: Backend>(
         image: tensor4(image_values, image_shape, device),
         audio: tensor4(audio_values, audio_shape, device),
         target: tensor5(target_values, target_shape, device),
-        mouth_mask: tensor5(mask_values, mask_shape, device),
-    })
+        mouth_mask: tensor5(mask_values, mask_shape, device)})
 }

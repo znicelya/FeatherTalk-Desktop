@@ -5,34 +5,28 @@ use burn_store::pytorch::{PytorchReader, reader::PickleValue};
 
 use crate::{
     PfldIgnoredTensors, PfldImportRequest, TensorAudit, TensorSummary, WeightImportError,
-    source::tensor_elements,
-};
+    source::tensor_elements};
 
 use super::{
     PFLD_CHECKPOINT_EPOCH,
     key_map::{
-        LOCALIZATION_KEYS, is_valid_batch_norm_counter, map_pfld_key, reject_duplicate_destinations,
-    },
-};
+        LOCALIZATION_KEYS, is_valid_batch_norm_counter, map_pfld_key, reject_duplicate_destinations}};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct PfldEnvelope {
-    pub(super) has_auxiliarynet: bool,
-}
+    pub(super) has_auxiliarynet: bool}
 
 #[derive(Debug, Clone, Copy)]
 struct SafetyLimits {
     max_tensor_count: usize,
-    max_total_elements: u64,
-}
+    max_total_elements: u64}
 
 #[cfg(test)]
 impl SafetyLimits {
     fn unbounded() -> Self {
         Self {
             max_tensor_count: usize::MAX,
-            max_total_elements: u64::MAX,
-        }
+            max_total_elements: u64::MAX}
     }
 }
 
@@ -40,8 +34,7 @@ impl SafetyLimits {
 struct TensorFact {
     key: String,
     dtype: DType,
-    elements: u64,
-}
+    elements: u64}
 
 #[derive(Debug, Clone)]
 pub(super) struct PfldInspection {
@@ -49,8 +42,7 @@ pub(super) struct PfldInspection {
     pub(super) applied: TensorSummary,
     pub(super) ignored: PfldIgnoredTensors,
     pub(super) expected_applied: BTreeSet<String>,
-    pub(super) expected_unused: BTreeSet<String>,
-}
+    pub(super) expected_unused: BTreeSet<String>}
 
 pub(super) fn validate_envelope(value: PickleValue) -> Result<PfldEnvelope, WeightImportError> {
     let PickleValue::Dict(root) = value else {
@@ -76,14 +68,12 @@ pub(super) fn validate_envelope(value: PickleValue) -> Result<PfldEnvelope, Weig
         Some(PickleValue::Int(epoch)) => {
             return Err(WeightImportError::InvalidPfldEpoch {
                 expected: PFLD_CHECKPOINT_EPOCH,
-                actual: epoch.to_string(),
-            });
+                actual: epoch.to_string()});
         }
         Some(actual) => {
             return Err(WeightImportError::InvalidPfldEpoch {
                 expected: PFLD_CHECKPOINT_EPOCH,
-                actual: format!("{actual:?}"),
-            });
+                actual: format!("{actual:?}")});
         }
         None => {
             return Err(WeightImportError::InvalidPfldEnvelope(
@@ -168,8 +158,7 @@ pub(super) fn inspect_checkpoint(
         auxiliary,
         SafetyLimits {
             max_tensor_count: request.max_tensor_count,
-            max_total_elements: request.max_total_elements,
-        },
+            max_total_elements: request.max_total_elements},
     )
 }
 
@@ -186,8 +175,7 @@ fn read_tensor_facts(
             Ok(TensorFact {
                 key,
                 dtype: snapshot.dtype,
-                elements: tensor_elements(&snapshot)?,
-            })
+                elements: tensor_elements(&snapshot)?})
         })
         .collect()
 }
@@ -204,8 +192,7 @@ fn audit_tensor_facts(
         .transpose()?
         .unwrap_or(TensorSummary {
             tensor_count: 0,
-            total_elements: 0,
-        });
+            total_elements: 0});
     let global_tensor_count = backbone_summary
         .tensor_count
         .checked_add(auxiliary_summary.tensor_count)
@@ -294,32 +281,26 @@ fn audit_tensor_facts(
         TensorAudit {
             tensor_count: auxiliary_summary.tensor_count,
             total_elements: auxiliary_summary.total_elements,
-            keys,
-        }
+            keys}
     });
 
     Ok(PfldInspection {
         backbone: backbone_summary,
         applied: TensorSummary {
             tensor_count: applied_count,
-            total_elements: applied_elements,
-        },
+            total_elements: applied_elements},
         ignored: PfldIgnoredTensors {
             batch_norm_counters: TensorAudit {
                 tensor_count: batch_norm_keys.len(),
                 total_elements: batch_norm_elements,
-                keys: batch_norm_keys,
-            },
+                keys: batch_norm_keys},
             localization: TensorAudit {
                 tensor_count: localization_keys.len(),
                 total_elements: localization_elements,
-                keys: localization_keys,
-            },
-            auxiliarynet: auxiliary_audit,
-        },
+                keys: localization_keys},
+            auxiliarynet: auxiliary_audit},
         expected_applied,
-        expected_unused,
-    })
+        expected_unused})
 }
 
 fn summarize_facts(facts: &[TensorFact]) -> Result<TensorSummary, WeightImportError> {
@@ -333,8 +314,7 @@ fn summarize_facts(facts: &[TensorFact]) -> Result<TensorSummary, WeightImportEr
     })?;
     Ok(TensorSummary {
         tensor_count,
-        total_elements,
-    })
+        total_elements})
 }
 
 fn checked_add_elements(total: u64, elements: u64) -> Result<u64, WeightImportError> {
@@ -490,8 +470,7 @@ mod tests {
         TensorFact {
             key: key.to_owned(),
             dtype,
-            elements,
-        }
+            elements}
     }
 
     #[test]
@@ -509,8 +488,7 @@ mod tests {
             Some(auxiliary),
             SafetyLimits {
                 max_tensor_count: 6,
-                max_total_elements: 2_481,
-            },
+                max_total_elements: 2_481},
         )
         .unwrap();
 
@@ -537,8 +515,7 @@ mod tests {
             TensorAudit {
                 tensor_count: 1,
                 total_elements: 7,
-                keys: vec!["auxiliarynet.conv1.weight".to_owned()],
-            }
+                keys: vec!["auxiliarynet.conv1.weight".to_owned()]}
         );
     }
 
@@ -580,8 +557,7 @@ mod tests {
                 Some(auxiliary.clone()),
                 SafetyLimits {
                     max_tensor_count: 4,
-                    max_total_elements: 10,
-                }
+                    max_total_elements: 10}
             ),
             Err(WeightImportError::UnsafeLimit(_))
         ));
@@ -591,8 +567,7 @@ mod tests {
                 Some(auxiliary),
                 SafetyLimits {
                     max_tensor_count: 10,
-                    max_total_elements: 4,
-                }
+                    max_total_elements: 4}
             ),
             Err(WeightImportError::UnsafeLimit(_))
         ));

@@ -20,24 +20,21 @@ pub const MAX_WEIGHT_BYTES: u64 = 32 * 1024 * 1024;
 #[serde(deny_unknown_fields)]
 pub struct PfldSourceManifest {
     pub file_name: String,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PfldTensorSpec {
     pub name: String,
     pub shape: Vec<usize>,
-    pub dtype: String,
-}
+    pub dtype: String}
 
 impl PfldTensorSpec {
     pub fn new<const N: usize>(name: &str, shape: [usize; N]) -> Self {
         Self {
             name: name.to_owned(),
             shape: shape.to_vec(),
-            dtype: "f32".to_owned(),
-        }
+            dtype: "f32".to_owned()}
     }
 }
 
@@ -48,15 +45,13 @@ pub struct PfldModelManifest {
     pub file_name: String,
     pub sha256: String,
     pub tensor_count: usize,
-    pub total_elements: u64,
-}
+    pub total_elements: u64}
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PfldLicenseManifest {
     pub spdx: String,
-    pub redistribution_approved: bool,
-}
+    pub redistribution_approved: bool}
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -69,8 +64,7 @@ pub struct PfldRuntimeManifest {
     pub input: PfldTensorSpec,
     pub output: PfldTensorSpec,
     pub model: PfldModelManifest,
-    pub license: PfldLicenseManifest,
-}
+    pub license: PfldLicenseManifest}
 
 impl PfldRuntimeManifest {
     pub fn approved(
@@ -86,8 +80,7 @@ impl PfldRuntimeManifest {
             architecture_version: PFLD_ARCHITECTURE_VERSION.to_owned(),
             source: PfldSourceManifest {
                 file_name: source_file_name,
-                sha256: source_sha256,
-            },
+                sha256: source_sha256},
             epoch: PFLD_CHECKPOINT_EPOCH,
             input: PfldTensorSpec::new("input", PFLD_INPUT_SHAPE),
             output: PfldTensorSpec::new("landmarks", PFLD_OUTPUT_SHAPE),
@@ -96,21 +89,17 @@ impl PfldRuntimeManifest {
                 file_name: "model.safetensors".to_owned(),
                 sha256: model_sha256,
                 tensor_count,
-                total_elements,
-            },
+                total_elements},
             license: PfldLicenseManifest {
                 spdx: "NOASSERTION".to_owned(),
-                redistribution_approved: false,
-            },
-        }
+                redistribution_approved: false}}
     }
 
     pub fn validate(&self) -> Result<(), PfldRuntimeError> {
         if self.schema_version != PFLD_RUNTIME_SCHEMA_VERSION {
             return Err(PfldRuntimeError::UnsupportedSchemaVersion {
                 expected: PFLD_RUNTIME_SCHEMA_VERSION,
-                actual: self.schema_version,
-            });
+                actual: self.schema_version});
         }
         if self.model_type != PFLD_MODEL_TYPE {
             return Err(invalid("model_type", format!("expected {PFLD_MODEL_TYPE}")));
@@ -118,8 +107,7 @@ impl PfldRuntimeManifest {
         if self.architecture_version != PFLD_ARCHITECTURE_VERSION {
             return Err(PfldRuntimeError::UnsupportedArchitectureVersion {
                 expected: PFLD_ARCHITECTURE_VERSION.to_owned(),
-                actual: self.architecture_version.clone(),
-            });
+                actual: self.architecture_version.clone()});
         }
         if self.epoch != PFLD_CHECKPOINT_EPOCH {
             return Err(invalid(
@@ -184,8 +172,7 @@ impl PfldRuntimeManifest {
 fn invalid(field: impl Into<String>, message: impl Into<String>) -> PfldRuntimeError {
     PfldRuntimeError::InvalidManifest {
         field: field.into(),
-        message: message.into(),
-    }
+        message: message.into()}
 }
 
 fn require_hash(field: &str, value: &str) -> Result<(), PfldRuntimeError> {

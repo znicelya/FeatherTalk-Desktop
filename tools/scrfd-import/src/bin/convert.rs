@@ -4,18 +4,17 @@ struct Args {
     #[arg(long)]
     burnpack: std::path::PathBuf,
     #[arg(long)]
-    safetensors: std::path::PathBuf,
-}
+    safetensors: std::path::PathBuf}
 
 #[cfg(scrfd_generated)]
 fn main() {
-    use burn::backend::NdArray;
+    use burn::backend::Flex;
     use clap::Parser;
     use feathertalk_scrfd_import::{ToolError, ensure_destination_absent};
 
     let args = Args::parse();
     if let Err(error) = ensure_destination_absent(&args.safetensors).and_then(|()| {
-        feathertalk_scrfd_import::convert::convert_burnpack::<NdArray<f32>>(
+        feathertalk_scrfd_import::convert::convert_burnpack::<Flex>(
             &args.burnpack,
             &args.safetensors,
         )

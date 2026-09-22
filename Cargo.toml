@@ -35,23 +35,34 @@ exclude = ["crates/feathertalk-app", "tools/scrfd-import", "vendor/cubek-matmul"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94"
+rust-version = "1.95"
 license = "Apache-2.0"
 
 [workspace.dependencies]
 base64 = "0.22"
 # Vulkan enables CubeCL's native SPIR-V compiler; fusion and autotuning avoid
 # the unfused/direct-only kernel configuration on production GPU workloads.
-burn = { version = "=0.21.0", default-features = false, features = ["std", "autodiff", "ndarray", "vulkan", "fusion", "autotune", "store"] }
-burn-store = { version = "=0.21.0", default-features = false, features = ["std", "pytorch", "safetensors"] }
-burn-wgpu = { version = "=0.21.0", default-features = false, features = ["vulkan", "fusion", "autotune"] }
-burn-cuda = { version = "=0.21.0", default-features = false, features = ["std", "fusion", "autotune"] }
-burn-rocm = { version = "=0.21.0", default-features = false, features = ["std", "fusion", "autotune"] }
+burn = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "autodiff", "flex", "vulkan", "fusion", "autotune", "store", "extension", "optim"] }
+# Cargo.lock pins pliron/pliron-derive to 0.17.0: pliron 0.18 postdates this
+# pre-release and its derive 0.18 does not compile against pliron 0.17 sources.
+# Re-run `cargo update -p pliron@0.18.0 --precise 0.17.0` (likewise for the
+# derive) after any `cargo update` until burn 0.22.0 stable ships a lock.
+burn-store = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "pytorch", "safetensors"] }
+burn-wgpu = { version = "=0.22.0-pre.3", default-features = false, features = ["vulkan", "fusion", "autotune"] }
+burn-cuda = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "fusion", "autotune"] }
+burn-rocm = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "fusion", "autotune"] }
 # Use fixed generated bindings: detecting an installed 11.x toolkit at build
-# time omits tensor-map types required by CubeCL. Libraries remain runtime-loaded.
+# time omits tensor-map types required by CubeCL. CubeCL 0.11 requests build-system
+# detection, but the explicit feature wins in cudarc's build script and keeps
+# the 12.8 bindings. Libraries remain runtime-loaded.
 cudarc = { version = "=0.19.9", default-features = false, features = ["std", "driver", "nvrtc", "dynamic-loading", "cuda-12080"] }
-# Burn 0.21's ROCm backend is paired with CubeCL's HIP bindings.
+# Burn 0.22's ROCm backend is paired with CubeCL 0.11's HIP bindings.
 cubecl-hip-sys = "=7.14.6085000"
+# Burn 0.22.0-pre.3 predates pliron 0.18: letting pliron-llvm's `^0` requirement
+# float to 0.18 pulls pliron-derive 0.18, which does not compile against the
+# pliron 0.17 sources burn pins. Match burn's own lockfile until 0.22.0 stable.
+pliron = "=0.17.0"
+pliron-derive = "=0.17.0"
 cap-std = "3.4.5"
 clap = { version = "4.5", features = ["derive"] }
 ctrlc = "=3.4.5"
@@ -68,11 +79,6 @@ tempfile = "3.20"
 thiserror = "2.0"
 time = { version = "0.3.55", features = ["parsing", "formatting", "macros"] }
 zip = { version = "6", default-features = false, features = ["deflate"] }
-
-[patch.crates-io]
-# Cubek 0.2.0 double-buffered matmul needs K bounds checks for an odd number
-# of whole stages. See vendor/cubek-matmul/FEATHERTALK-PATCH.md.
-cubek-matmul = { path = "vendor/cubek-matmul" }
 
 # burn's tensor kernels are generic, so they are monomorphized into whichever
 # crate calls them and compile at opt-level 0 in a plain `cargo test`. That makes

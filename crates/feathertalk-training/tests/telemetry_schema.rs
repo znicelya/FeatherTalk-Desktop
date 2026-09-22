@@ -1,7 +1,6 @@
 use feathertalk_training::{
     PREVIEW_ARTIFACT_SCHEMA_VERSION, PREVIEW_TENSOR_SHAPE, PreviewArtifact,
-    TRAINING_METRICS_SCHEMA_VERSION, TrainingError, TrainingMetrics, TrainingMode,
-};
+    TRAINING_METRICS_SCHEMA_VERSION, TrainingError, TrainingMetrics, TrainingMode};
 
 fn metrics(mode: TrainingMode) -> TrainingMetrics {
     TrainingMetrics {
@@ -19,8 +18,7 @@ fn metrics(mode: TrainingMode) -> TrainingMetrics {
         samples_per_second: 12.5,
         estimated_remaining_seconds: 8.0,
         gpu_memory_bytes: Some(4_000_000),
-        worker_state: "training".to_owned(),
-    }
+        worker_state: "training".to_owned()}
 }
 
 #[test]

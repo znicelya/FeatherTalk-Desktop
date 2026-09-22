@@ -2,18 +2,15 @@ mod support;
 
 use std::{
     path::Path,
-    sync::{Arc, OnceLock},
-};
+    sync::{Arc, OnceLock}};
 
 use burn::tensor::{Tensor, TensorData};
 use feathertalk_face::DetectionConfig;
 use feathertalk_frame_adapters::{
-    FrameImageCache, JpegFrameDecoder, ScrfdFaceDetector, ScrfdInput, scrfd_input,
-};
+    FrameImageCache, JpegFrameDecoder, ScrfdFaceDetector, ScrfdInput, scrfd_input};
 use feathertalk_frame_pipeline::{
     DecodedFrame, FACE_CONFIDENCE_THRESHOLD, FaceDetection, FaceDetector, FrameDecoder,
-    NMS_IOU_THRESHOLD,
-};
+    NMS_IOU_THRESHOLD};
 use feathertalk_models::backend::CpuBackend;
 use feathertalk_scrfd::{SCRFD_INPUT_SHAPE, ScrfdArtifactPaths, ScrfdModel};
 
@@ -23,8 +20,7 @@ fn artifact_paths() -> ScrfdArtifactPaths {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../feathertalk-scrfd/artifacts/scrfd_2_5g");
     ScrfdArtifactPaths {
         manifest: root.join("manifest.json"),
-        weights: root.join("model.safetensors"),
-    }
+        weights: root.join("model.safetensors")}
 }
 
 /// One cache for the whole binary, so the decoder and the detector share the
@@ -37,8 +33,8 @@ fn shared_cache() -> Arc<FrameImageCache> {
 /// Reading 3.3 MB of weights takes longer than the forward pass, so the shared
 /// detector is loaded once. `&'static` is sound because `FaceDetector` is
 /// `Send + Sync`.
-fn shared_detector() -> &'static ScrfdFaceDetector<CpuBackend> {
-    static DETECTOR: OnceLock<ScrfdFaceDetector<CpuBackend>> = OnceLock::new();
+fn shared_detector() -> &'static ScrfdFaceDetector {
+    static DETECTOR: OnceLock<ScrfdFaceDetector> = OnceLock::new();
     DETECTOR.get_or_init(|| {
         ScrfdFaceDetector::load(&artifact_paths(), Default::default(), shared_cache())
             .expect("the committed artifact loads")
@@ -137,15 +133,15 @@ fn the_level_maxima_match_the_demo_fixture() {
     // so a failure here means preprocessing or weights, and a failure in the
     // tests above with this one passing means postprocessing.
     let device = Default::default();
-    let model = ScrfdModel::<CpuBackend>::load(&artifact_paths(), &device).unwrap();
-    let input = Tensor::<CpuBackend, 4>::from_data(
+    let model = ScrfdModel::load(&artifact_paths(), &device).unwrap();
+    let input = Tensor::<4>::from_data(
         TensorData::new(data, SCRFD_INPUT_SHAPE.to_vec()),
         &device,
     );
     let output = model.forward(input).unwrap();
 
     for (level, tensor) in output.levels.into_iter().enumerate() {
-        let scores = tensor.scores.into_data().to_vec::<f32>().unwrap();
+        let scores = tensor.scores.into_data().try_to_vec::<f32>().unwrap();
         let maximum = scores.iter().copied().fold(f32::MIN, f32::max);
         let want = expected.level_max_scores[level];
         assert!(
@@ -162,12 +158,11 @@ fn raising_the_confidence_threshold_rejects_the_demo_face() {
     let frame = decoded(&expected.path);
 
     let device = Default::default();
-    let model = ScrfdModel::<CpuBackend>::load(&artifact_paths(), &device).unwrap();
+    let model = ScrfdModel::load(&artifact_paths(), &device).unwrap();
     let strict = ScrfdFaceDetector::from_model(model, device, shared_cache())
         .with_detection_config(DetectionConfig {
             confidence_threshold: 0.95,
-            nms_iou_threshold: NMS_IOU_THRESHOLD,
-        });
+            nms_iou_threshold: NMS_IOU_THRESHOLD});
 
     // The demo face scores 0.8108, so a 0.95 gate must drop it. Without this
     // test nothing proves `config` reaches `scrfd_detections`.

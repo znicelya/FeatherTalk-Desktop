@@ -2,10 +2,8 @@ use feathertalk_parity::{
     archive::GoldenArchive,
     fixture::{
         ForwardCase, run_cpu_forward, run_cpu_train_step, validate_forward_fixture,
-        validate_train_step_fixture,
-    },
-    metrics::{ParityError, compare_f32},
-};
+        validate_train_step_fixture},
+    metrics::{ParityError, compare_f32}};
 use ndarray::{ArrayD, IxDyn, array};
 use serde_json::json;
 use std::fs::File;

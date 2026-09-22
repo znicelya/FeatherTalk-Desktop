@@ -6,8 +6,7 @@ pub struct PfldConfig {
     pub width_factor: f32,
     pub input_size: usize,
     pub landmark_count: usize,
-    pub num_conv_branches: usize,
-}
+    pub num_conv_branches: usize}
 
 impl PfldConfig {
     pub const fn production() -> Self {
@@ -15,8 +14,7 @@ impl PfldConfig {
             width_factor: 0.5,
             input_size: 192,
             landmark_count: 110,
-            num_conv_branches: 6,
-        }
+            num_conv_branches: 6}
     }
 
     pub const fn output_values(&self) -> usize {

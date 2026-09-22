@@ -7,60 +7,52 @@ struct ModelProto {
     #[prost(message, optional, tag = "7")]
     graph: Option<GraphProto>,
     #[prost(message, repeated, tag = "8")]
-    opset_import: Vec<OperatorSetIdProto>,
-}
+    opset_import: Vec<OperatorSetIdProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct OperatorSetIdProto {
     #[prost(string, tag = "1")]
     domain: String,
     #[prost(int64, tag = "2")]
-    version: i64,
-}
+    version: i64}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct GraphProto {
     #[prost(message, repeated, tag = "11")]
     input: Vec<ValueInfoProto>,
     #[prost(message, repeated, tag = "12")]
-    output: Vec<ValueInfoProto>,
-}
+    output: Vec<ValueInfoProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct ValueInfoProto {
     #[prost(string, tag = "1")]
     name: String,
     #[prost(message, optional, tag = "2")]
-    r#type: Option<TypeProto>,
-}
+    r#type: Option<TypeProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct TypeProto {
     #[prost(message, optional, tag = "1")]
-    tensor_type: Option<TensorTypeProto>,
-}
+    tensor_type: Option<TensorTypeProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct TensorTypeProto {
     #[prost(int32, tag = "1")]
     elem_type: i32,
     #[prost(message, optional, tag = "2")]
-    shape: Option<TensorShapeProto>,
-}
+    shape: Option<TensorShapeProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct TensorShapeProto {
     #[prost(message, repeated, tag = "1")]
-    dim: Vec<DimensionProto>,
-}
+    dim: Vec<DimensionProto>}
 
 #[derive(Clone, PartialEq, prost::Message)]
 struct DimensionProto {
     #[prost(int64, optional, tag = "1")]
     dim_value: Option<i64>,
     #[prost(string, optional, tag = "2")]
-    dim_param: Option<String>,
-}
+    dim_param: Option<String>}
 
 pub(crate) fn parse_contract(bytes: &[u8]) -> Result<OnnxContract, ToolError> {
     let model =
@@ -122,8 +114,7 @@ pub(crate) fn parse_contract(bytes: &[u8]) -> Result<OnnxContract, ToolError> {
         input_elem_type,
         input_shape,
         output_names: output_names.try_into().expect("exactly nine outputs"),
-        output_shapes,
-    })
+        output_shapes})
 }
 
 fn value_contract(value: &ValueInfoProto) -> Result<(String, i32, Vec<usize>), ToolError> {

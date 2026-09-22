@@ -6,8 +6,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::onnx::{
-    ONNX_OPSET_VERSION, OnnxModelKind, OnnxValidationError, validate_model_contract,
-};
+    ONNX_OPSET_VERSION, OnnxModelKind, OnnxValidationError, validate_model_contract};
 
 #[derive(Debug, Error)]
 pub enum OnnxPublishError {
@@ -16,8 +15,7 @@ pub enum OnnxPublishError {
     #[error("ONNX contract violation: {0}")]
     Contract(#[from] OnnxValidationError),
     #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-}
+    Io(#[from] std::io::Error)}
 
 /// A published ONNX file, as the client should record it.
 #[derive(Debug, Clone)]
@@ -25,8 +23,7 @@ pub struct OnnxArtifact {
     kind: OnnxModelKind,
     opset: i64,
     bytes: u64,
-    sha256: String,
-}
+    sha256: String}
 
 impl OnnxArtifact {
     pub fn kind(&self) -> OnnxModelKind {
@@ -93,6 +90,5 @@ pub fn publish_onnx_model(
         kind,
         opset: ONNX_OPSET_VERSION,
         bytes: published,
-        sha256: hex::encode(Sha256::digest(bytes)),
-    })
+        sha256: hex::encode(Sha256::digest(bytes))})
 }

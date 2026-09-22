@@ -3,12 +3,10 @@ use std::path::{Path, PathBuf};
 use feathertalk_audio::{FeatureMatrix, read_feature_file};
 use feathertalk_inference::{
     BgrFrame, FrameReader, JpegFrameReader, MouthMasking, RenderGeometry, build_face_crop,
-    build_inner_image_planes, build_unet_audio_window,
-};
+    build_inner_image_planes, build_unet_audio_window};
 use feathertalk_preprocess::{
     CropSpec, MaskRect, MouthRoiSpec, audio_window_indices, compute_face_bbox, default_crop_spec,
-    default_mouth_roi_spec, mouth_roi_rect, read_landmarks,
-};
+    default_mouth_roi_spec, mouth_roi_rect, read_landmarks};
 use feathertalk_project::validate_project_dir;
 use feathertalk_training::{TrainingDataset, TrainingError, TrainingSample};
 
@@ -31,8 +29,7 @@ pub struct FrameSample {
     image: Vec<f32>,
     audio: Vec<f32>,
     target: Vec<f32>,
-    mouth_mask: Vec<f32>,
-}
+    mouth_mask: Vec<f32>}
 
 impl FrameSample {
     /// Assembles a frame sample from four already-flattened planes.
@@ -56,8 +53,7 @@ impl FrameSample {
             image,
             audio,
             target,
-            mouth_mask,
-        })
+            mouth_mask})
     }
 
     /// `[6, 160, 160]`: the reference frame's planes followed by the mouth-masked target planes.
@@ -87,9 +83,7 @@ pub enum TrainingItem {
     SingleFrame(FrameSample),
     TemporalPair {
         first: FrameSample,
-        second: FrameSample,
-    },
-}
+        second: FrameSample}}
 
 /// A locked project directory presented as a training dataset.
 #[derive(Debug)]
@@ -102,42 +96,36 @@ pub struct ProjectTrainingDataset<R: FrameReader> {
     reader: R,
     crop: CropSpec,
     mouth_roi: MouthRoiSpec,
-    geometry: RenderGeometry,
-}
+    geometry: RenderGeometry}
 
 struct LoadedFrame {
     crop: BgrFrame,
-    mouth: MaskRect,
-}
+    mouth: MaskRect}
 
 fn project_error(path: &Path, message: String) -> TrainingDataError {
     TrainingDataError::Project {
         path: path.to_path_buf(),
-        message,
-    }
+        message}
 }
 
 fn features_error(path: &Path, message: String) -> TrainingDataError {
     TrainingDataError::Features {
         path: path.to_path_buf(),
-        message,
-    }
+        message}
 }
 
 fn frame_error(index: usize, path: &Path, message: String) -> TrainingDataError {
     TrainingDataError::Frame {
         index,
         path: path.to_path_buf(),
-        message,
-    }
+        message}
 }
 
 fn landmark_error(index: usize, path: &Path, message: String) -> TrainingDataError {
     TrainingDataError::Landmarks {
         index,
         path: path.to_path_buf(),
-        message,
-    }
+        message}
 }
 
 fn sample_error(index: usize, message: String) -> TrainingDataError {
@@ -196,8 +184,7 @@ impl<R: FrameReader> ProjectTrainingDataset<R> {
                 path: feature_path,
                 expected_tokens,
                 actual_tokens: features.tokens(),
-                dims: features.dims(),
-            });
+                dims: features.dims()});
         }
         Ok(Self {
             root,
@@ -208,8 +195,7 @@ impl<R: FrameReader> ProjectTrainingDataset<R> {
             reader,
             crop: default_crop_spec(),
             mouth_roi: default_mouth_roi_spec(),
-            geometry: RenderGeometry::standard(),
-        })
+            geometry: RenderGeometry::standard()})
     }
 
     /// The canonical project root the dataset reads from.
@@ -222,9 +208,7 @@ impl<R: FrameReader> ProjectTrainingDataset<R> {
             Ok(resolved) if resolved < self.frame_count => Ok(resolved),
             _ => Err(TrainingDataError::FrameIndexOutOfRange {
                 index,
-                frame_count: self.frame_count as u64,
-            }),
-        }
+                frame_count: self.frame_count as u64})}
     }
 
     fn load_frame(&self, index: usize) -> Result<LoadedFrame, TrainingDataError> {
@@ -319,16 +303,14 @@ impl<R: FrameReader> ProjectTrainingDataset<R> {
             image,
             audio: self.audio_window(index)?,
             target: keep,
-            mouth_mask: Self::mouth_mask_plane(&target.mouth),
-        })
+            mouth_mask: Self::mouth_mask_plane(&target.mouth)})
     }
 
     fn load_item(&self, sample: &TrainingSample) -> Result<TrainingItem, TrainingDataError> {
         match sample {
             TrainingSample::SingleFrame {
                 target_index,
-                reference_index,
-            } => {
+                reference_index} => {
                 let target_index = self.resolve_index(*target_index)?;
                 let reference_index = self.resolve_index(*reference_index)?;
                 let reference = self.load_frame(reference_index)?;
@@ -341,8 +323,7 @@ impl<R: FrameReader> ProjectTrainingDataset<R> {
             TrainingSample::TemporalPair {
                 first_target_index,
                 second_target_index,
-                reference_index,
-            } => {
+                reference_index} => {
                 let first_index = self.resolve_index(*first_target_index)?;
                 let second_index = self.resolve_index(*second_target_index)?;
                 let reference_index = self.resolve_index(*reference_index)?;

@@ -29,8 +29,7 @@ pub struct TrainingMetrics {
     pub samples_per_second: f64,
     pub estimated_remaining_seconds: f64,
     pub gpu_memory_bytes: Option<u64>,
-    pub worker_state: String,
-}
+    pub worker_state: String}
 
 impl TrainingMetrics {
     #[allow(clippy::too_many_arguments)]
@@ -65,8 +64,7 @@ impl TrainingMetrics {
             samples_per_second,
             estimated_remaining_seconds,
             gpu_memory_bytes,
-            worker_state: worker_state.into(),
-        };
+            worker_state: worker_state.into()};
         value.validate()?;
         Ok(value)
     }
@@ -142,8 +140,7 @@ pub struct PreviewArtifact {
     worker_state: String,
     prediction: Vec<f32>,
     target: Vec<f32>,
-    mouth_roi: Vec<f32>,
-}
+    mouth_roi: Vec<f32>}
 
 impl PreviewArtifact {
     #[allow(clippy::too_many_arguments)]
@@ -169,8 +166,7 @@ impl PreviewArtifact {
             worker_state: worker_state.into(),
             prediction,
             target,
-            mouth_roi,
-        };
+            mouth_roi};
         value.validate()?;
         Ok(value)
     }
@@ -235,8 +231,7 @@ impl PreviewArtifact {
 pub struct PreviewFileManifest {
     pub file_name: String,
     pub bytes: u64,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 impl PreviewFileManifest {
     pub fn validate(&self, expected_file_name: &str) -> Result<(), TrainingError> {
@@ -271,8 +266,7 @@ pub struct PreviewArtifactManifest {
     pub shape: [u32; 3],
     pub prediction: PreviewFileManifest,
     pub target: PreviewFileManifest,
-    pub mouth_roi: PreviewFileManifest,
-}
+    pub mouth_roi: PreviewFileManifest}
 
 impl PreviewArtifactManifest {
     pub fn validate(&self) -> Result<(), TrainingError> {

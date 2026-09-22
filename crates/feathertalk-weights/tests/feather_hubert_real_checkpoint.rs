@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use burn::tensor::{Tensor, TensorData};
-use feathertalk_models::backend::CpuBackend;
 use feathertalk_weights::load_feather_hubert_checkpoint;
 
 const EXPECTED_BYTES: u64 = 40_436_613;
@@ -19,7 +18,7 @@ fn configured_user_checkpoint_loads_and_runs_on_cpu_without_writes() {
     assert_eq!(before.len(), EXPECTED_BYTES);
 
     let device = Default::default();
-    let (model, checkpoint) = load_feather_hubert_checkpoint::<CpuBackend>(&path, &device).unwrap();
+    let (model, checkpoint) = load_feather_hubert_checkpoint(&path, &device).unwrap();
     assert_eq!(checkpoint.source_sha256(), EXPECTED_SHA256);
     assert_eq!(checkpoint.config().channels, 256);
     assert_eq!(checkpoint.config().expansion, 2);
@@ -35,7 +34,7 @@ fn configured_user_checkpoint_loads_and_runs_on_cpu_without_writes() {
     let waveform = Tensor::from_data(TensorData::new(samples, [1, 1360]), &device);
     let output = model.forward(waveform);
     assert_eq!(output.dims(), [1, 4, 1024]);
-    let values = output.into_data().to_vec::<f32>().unwrap();
+    let values = output.into_data().try_to_vec::<f32>().unwrap();
     assert!(values.iter().all(|value| value.is_finite()));
 
     let after = std::fs::metadata(&path).unwrap();

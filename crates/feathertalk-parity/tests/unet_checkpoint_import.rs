@@ -14,8 +14,8 @@ fn unet_micro_checkpoint_applies_strictly_to_burn_model() {
         .expect("golden archive should extract");
 
     let device = Default::default();
-    let mut model = OriginalUnetConfig::parity_micro().init::<CpuBackend>(&device);
-    let report = import_into::<CpuBackend, _>(
+    let mut model = OriginalUnetConfig::parity_micro().init(&device);
+    let report = import_into::<_>(
         &mut model,
         &LegacyImportRequest {
             path: fixture.join("weights/unet_micro_train.pth"),

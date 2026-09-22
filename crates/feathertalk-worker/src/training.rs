@@ -1,7 +1,6 @@
 use std::{
     fs, io,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use burn::tensor::Device;
 use feathertalk_domain::{TrainParams, TrainingMode as DomainTrainingMode, UnetVariant};
@@ -9,8 +8,7 @@ use feathertalk_export::ModelConfiguration;
 use feathertalk_models::backend::CpuAutodiffBackend;
 use feathertalk_training::{
     CheckpointDescriptor, PreviewArtifact, TrainingConfig, TrainingError, TrainingMetrics,
-    TrainingMode, TrainingSample, write_preview_artifact, write_training_metrics,
-};
+    TrainingMode, TrainingSample, write_preview_artifact, write_training_metrics};
 use sha2::{Digest, Sha256};
 
 /// The default backend used by CPU convenience functions. Production dispatch
@@ -18,10 +16,10 @@ use sha2::{Digest, Sha256};
 pub type TrainBackend = CpuAutodiffBackend;
 
 /// The default CPU training device.
-pub type TrainDevice = Device<TrainBackend>;
+pub type TrainDevice = Device;
 
 /// The backend name in results from the CPU convenience functions.
-pub const TRAIN_BACKEND_NAME: &str = "ndarray-cpu";
+pub const TRAIN_BACKEND_NAME: &str = "flex-cpu";
 
 /// The protocol's single-sample default, expressed in training-config units.
 pub const DEFAULT_BATCH_SIZE: u64 = feathertalk_domain::DEFAULT_BATCH_SIZE as u64;
@@ -64,8 +62,7 @@ pub fn training_mode(mode: DomainTrainingMode) -> TrainingMode {
     match mode {
         DomainTrainingMode::Baseline => TrainingMode::Baseline,
         DomainTrainingMode::MouthRoi => TrainingMode::MouthRoi,
-        DomainTrainingMode::Temporal => TrainingMode::MouthRoiTemporal,
-    }
+        DomainTrainingMode::Temporal => TrainingMode::MouthRoiTemporal}
 }
 
 /// `TrainingConfig::validate` demands a zero stride outside the temporal mode
@@ -74,8 +71,7 @@ pub fn training_mode(mode: DomainTrainingMode) -> TrainingMode {
 fn temporal_stride(mode: DomainTrainingMode) -> u64 {
     match mode {
         DomainTrainingMode::Baseline | DomainTrainingMode::MouthRoi => 0,
-        DomainTrainingMode::Temporal => 1,
-    }
+        DomainTrainingMode::Temporal => 1}
 }
 
 /// How many samples one epoch holds. A temporal pair needs a successor, so the
@@ -83,8 +79,7 @@ fn temporal_stride(mode: DomainTrainingMode) -> u64 {
 pub fn sample_count(mode: DomainTrainingMode, frame_count: u64) -> u64 {
     match mode {
         DomainTrainingMode::Baseline | DomainTrainingMode::MouthRoi => frame_count,
-        DomainTrainingMode::Temporal => frame_count.saturating_sub(1),
-    }
+        DomainTrainingMode::Temporal => frame_count.saturating_sub(1)}
 }
 
 /// Combine the requested mode, batch size and epoch target with the worker's
@@ -99,8 +94,7 @@ pub fn training_config(params: &TrainParams) -> TrainingConfig {
         mouth_weight: MOUTH_WEIGHT,
         temporal_weight: TEMPORAL_WEIGHT,
         temporal_mouth_weight: TEMPORAL_MOUTH_WEIGHT,
-        perceptual_weight: PERCEPTUAL_WEIGHT,
-    }
+        perceptual_weight: PERCEPTUAL_WEIGHT}
 }
 
 /// Derives the checkpoint descriptor from the model configuration instead of
@@ -133,16 +127,14 @@ pub fn checkpoint_descriptor(
 pub struct TrainingPaths {
     checkpoints: PathBuf,
     metrics: PathBuf,
-    previews: PathBuf,
-}
+    previews: PathBuf}
 
 impl TrainingPaths {
     pub fn new(project_dir: &Path) -> Self {
         Self {
             checkpoints: project_dir.join(MODELS_DIR).join(UNET_DIR),
             metrics: project_dir.join(OUTPUTS_DIR).join(METRICS_DIR),
-            previews: project_dir.join(OUTPUTS_DIR).join(PREVIEW_DIR),
-        }
+            previews: project_dir.join(OUTPUTS_DIR).join(PREVIEW_DIR)}
     }
 
     /// The directory every checkpoint of this project lives in.
@@ -165,6 +157,11 @@ impl TrainingPaths {
     pub fn metrics(&self, global_step: u64) -> PathBuf {
         self.metrics
             .join(format!("{STEP_PREFIX}{global_step:08}.json"))
+    }
+
+    /// `outputs/metrics/step-profile.jsonl`.
+    pub fn step_profile(&self) -> PathBuf {
+        self.metrics.join("step-profile.jsonl")
     }
 
     /// `outputs/preview/step-00000188`.
@@ -200,8 +197,7 @@ pub struct TrainingPlan {
     pub paths: TrainingPaths,
     /// The checkpoint this run resumes from, `None` for a fresh run. It is also
     /// what the result payload reports as `resumed_from`.
-    pub resume_from: Option<PathBuf>,
-}
+    pub resume_from: Option<PathBuf>}
 
 /// Prefix of the directory a checkpoint is written into before it takes its
 /// step name.
@@ -249,8 +245,7 @@ where
             Some(retired)
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => None,
-        Err(error) => return Err(TrainingError::from(error)),
-    };
+        Err(error) => return Err(TrainingError::from(error))};
 
     fs::rename(&staged, &destination)?;
     if let Some(retired) = retired {
@@ -278,8 +273,7 @@ fn reserve_name(root: &Path, prefix: &str) -> Result<PathBuf, TrainingError> {
                 return Ok(candidate);
             }
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(TrainingError::from(error)),
-        }
+            Err(error) => return Err(TrainingError::from(error))}
     }
     Err(TrainingError::CheckpointDirectory(format!(
         "no free staging name under {} after {MAX_PUBLISH_ATTEMPTS} attempts",
@@ -293,8 +287,7 @@ pub fn latest_checkpoint(paths: &TrainingPaths) -> Result<Option<PathBuf>, Train
     let entries = match fs::read_dir(paths.checkpoints()) {
         Ok(entries) => entries,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(TrainingError::from(error)),
-    };
+        Err(error) => return Err(TrainingError::from(error))};
 
     let mut best: Option<(u64, PathBuf)> = None;
     for entry in entries {
@@ -356,8 +349,7 @@ pub fn write_preview_unless_present(
 pub fn preview_sample(frame_count: u64) -> TrainingSample {
     TrainingSample::SingleFrame {
         target_index: 0,
-        reference_index: frame_count / 2,
-    }
+        reference_index: frame_count / 2}
 }
 
 /// Whether `path` is already taken, without following a symlink.
@@ -365,6 +357,5 @@ fn exists(path: &Path) -> Result<bool, TrainingError> {
     match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(error) => Err(TrainingError::from(error)),
-    }
+        Err(error) => Err(TrainingError::from(error))}
 }

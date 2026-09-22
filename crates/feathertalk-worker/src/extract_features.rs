@@ -3,16 +3,14 @@ use std::path::PathBuf;
 use feathertalk_audio::{
     AudioError, ChunkEncoder, ChunkPlan, DEFAULT_CHUNK_SAMPLES, MAX_FEATURE_FILE_BYTES,
     drop_odd_token, expected_hubert_frames, extract_long_audio, normalize_waveform, plan_chunks,
-    read_wav_16k_mono, write_feature_file_no_clobber,
-};
+    read_wav_16k_mono, write_feature_file_no_clobber};
 use feathertalk_domain::{ExtractFeaturesParams, Progress, TaskStage};
 use feathertalk_media::CancellationToken;
 
 use crate::{
     CommandOutcome, TaskReporter,
     admission::{check_project_dir, invalid_request},
-    audio_task_error, feature_to_json, is_audio_cancellation,
-};
+    audio_task_error, feature_to_json, is_audio_cancellation};
 
 /// The asset directory `normalize_media` writes into.
 const ASSETS_DIR: &str = "assets";
@@ -50,8 +48,7 @@ pub fn execute_extract_features<E: ChunkEncoder>(
     reporter.report(TaskStage::Preparing, None);
     let admitted = match admit(params, encoder.output_dim()) {
         Ok(admitted) => admitted,
-        Err(outcome) => return outcome,
-    };
+        Err(outcome) => return outcome};
     // The runtime checks the token before dispatch; this second check covers
     // the seconds admission spent reading a large wav file.
     if token.is_cancelled() {
@@ -59,20 +56,17 @@ pub fn execute_extract_features<E: ChunkEncoder>(
     }
     let normalized = match normalize_waveform(&admitted.samples) {
         Ok(normalized) => normalized,
-        Err(error) => return audio_failure(&error),
-    };
+        Err(error) => return audio_failure(&error)};
     let total = admitted.plan.ranges().len() as u64;
     let mut progress = ChunkProgress {
         inner: encoder,
         reporter,
         token,
         total,
-        completed: 0,
-    };
+        completed: 0};
     let matrix = match extract_long_audio(&normalized, &mut progress, DEFAULT_CHUNK_SAMPLES) {
         Ok(matrix) => matrix,
-        Err(error) => return audio_failure(&error),
-    };
+        Err(error) => return audio_failure(&error)};
     // Two tokens per video frame, so an odd one has no frame to belong to.
     let matrix = drop_odd_token(matrix);
     if let Err(error) = reporter.before_publish() {
@@ -83,8 +77,7 @@ pub fn execute_extract_features<E: ChunkEncoder>(
             let payload = feature_to_json(&admitted.output_dir, &artifact, model_sha256);
             CommandOutcome::Completed(Some(payload))
         }
-        Err(error) => audio_failure(&error),
-    }
+        Err(error) => audio_failure(&error)}
 }
 
 /// Everything admission established, so the command body never re-reads the
@@ -93,8 +86,7 @@ struct Admitted {
     samples: Vec<f32>,
     plan: ChunkPlan,
     output_dir: PathBuf,
-    destination: PathBuf,
-}
+    destination: PathBuf}
 
 /// Everything that has to hold before the encoder runs, ordered so that the
 /// cheapest refusal happens first.
@@ -155,8 +147,7 @@ fn admit(params: &ExtractFeaturesParams, dims: usize) -> Result<Admitted, Comman
         samples,
         plan,
         output_dir,
-        destination,
-    })
+        destination})
 }
 
 /// Bridges the encoder onto the worker's reporter and token.
@@ -169,8 +160,7 @@ struct ChunkProgress<'a, E: ChunkEncoder> {
     reporter: &'a dyn TaskReporter,
     token: &'a CancellationToken,
     total: u64,
-    completed: u64,
-}
+    completed: u64}
 
 impl<E: ChunkEncoder> ChunkEncoder for ChunkProgress<'_, E> {
     fn output_dim(&self) -> usize {
@@ -182,8 +172,7 @@ impl<E: ChunkEncoder> ChunkEncoder for ChunkProgress<'_, E> {
         // chunk is a single forward pass with no seam inside it.
         if self.token.is_cancelled() {
             return Err(AudioError::Cancelled {
-                operation: "extract_features",
-            });
+                operation: "extract_features"});
         }
         let output = self.inner.encode(chunk_index, samples)?;
         self.completed += 1;
@@ -191,8 +180,7 @@ impl<E: ChunkEncoder> ChunkEncoder for ChunkProgress<'_, E> {
             TaskStage::ExtractingFeatures,
             Some(Progress {
                 completed: self.completed,
-                total: Some(self.total),
-            }),
+                total: Some(self.total)}),
         );
         Ok(output)
     }

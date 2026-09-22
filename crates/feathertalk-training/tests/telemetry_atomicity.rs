@@ -1,14 +1,12 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_training::{
     PREVIEW_MOUTH_ROI_FILE_NAME, PREVIEW_PREDICTION_FILE_NAME, PREVIEW_TARGET_FILE_NAME,
     PREVIEW_TENSOR_ELEMENTS, PreviewArtifact, TRAINING_METRICS_SCHEMA_VERSION, TrainingError,
     TrainingMetrics, TrainingMode, read_preview_artifact, read_training_metrics,
-    write_preview_artifact, write_training_metrics,
-};
+    write_preview_artifact, write_training_metrics};
 use sha2::{Digest, Sha256};
 
 fn preview() -> PreviewArtifact {

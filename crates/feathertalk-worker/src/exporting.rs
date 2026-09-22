@@ -2,27 +2,23 @@
 
 use std::{
     fmt, fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use burn::module::AutodiffModule;
 use feathertalk_domain::{ExportModelPackageParams, Progress, TaskStage};
 use feathertalk_export::{
     LICENSE_FILE_NAME, ModelDescription, ModelPackageManifest, PackageBuildRequest, SourceManifest,
-    TrainingManifest, TrainingMode as PackageTrainingMode, write_model_package,
-};
+    TrainingManifest, TrainingMode as PackageTrainingMode, write_model_package};
 use feathertalk_media::CancellationToken;
 use feathertalk_training::{
     CHECKPOINT_MODEL_FILE_NAME, TrainingCheckpointMetadata, TrainingConfig,
     TrainingMode as CheckpointTrainingMode, load_training_checkpoint_model,
-    read_training_checkpoint,
-};
+    read_training_checkpoint};
 
 use crate::inspect_result::package_mode_slug;
 use crate::{
-    ModelSourceKind, RenderBackend, RenderDevice, RenderVariant, TaskReporter, TrainBackend,
-    TrainDevice, WorkerConfig, checkpoint_descriptor, model_source_kind, render_variant,
-};
+    ModelSourceKind, RenderDevice, RenderVariant, TaskReporter,
+    TrainDevice, WorkerConfig, checkpoint_descriptor, model_source_kind, render_variant};
 
 /// What the published manifest calls the thing it was made from. A checkpoint is
 /// not a vendor artifact, so it gets its own format name rather than borrowing
@@ -32,23 +28,20 @@ const SOURCE_FORMAT: &str = "feathertalk-training-checkpoint";
 #[derive(Debug)]
 pub enum ExportModelPackageError {
     Cancelled { stage: TaskStage },
-    Failed { detail: String, stage: TaskStage },
-}
+    Failed { detail: String, stage: TaskStage }}
 
 impl fmt::Display for ExportModelPackageError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cancelled { .. } => formatter.write_str("model package export cancelled"),
-            Self::Failed { detail, .. } => formatter.write_str(detail),
-        }
+            Self::Failed { detail, .. } => formatter.write_str(detail)}
     }
 }
 
 impl ExportModelPackageError {
     pub fn stage(&self) -> TaskStage {
         match self {
-            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone(),
-        }
+            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone()}
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -72,8 +65,7 @@ pub struct ExportPlan {
     pub training: TrainingManifest,
     pub model_kind: String,
     pub epoch: u64,
-    pub global_step: u64,
-}
+    pub global_step: u64}
 
 /// Publishes the package a training checkpoint describes.
 ///
@@ -134,13 +126,11 @@ pub fn export_plan(
             version: format!("epoch-{epoch}-step-{global_step}"),
             file_name: CHECKPOINT_MODEL_FILE_NAME.to_owned(),
             sha256: metadata.manifest.model.sha256.clone(),
-            url: None,
-        },
+            url: None},
         training: training_manifest(&metadata.state.training_config),
         model_kind: metadata.manifest.model_kind.clone(),
         epoch,
-        global_step,
-    })
+        global_step})
 }
 
 /// Restores the record, fuses MobileOne, and publishes the package.
@@ -158,8 +148,7 @@ pub fn publish_checkpoint_package(
         TaskStage::Exporting,
         Some(Progress {
             completed: 0,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
     if token.is_cancelled() {
         return Err(cancelled(TaskStage::Exporting));
@@ -173,8 +162,8 @@ pub fn publish_checkpoint_package(
     let device = RenderDevice::default();
     let manifest = match variant {
         RenderVariant::OriginalUnet(configuration) => {
-            let template = configuration.init::<TrainBackend>(&load_device);
-            let restored = load_training_checkpoint_model::<TrainBackend, _>(
+            let template = configuration.init(&load_device);
+            let restored = load_training_checkpoint_model::<_>(
                 &plan.source,
                 &template,
                 &load_device,
@@ -188,16 +177,16 @@ pub fn publish_checkpoint_package(
             // shell is dropped here because a package carries weights only.
             let model = restored.model.valid();
             let factory = configuration.clone();
-            write_model_package::<RenderBackend, _, _>(
+            write_model_package::<_, _>(
                 &build_request(plan, ModelDescription::original_unet(configuration.clone())),
                 &model,
                 &device,
-                move |device| factory.init::<RenderBackend>(device),
+                move |device| factory.init(device),
             )
         }
         RenderVariant::MobileOneUnet(configuration) => {
-            let template = configuration.init::<TrainBackend>(&load_device);
-            let restored = load_training_checkpoint_model::<TrainBackend, _>(
+            let template = configuration.init(&load_device);
+            let restored = load_training_checkpoint_model::<_>(
                 &plan.source,
                 &template,
                 &load_device,
@@ -212,14 +201,14 @@ pub fn publish_checkpoint_package(
             // fused graph is what gets published.
             let model = restored.model.valid().reparameterize();
             let factory = configuration.clone();
-            write_model_package::<RenderBackend, _, _>(
+            write_model_package::<_, _>(
                 &build_request(
                     plan,
                     ModelDescription::mobileone_unet(configuration.clone(), true),
                 ),
                 &model,
                 &device,
-                move |device| factory.init::<RenderBackend>(device).reparameterize(),
+                move |device| factory.init(device).reparameterize(),
             )
         }
     }
@@ -229,8 +218,7 @@ pub fn publish_checkpoint_package(
         TaskStage::Exporting,
         Some(Progress {
             completed: 1,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
     Ok(report_json(plan, &manifest))
 }
@@ -278,8 +266,7 @@ fn validate_request(params: &ExportModelPackageParams) -> Result<(), ExportModel
             ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string())),
-    }
+        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string()))}
     let parent = params
         .destination
         .parent()
@@ -317,13 +304,11 @@ fn training_manifest(config: &TrainingConfig) -> TrainingManifest {
         mode: match config.mode {
             CheckpointTrainingMode::Baseline => PackageTrainingMode::Baseline,
             CheckpointTrainingMode::MouthRoi => PackageTrainingMode::MouthRoi,
-            CheckpointTrainingMode::MouthRoiTemporal => PackageTrainingMode::MouthRoiTemporal,
-        },
+            CheckpointTrainingMode::MouthRoiTemporal => PackageTrainingMode::MouthRoiTemporal},
         mouth_weight: config.mouth_weight,
         temporal_weight: config.temporal_weight,
         temporal_mouth_weight: config.temporal_mouth_weight,
-        perceptual_weight: config.perceptual_weight,
-    }
+        perceptual_weight: config.perceptual_weight}
 }
 
 fn build_request(plan: &ExportPlan, description: ModelDescription) -> PackageBuildRequest {
@@ -337,8 +322,7 @@ fn build_request(plan: &ExportPlan, description: ModelDescription) -> PackageBui
         licenses_path: plan.licenses.clone(),
         created_at: plan.created_at.clone(),
         minimum_app_version: plan.minimum_app_version.clone(),
-        training: plan.training.clone(),
-    }
+        training: plan.training.clone()}
 }
 
 fn report_json(plan: &ExportPlan, manifest: &ModelPackageManifest) -> serde_json::Value {
@@ -354,8 +338,7 @@ fn report_json(plan: &ExportPlan, manifest: &ModelPackageManifest) -> serde_json
         "source_sha256": manifest.source.sha256,
         "model_sha256": manifest.model.sha256,
         "tensor_count": manifest.tensors.tensor_count,
-        "total_elements": manifest.tensors.total_elements,
-    })
+        "total_elements": manifest.tensors.total_elements})
 }
 
 fn cancelled(stage: TaskStage) -> ExportModelPackageError {
@@ -365,6 +348,5 @@ fn cancelled(stage: TaskStage) -> ExportModelPackageError {
 fn failure(stage: TaskStage, detail: impl Into<String>) -> ExportModelPackageError {
     ExportModelPackageError::Failed {
         detail: detail.into(),
-        stage,
-    }
+        stage}
 }

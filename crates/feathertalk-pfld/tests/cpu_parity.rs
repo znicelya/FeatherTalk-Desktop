@@ -1,16 +1,14 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use burn::{
-    backend::NdArray,
-    tensor::{Tensor, TensorData},
-};
+    backend::Flex,
+    tensor::{Tensor, TensorData}};
 use feathertalk_pfld::PfldRuntime;
 use sha2::{Digest, Sha256};
 
-type CpuBackend = NdArray<f32>;
+type CpuBackend = Flex;
 
 fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/pytorch_cpu_v1")
@@ -66,12 +64,12 @@ fn committed_pfld_runtime_matches_python_on_all_220_cpu_outputs() {
         let input_values = read_f32(&root.join("input.f32"));
         let expected = read_f32(&root.join("output.f32"));
         let device = Default::default();
-        let runtime = PfldRuntime::<CpuBackend>::load(
+        let runtime = PfldRuntime::load(
             &Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts/pfld_ghost_one"),
             &device,
         )
         .unwrap();
-        let input = Tensor::<CpuBackend, 4>::from_data(
+        let input = Tensor::<4>::from_data(
             TensorData::new(input_values, [1, 3, 192, 192]),
             &device,
         );
@@ -79,7 +77,7 @@ fn committed_pfld_runtime_matches_python_on_all_220_cpu_outputs() {
             .forward(input)
             .unwrap()
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         let (max_abs, mean_abs) = compare(&actual, &expected);
         assert!(max_abs <= 1e-4, "max_abs={max_abs}, mean_abs={mean_abs}");

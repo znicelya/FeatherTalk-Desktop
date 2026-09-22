@@ -7,15 +7,14 @@ use feathertalk_training_data::TemporalBatch;
 use feathertalk_training_run::train_temporal_step;
 use support::{
     CpuAutodiffBackend, CpuDevice, IdentityExtractor, assert_close, model, on_step_stack,
-    training_config,
-};
+    training_config};
 
 fn stacked(
     values: &[f32],
     channels: usize,
     size: usize,
     device: &CpuDevice,
-) -> Tensor<CpuAutodiffBackend, 4> {
+) -> Tensor<4> {
     let rows = values
         .iter()
         .map(|value| Tensor::full([1, channels, size, size], *value, device))
@@ -23,17 +22,16 @@ fn stacked(
     Tensor::cat(rows, 0)
 }
 
-fn pairs(values: &[f32], device: &CpuDevice) -> Tensor<CpuAutodiffBackend, 5> {
+fn pairs(values: &[f32], device: &CpuDevice) -> Tensor<5> {
     stacked(values, 3, 160, device).reshape([2, 2, 3, 160, 160])
 }
 
-fn batch(device: &CpuDevice) -> TemporalBatch<CpuAutodiffBackend> {
+fn batch(device: &CpuDevice) -> TemporalBatch{
     TemporalBatch {
         image: stacked(&[0.25, 0.25, 0.75, 0.75], 6, 160, device),
         audio: stacked(&[0.5, 0.5, 0.1, 0.1], 16, 32, device),
         target: pairs(&[0.0, 0.5, 0.25, 1.0], device),
-        mouth_mask: Tensor::ones([2, 2, 1, 160, 160], device),
-    }
+        mouth_mask: Tensor::ones([2, 2, 1, 160, 160], device)}
 }
 
 #[test]

@@ -3,8 +3,7 @@ mod support;
 
 use feathertalk_training::{
     PREVIEW_TENSOR_ELEMENTS, PREVIEW_TENSOR_SHAPE, TrainingDataset, TrainingSample,
-    read_preview_artifact, write_preview_artifact,
-};
+    read_preview_artifact, write_preview_artifact};
 use feathertalk_training_data::TrainingItem;
 use feathertalk_training_run::build_preview_artifact;
 use fixture::{dataset, locked_project};
@@ -19,8 +18,7 @@ fn sha256() -> String {
 fn single_frame() -> TrainingSample {
     TrainingSample::SingleFrame {
         target_index: 1,
-        reference_index: 0,
-    }
+        reference_index: 0}
 }
 
 #[test]
@@ -32,7 +30,7 @@ fn the_preview_masks_the_prediction_with_the_mouth_roi() {
         let unet = model(&device);
         let sample = single_frame();
 
-        let artifact = build_preview_artifact::<CpuAutodiffBackend, _, _>(
+        let artifact = build_preview_artifact::<_, _>(
             &unet,
             &data,
             &device,
@@ -92,10 +90,9 @@ fn a_temporal_sample_has_no_preview() {
         let sample = TrainingSample::TemporalPair {
             first_target_index: 1,
             second_target_index: 2,
-            reference_index: 0,
-        };
+            reference_index: 0};
 
-        let error = build_preview_artifact::<CpuAutodiffBackend, _, _>(
+        let error = build_preview_artifact::<_, _>(
             &unet,
             &data,
             &device,
@@ -123,7 +120,7 @@ fn the_preview_round_trips_through_disk() {
         let data = dataset(&project_dir);
         let unet = model(&device);
 
-        let artifact = build_preview_artifact::<CpuAutodiffBackend, _, _>(
+        let artifact = build_preview_artifact::<_, _>(
             &unet,
             &data,
             &device,

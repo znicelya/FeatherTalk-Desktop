@@ -1,6 +1,5 @@
 use feathertalk_inference::{
-    BgrFrame, InferenceError, RenderGeometry, build_face_crop, crop_bgr, resize_bilinear,
-};
+    BgrFrame, InferenceError, RenderGeometry, build_face_crop, crop_bgr, resize_bilinear};
 use feathertalk_preprocess::FaceBoundingBox;
 
 #[test]
@@ -17,8 +16,7 @@ fn crop_copies_a_left_top_inclusive_region() {
             xmin: 1,
             ymin: 0,
             xmax: 3,
-            ymax: 2,
-        },
+            ymax: 2},
     )
     .unwrap();
     assert_eq!((crop.width(), crop.height()), (2, 2));
@@ -33,20 +31,17 @@ fn crop_rejects_negative_or_outside_bbox_without_panicking() {
             xmin: -1,
             ymin: 0,
             xmax: 2,
-            ymax: 2,
-        },
+            ymax: 2},
         FaceBoundingBox {
             xmin: 1,
             ymin: 0,
             xmax: 4,
-            ymax: 2,
-        },
+            ymax: 2},
         FaceBoundingBox {
             xmin: 2,
             ymin: 1,
             xmax: 2,
-            ymax: 2,
-        },
+            ymax: 2},
     ] {
         assert!(matches!(
             crop_bgr(&frame, &bbox),
@@ -83,8 +78,7 @@ fn face_crop_is_the_bbox_crop_resized_to_the_geometry() {
         xmin: 4,
         ymin: 6,
         xmax: 44,
-        ymax: 46,
-    };
+        ymax: 46};
     let geometry = RenderGeometry::standard();
     let face_crop = build_face_crop(&frame, &bbox, &geometry).unwrap();
     let source = crop_bgr(&frame, &bbox).unwrap();
@@ -100,8 +94,7 @@ fn face_crop_rejects_a_bbox_outside_the_frame() {
         xmin: 0,
         ymin: 0,
         xmax: 9,
-        ymax: 8,
-    };
+        ymax: 8};
     assert!(matches!(
         build_face_crop(&frame, &bbox, &RenderGeometry::standard()),
         Err(InferenceError::InvalidBbox { .. })

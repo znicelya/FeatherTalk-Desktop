@@ -33,8 +33,7 @@ fn a_missing_frame_file_is_an_io_error() {
             assert_eq!(operation, "decode_frame");
             assert_eq!(reported, path);
         }
-        other => panic!("expected an Io error, got {other}"),
-    }
+        other => panic!("expected an Io error, got {other}")}
 }
 
 #[test]
@@ -48,8 +47,7 @@ fn a_file_that_is_not_a_jpeg_is_an_adapter_error() {
             assert_eq!(component, "jpeg");
             assert!(message.contains("SOI marker"), "{message}");
         }
-        other => panic!("expected an Adapter error, got {other}"),
-    }
+        other => panic!("expected an Adapter error, got {other}")}
 }
 
 #[test]
@@ -67,8 +65,7 @@ fn a_frame_beyond_the_pixel_budget_is_an_adapter_error() {
             assert!(message.contains("16777216 pixels"), "{message}");
             assert!(message.contains("1024 pixel budget"), "{message}");
         }
-        other => panic!("expected an Adapter error, got {other}"),
-    }
+        other => panic!("expected an Adapter error, got {other}")}
 }
 
 #[test]
@@ -98,8 +95,7 @@ fn default_and_new_build_the_same_cache() {
             // Past the budget check, the truncated header fails in the decoder.
             assert!(!message.contains("pixel budget"), "{message}");
         }
-        other => panic!("expected an Adapter error, got {other}"),
-    }
+        other => panic!("expected an Adapter error, got {other}")}
 }
 
 #[test]
@@ -198,6 +194,5 @@ fn a_real_frame_beyond_the_pixel_budget_is_rejected() {
             assert!(message.contains("409600 pixels"), "{message}");
             assert!(message.contains("409599 pixel budget"), "{message}");
         }
-        other => panic!("expected an Adapter error, got {other}"),
-    }
+        other => panic!("expected an Adapter error, got {other}")}
 }

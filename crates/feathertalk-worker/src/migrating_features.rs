@@ -16,23 +16,20 @@ const FEATURE_PAIR_WIDTH: usize = 2;
 #[derive(Debug)]
 pub enum MigrateLegacyFeaturesError {
     Cancelled { stage: TaskStage },
-    Failed { detail: String, stage: TaskStage },
-}
+    Failed { detail: String, stage: TaskStage }}
 
 impl fmt::Display for MigrateLegacyFeaturesError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cancelled { .. } => formatter.write_str("legacy feature migration cancelled"),
-            Self::Failed { detail, .. } => formatter.write_str(detail),
-        }
+            Self::Failed { detail, .. } => formatter.write_str(detail)}
     }
 }
 
 impl MigrateLegacyFeaturesError {
     pub fn stage(&self) -> TaskStage {
         match self {
-            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone(),
-        }
+            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone()}
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -49,15 +46,13 @@ pub fn execute_migrate_legacy_features(
     reporter.report(TaskStage::Preparing, None);
     if token.is_cancelled() {
         return Err(MigrateLegacyFeaturesError::Cancelled {
-            stage: TaskStage::Preparing,
-        });
+            stage: TaskStage::Preparing});
     }
     reporter.report(
         TaskStage::Importing,
         Some(Progress {
             completed: 0,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
 
     let file = fs::File::open(&params.source)
@@ -73,8 +68,7 @@ pub fn execute_migrate_legacy_features(
     })?;
     if token.is_cancelled() {
         return Err(MigrateLegacyFeaturesError::Cancelled {
-            stage: TaskStage::Importing,
-        });
+            stage: TaskStage::Importing});
     }
     let rank = array.ndim();
     if rank != 3 {
@@ -108,8 +102,7 @@ pub fn execute_migrate_legacy_features(
         .map_err(|error| failure(TaskStage::Importing, error.to_string()))?;
     if token.is_cancelled() {
         return Err(MigrateLegacyFeaturesError::Cancelled {
-            stage: TaskStage::Importing,
-        });
+            stage: TaskStage::Importing});
     }
     let artifact = write_feature_file_no_clobber(&params.destination, &matrix)
         .map_err(|error| failure(TaskStage::Importing, error.to_string()))?;
@@ -117,8 +110,7 @@ pub fn execute_migrate_legacy_features(
         TaskStage::Importing,
         Some(Progress {
             completed: 1,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
     Ok(serde_json::json!({
         "kind": "migrate_legacy_features",
@@ -128,8 +120,7 @@ pub fn execute_migrate_legacy_features(
         "tokens": artifact.tokens(),
         "dims": artifact.dims(),
         "bytes": artifact.bytes(),
-        "sha256": artifact.sha256(),
-    }))
+        "sha256": artifact.sha256()}))
 }
 
 fn validate_request(
@@ -183,8 +174,7 @@ fn validate_request(
             ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string())),
-    }
+        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string()))}
     let parent = params
         .destination
         .parent()
@@ -204,6 +194,5 @@ fn validate_request(
 fn failure(stage: TaskStage, detail: impl Into<String>) -> MigrateLegacyFeaturesError {
     MigrateLegacyFeaturesError::Failed {
         detail: detail.into(),
-        stage,
-    }
+        stage}
 }

@@ -7,20 +7,17 @@ use feathertalk_domain::{ErrorCode, MigrateLegacyFeaturesParams, Progress, Reque
 use feathertalk_media::CancellationToken;
 use feathertalk_worker::{
     CommandOutcome, NoReporter, TaskReporter, WorkerConfig, execute,
-    execute_migrate_legacy_features,
-};
+    execute_migrate_legacy_features};
 use ndarray::{Array2, Array3};
 
 /// Records the stages a command reports, so a test can assert their order.
 struct Recorder {
-    events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
-}
+    events: Mutex<Vec<(TaskStage, Option<Progress>)>>}
 
 impl Recorder {
     fn new() -> Self {
         Self {
-            events: Mutex::new(Vec::new()),
-        }
+            events: Mutex::new(Vec::new())}
     }
 
     fn stages(&self) -> Vec<TaskStage> {
@@ -45,8 +42,7 @@ impl TaskReporter for Recorder {
 fn params(source: PathBuf, destination: PathBuf) -> MigrateLegacyFeaturesParams {
     MigrateLegacyFeaturesParams {
         source,
-        destination,
-    }
+        destination}
 }
 
 fn valid_npy(path: &std::path::Path) {

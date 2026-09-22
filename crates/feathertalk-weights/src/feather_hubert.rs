@@ -1,9 +1,8 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
-    path::Path,
-};
+    path::Path};
 
-use burn::tensor::{DType, backend::Backend};
+use burn::tensor::DType;
 use burn_store::pytorch::{PytorchReader, reader::PickleValue};
 use feathertalk_models::feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder};
 
@@ -12,17 +11,14 @@ use crate::{
     legacy::select_top_level_key,
     source::{
         DEFAULT_MAX_FILE_BYTES, DEFAULT_MAX_TENSOR_COUNT, DEFAULT_MAX_TOTAL_ELEMENTS, SnapshotFile,
-        tensor_elements,
-    },
-};
+        tensor_elements}};
 
 #[derive(Debug, Clone)]
 pub struct FeatherHubertCheckpoint {
     config: FeatherHubertConfig,
     source_sha256: String,
     tensor_count: usize,
-    total_elements: u64,
-}
+    total_elements: u64}
 
 impl FeatherHubertCheckpoint {
     pub fn config(&self) -> &FeatherHubertConfig {
@@ -45,16 +41,14 @@ impl FeatherHubertCheckpoint {
 #[derive(Debug, Clone)]
 struct TensorFact {
     dtype: DType,
-    shape: Vec<usize>,
-}
+    shape: Vec<usize>}
 
 impl TensorFact {
     #[cfg(test)]
     fn f32(shape: Vec<usize>) -> Self {
         Self {
             dtype: DType::F32,
-            shape,
-        }
+            shape}
     }
 }
 
@@ -64,14 +58,12 @@ struct MetadataConfig {
     expansion: usize,
     num_blocks: usize,
     output_dim: usize,
-    dropout: f64,
-}
+    dropout: f64}
 
 #[derive(Debug, Clone, Copy)]
 struct SafetyLimits {
     max_tensor_count: usize,
-    max_total_elements: u64,
-}
+    max_total_elements: u64}
 
 pub fn inspect_feather_hubert_checkpoint(
     path: impl AsRef<Path>,
@@ -81,19 +73,18 @@ pub fn inspect_feather_hubert_checkpoint(
         &snapshot,
         SafetyLimits {
             max_tensor_count: DEFAULT_MAX_TENSOR_COUNT,
-            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS,
-        },
+            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS},
     )
 }
 
-pub fn load_feather_hubert_checkpoint<B: Backend>(
+pub fn load_feather_hubert_checkpoint(
     path: impl AsRef<Path>,
-    device: &B::Device,
-) -> Result<(FeatherHubertEncoder<B>, FeatherHubertCheckpoint), WeightImportError> {
+    device: &burn::tensor::Device,
+) -> Result<(FeatherHubertEncoder, FeatherHubertCheckpoint), WeightImportError> {
     let path = path.as_ref();
     let checkpoint = inspect_feather_hubert_checkpoint(path)?;
-    let mut model = checkpoint.config.clone().init::<B>(device);
-    let report = import_into::<B, _>(
+    let mut model = checkpoint.config.clone().init(device);
+    let report = import_into::<_>(
         &mut model,
         &LegacyImportRequest {
             path: path.to_owned(),
@@ -101,8 +92,7 @@ pub fn load_feather_hubert_checkpoint<B: Backend>(
             top_level_key: None,
             max_file_bytes: DEFAULT_MAX_FILE_BYTES,
             max_tensor_count: DEFAULT_MAX_TENSOR_COUNT,
-            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS,
-        },
+            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS},
     )?;
     if report.source_sha256 != checkpoint.source_sha256
         || report.tensor_count != checkpoint.tensor_count
@@ -131,13 +121,11 @@ fn inspect_snapshot(
         top_level_key: None,
         max_file_bytes: DEFAULT_MAX_FILE_BYTES,
         max_tensor_count: limits.max_tensor_count,
-        max_total_elements: limits.max_total_elements,
-    };
+        max_total_elements: limits.max_total_elements};
     let top_level_key = select_top_level_key(snapshot.path(), &selection_request)?;
     let reader = match top_level_key.as_deref() {
         Some(key) => PytorchReader::with_top_level_key(snapshot.path(), key),
-        None => PytorchReader::new(snapshot.path()),
-    }
+        None => PytorchReader::new(snapshot.path())}
     .map_err(store_error)?;
 
     let mut facts = BTreeMap::new();
@@ -153,8 +141,7 @@ fn inspect_snapshot(
                 key.clone(),
                 TensorFact {
                     dtype: tensor.dtype,
-                    shape: tensor.shape.to_vec(),
-                },
+                    shape: tensor.shape.to_vec()},
             )
             .is_some()
         {
@@ -170,8 +157,7 @@ fn inspect_snapshot(
         config,
         source_sha256: snapshot.sha256().to_owned(),
         tensor_count,
-        total_elements,
-    })
+        total_elements})
 }
 
 fn read_metadata(path: &Path) -> Result<Option<MetadataConfig>, WeightImportError> {
@@ -196,8 +182,7 @@ fn read_metadata(path: &Path) -> Result<Option<MetadataConfig>, WeightImportErro
             ))
         }
         (Some(config), _) | (_, Some(config)) => Ok(Some(config)),
-        (None, None) => Ok(None),
-    }
+        (None, None) => Ok(None)}
 }
 
 fn parse_metadata_config(
@@ -214,8 +199,7 @@ fn parse_metadata_config(
         expansion: positive_usize(name, values, "expansion")?,
         num_blocks: positive_usize(name, values, "num_blocks")?,
         output_dim: positive_usize(name, values, "output_dim")?,
-        dropout: dropout_value(name, values)?,
-    })
+        dropout: dropout_value(name, values)?})
 }
 
 fn positive_usize(
@@ -318,8 +302,7 @@ fn infer_config(
         expansion,
         num_blocks,
         output_dim,
-        dropout: 0.0,
-    })
+        dropout: 0.0})
 }
 
 fn contiguous_block_count(
@@ -427,8 +410,7 @@ impl TensorFact {
     fn f32_for_runtime(shape: Vec<usize>) -> Self {
         Self {
             dtype: DType::F32,
-            shape,
-        }
+            shape}
     }
 }
 
@@ -497,8 +479,7 @@ mod tests {
             expansion,
             num_blocks,
             output_dim,
-            dropout,
-        }
+            dropout}
     }
 
     #[test]
@@ -596,8 +577,7 @@ mod tests {
                 10,
                 SafetyLimits {
                     max_tensor_count: 1,
-                    max_total_elements: 10,
-                }
+                    max_total_elements: 10}
             ),
             Err(WeightImportError::UnsafeLimit(_))
         ));
@@ -607,8 +587,7 @@ mod tests {
                 11,
                 SafetyLimits {
                     max_tensor_count: 1,
-                    max_total_elements: 10,
-                }
+                    max_total_elements: 10}
             ),
             Err(WeightImportError::UnsafeLimit(_))
         ));

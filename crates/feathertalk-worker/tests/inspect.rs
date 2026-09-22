@@ -4,8 +4,7 @@ use feathertalk_domain::{ErrorCode, InspectModelParams, TaskError, TaskStage};
 use feathertalk_media::CancellationToken;
 use feathertalk_training::CheckpointDescriptor;
 use feathertalk_worker::{
-    CommandOutcome, WorkerConfig, checkpoint_descriptor, execute_inspect_model, render_variant,
-};
+    CommandOutcome, WorkerConfig, checkpoint_descriptor, execute_inspect_model, render_variant};
 use serde_json::Value;
 
 #[path = "support/mod.rs"]
@@ -20,22 +19,19 @@ fn config() -> WorkerConfig {
 
 fn params(source: &Path) -> InspectModelParams {
     InspectModelParams {
-        source: source.to_path_buf(),
-    }
+        source: source.to_path_buf()}
 }
 
 fn failed(outcome: CommandOutcome) -> TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failure, got {other:?}"),
-    }
+        other => panic!("expected a failure, got {other:?}")}
 }
 
 fn completed(outcome: CommandOutcome) -> Value {
     match outcome {
         CommandOutcome::Completed(Some(payload)) => payload,
-        other => panic!("expected a payload, got {other:?}"),
-    }
+        other => panic!("expected a payload, got {other:?}")}
 }
 
 #[test]

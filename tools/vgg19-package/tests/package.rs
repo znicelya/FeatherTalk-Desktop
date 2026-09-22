@@ -1,15 +1,14 @@
 use std::{fs, io, path::PathBuf};
 
-use burn::{tensor::TensorData, tensor::backend::Backend};
+use burn::tensor::TensorData;
 use burn_store::ModuleSnapshot;
 use feathertalk_training::{
-    Vgg19Conv3_3, Vgg19LicenseBundle, Vgg19LicenseEntry, load_vgg19_package,
-};
+    Vgg19Conv3_3, Vgg19LicenseBundle, Vgg19LicenseEntry, load_vgg19_package};
 use feathertalk_vgg19_package::{PackageError, Vgg19PackageRequest, build_vgg19_package};
 use feathertalk_weights::{LegacyImportRequest, LegacyModelKind, import_into};
 use zip::ZipArchive;
 
-type CpuBackend = burn::backend::NdArray<f32>;
+type CpuBackend = burn::backend::Flex;
 
 #[test]
 fn direct_fixture_builds_a_loadable_three_file_package() {
@@ -19,8 +18,7 @@ fn direct_fixture_builds_a_loadable_three_file_package() {
     let report = build_vgg19_package(&Vgg19PackageRequest {
         source: fixture.source.clone(),
         licenses: fixture.licenses.clone(),
-        destination: destination.clone(),
-    })
+        destination: destination.clone()})
     .unwrap();
 
     assert_eq!(report.manifest.tensor_count, 14);
@@ -29,7 +27,7 @@ fn direct_fixture_builds_a_loadable_three_file_package() {
     assert!(destination.join("model.safetensors").is_file());
     assert!(destination.join("LICENSES.json").is_file());
 
-    let loaded = load_vgg19_package::<CpuBackend>(&destination, &Default::default()).unwrap();
+    let loaded = load_vgg19_package(&destination, &Default::default()).unwrap();
     let expected = import_fixture(&fixture.source);
     assert_module_data_equal(&expected, &loaded);
 }
@@ -44,8 +42,7 @@ fn existing_destination_is_rejected_without_overwrite() {
     let error = build_vgg19_package(&Vgg19PackageRequest {
         source: fixture.source,
         licenses: fixture.licenses,
-        destination: destination.clone(),
-    })
+        destination: destination.clone()})
     .unwrap_err();
 
     assert!(matches!(error, PackageError::InvalidRequest(_)));
@@ -60,8 +57,7 @@ fn invalid_license_bundle_leaves_destination_absent() {
         &fixture.licenses,
         serde_json::to_vec_pretty(&Vgg19LicenseBundle {
             schema_version: 1,
-            entries: Vec::new(),
-        })
+            entries: Vec::new()})
         .unwrap(),
     )
     .unwrap();
@@ -69,8 +65,7 @@ fn invalid_license_bundle_leaves_destination_absent() {
     let error = build_vgg19_package(&Vgg19PackageRequest {
         source: fixture.source,
         licenses: fixture.licenses,
-        destination: destination.clone(),
-    })
+        destination: destination.clone()})
     .unwrap_err();
 
     assert!(matches!(error, PackageError::Training(_)));
@@ -86,8 +81,7 @@ fn unexpected_source_tensor_leaves_destination_absent() {
     let error = build_vgg19_package(&Vgg19PackageRequest {
         source: unexpected,
         licenses: fixture.licenses,
-        destination: destination.clone(),
-    })
+        destination: destination.clone()})
     .unwrap_err();
 
     assert!(matches!(error, PackageError::WeightImport(_)));
@@ -97,8 +91,7 @@ fn unexpected_source_tensor_leaves_destination_absent() {
 struct Fixture {
     temp: tempfile::TempDir,
     source: PathBuf,
-    licenses: PathBuf,
-}
+    licenses: PathBuf}
 
 fn fixture() -> Fixture {
     let temp = tempfile::tempdir().unwrap();
@@ -110,15 +103,12 @@ fn fixture() -> Fixture {
             component: "synthetic VGG19 import fixture".to_owned(),
             license_id: "LicenseRef-Test-Only".to_owned(),
             source_url: "https://example.invalid/vgg19".to_owned(),
-            notice: "Synthetic test fixture only.".to_owned(),
-        }],
-    };
+            notice: "Synthetic test fixture only.".to_owned()}]};
     fs::write(&licenses, serde_json::to_vec_pretty(&bundle).unwrap()).unwrap();
     Fixture {
         temp,
         source,
-        licenses,
-    }
+        licenses}
 }
 
 fn extract_fixture(temp: &tempfile::TempDir, member: &str) -> PathBuf {
@@ -133,10 +123,10 @@ fn extract_fixture(temp: &tempfile::TempDir, member: &str) -> PathBuf {
     destination
 }
 
-fn import_fixture(path: &std::path::Path) -> Vgg19Conv3_3<CpuBackend> {
+fn import_fixture(path: &std::path::Path) -> Vgg19Conv3_3{
     let device = Default::default();
-    let mut model = Vgg19Conv3_3::<CpuBackend>::new_for_import(&device);
-    let report = import_into::<CpuBackend, _>(
+    let mut model = Vgg19Conv3_3::new_for_import(&device);
+    let report = import_into::<_>(
         &mut model,
         &LegacyImportRequest {
             path: path.to_owned(),
@@ -144,22 +134,21 @@ fn import_fixture(path: &std::path::Path) -> Vgg19Conv3_3<CpuBackend> {
             top_level_key: None,
             max_file_bytes: 16 * 1024 * 1024,
             max_tensor_count: 64,
-            max_total_elements: 2_000_000,
-        },
+            max_total_elements: 2_000_000},
     )
     .unwrap();
     assert_eq!(report.applied.len(), 14);
     model
 }
 
-fn module_data<B: Backend, M: ModuleSnapshot<B>>(module: &M) -> Vec<(String, TensorData)> {
+fn module_data<M: ModuleSnapshot>(module: &M) -> Vec<(String, TensorData)> {
     module
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot.to_data().unwrap()))
+        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
         .collect()
 }
 
-fn assert_module_data_equal<B: Backend, M: ModuleSnapshot<B>>(first: &M, second: &M) {
+fn assert_module_data_equal<M: ModuleSnapshot>(first: &M, second: &M) {
     assert_eq!(module_data(first), module_data(second));
 }

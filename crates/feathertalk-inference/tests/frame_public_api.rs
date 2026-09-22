@@ -1,7 +1,6 @@
 use feathertalk_inference::{
     BgrFrame, InferenceError, RenderGeometry, UnetImageInput, apply_unet_prediction,
-    build_unet_image_input, crop_bgr, paste_bgr, render_frame, resize_bilinear,
-};
+    build_unet_image_input, crop_bgr, paste_bgr, render_frame, resize_bilinear};
 use feathertalk_preprocess::FaceBoundingBox;
 
 #[test]
@@ -12,8 +11,7 @@ fn frame_kernel_is_available_from_crate_root() {
         xmin: 0,
         ymin: 0,
         xmax: 1,
-        ymax: 1,
-    };
+        ymax: 1};
     let _cropped: BgrFrame = crop_bgr(&destination, &bbox).unwrap();
     let _resized: BgrFrame = resize_bilinear(&source, 2, 2).unwrap();
     paste_bgr(&mut destination, &source, 1, 1).unwrap();
@@ -32,8 +30,7 @@ fn frame_kernel_is_available_from_crate_root() {
             xmin: 0,
             ymin: 0,
             xmax: 1,
-            ymax: 1,
-        },
+            ymax: 1},
         &vec![0.0; 3 * 160 * 160],
         &geometry,
     )

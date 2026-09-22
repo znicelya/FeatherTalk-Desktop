@@ -2,7 +2,8 @@ use burn::nn::{
     Gelu, GroupNorm, GroupNormConfig, PaddingConfig1d,
     conv::{Conv1d, Conv1dConfig},
 };
-use burn::tensor::{Tensor, backend::Backend, ops::PadMode};
+use burn::tensor::{Tensor, ops::PadMode};
+use burn::tensor::Device;
 
 use super::{
     config::{FeatherHubertConfig, expected_hubert_frames},
@@ -12,17 +13,16 @@ use super::{
 };
 
 #[derive(burn::module::Module, Debug)]
-pub struct FeatherHubertEncoder<B: Backend> {
-    pub frontend: HubertStrideFrontend<B>,
-    pub encoder: Vec<DepthwiseTcnBlock<B>>,
-    pub final_norm: GroupNorm<B>,
-    pub proj: Conv1d<B>,
+pub struct FeatherHubertEncoder {
+    pub frontend: HubertStrideFrontend,
+    pub encoder: Vec<DepthwiseTcnBlock>,
+    pub final_norm: GroupNorm,
+    pub proj: Conv1d,
     #[module(skip)]
-    pub config: FeatherHubertConfig,
-}
+    pub config: FeatherHubertConfig}
 
-impl<B: Backend> FeatherHubertEncoder<B> {
-    pub(crate) fn new(config: FeatherHubertConfig, device: &B::Device) -> Self {
+impl FeatherHubertEncoder {
+    pub(crate) fn new(config: FeatherHubertConfig, device: &Device) -> Self {
         let frontend = HubertStrideFrontend::new(
             [
                 64,
@@ -57,11 +57,10 @@ impl<B: Backend> FeatherHubertEncoder<B> {
             encoder,
             final_norm,
             proj,
-            config,
-        }
+            config}
     }
 
-    pub fn forward(&self, waveform: Tensor<B, 2>) -> Tensor<B, 3> {
+    pub fn forward(&self, waveform: Tensor<2>) -> Tensor<3> {
         let expected_frames = expected_hubert_frames(waveform.dims()[1]);
         assert!(
             expected_frames > 0,

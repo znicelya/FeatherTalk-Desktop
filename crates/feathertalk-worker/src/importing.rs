@@ -5,13 +5,9 @@ use std::{fmt, fs, path::Path};
 use feathertalk_domain::{ImportLegacyModelParams, LegacyModelKind, Progress, TaskStage};
 use feathertalk_export::{
     FeatherHubertPackageRequest, ModelDescription, PackageBuildRequest, SourceManifest,
-    TrainingManifest, build_feather_hubert_package, write_model_package,
-};
+    TrainingManifest, build_feather_hubert_package, write_model_package};
 use feathertalk_media::CancellationToken;
-use feathertalk_models::{
-    backend::CpuBackend,
-    unet::{OriginalUnet, OriginalUnetConfig},
-};
+use feathertalk_models::unet::{OriginalUnet, OriginalUnetConfig};
 use feathertalk_weights::{LegacyImportRequest, LegacyModelKind as WeightModelKind, import_into};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
@@ -22,15 +18,13 @@ const SOURCE_FORMAT: &str = "pytorch-pickle-restricted";
 #[derive(Debug)]
 pub enum ImportLegacyModelError {
     Cancelled,
-    Failed { detail: String, stage: TaskStage },
-}
+    Failed { detail: String, stage: TaskStage }}
 
 impl fmt::Display for ImportLegacyModelError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cancelled => formatter.write_str("legacy model import cancelled"),
-            Self::Failed { detail, .. } => formatter.write_str(detail),
-        }
+            Self::Failed { detail, .. } => formatter.write_str(detail)}
     }
 }
 
@@ -38,8 +32,7 @@ impl ImportLegacyModelError {
     pub fn stage(&self) -> TaskStage {
         match self {
             Self::Cancelled => TaskStage::Preparing,
-            Self::Failed { stage, .. } => stage.clone(),
-        }
+            Self::Failed { stage, .. } => stage.clone()}
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -61,8 +54,7 @@ pub fn execute_import_legacy_model(
         TaskStage::Importing,
         Some(Progress {
             completed: 0,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
     let created_at = OffsetDateTime::now_utc()
         .format(&Rfc3339)
@@ -82,8 +74,7 @@ pub fn execute_import_legacy_model(
         LegacyModelKind::Pfld | LegacyModelKind::MobileOneUnet => Err(failure(
             TaskStage::Preparing,
             "legacy model kind is not supported by the standard package writer",
-        )),
-    }?;
+        ))}?;
     if token.is_cancelled() {
         return Err(ImportLegacyModelError::Cancelled);
     }
@@ -91,8 +82,7 @@ pub fn execute_import_legacy_model(
         TaskStage::Importing,
         Some(Progress {
             completed: 1,
-            total: Some(1),
-        }),
+            total: Some(1)}),
     );
     Ok(result)
 }
@@ -147,8 +137,7 @@ fn validate_request(params: &ImportLegacyModelParams) -> Result<(), ImportLegacy
             ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string())),
-    }
+        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string()))}
     let parent = params
         .destination
         .parent()
@@ -180,8 +169,7 @@ fn import_feather_hubert(
         licenses: licenses.to_owned(),
         destination: params.destination.clone(),
         created_at: created_at.to_owned(),
-        minimum_app_version: config.worker_version().to_owned(),
-    })
+        minimum_app_version: config.worker_version().to_owned()})
     .map_err(|error| failure(TaskStage::Importing, error.to_string()))?;
     Ok(report_json(&ImportReportData {
         kind: LegacyModelKind::FeatherHubert,
@@ -191,8 +179,7 @@ fn import_feather_hubert(
         source_sha256: &report.manifest.source.sha256,
         model_sha256: &report.manifest.model.sha256,
         tensor_count: report.manifest.tensors.tensor_count,
-        total_elements: report.manifest.tensors.total_elements,
-    }))
+        total_elements: report.manifest.tensors.total_elements}))
 }
 
 fn import_original_unet(
@@ -204,8 +191,8 @@ fn import_original_unet(
 ) -> Result<serde_json::Value, ImportLegacyModelError> {
     let device = Default::default();
     let model_config = OriginalUnetConfig::production();
-    let mut model = model_config.clone().init::<CpuBackend>(&device);
-    let import = import_into::<CpuBackend, OriginalUnet<CpuBackend>>(
+    let mut model = model_config.clone().init(&device);
+    let import = import_into::<OriginalUnet>(
         &mut model,
         &LegacyImportRequest {
             path: params.source.clone(),
@@ -219,7 +206,7 @@ fn import_original_unet(
     }
     let file_name = source_file_name(&params.source)?;
     let source_version = legacy_version(&file_name)?;
-    let package = write_model_package::<CpuBackend, _, _>(
+    let package = write_model_package::<_, _>(
         &PackageBuildRequest {
             destination: params.destination.clone(),
             description: ModelDescription::original_unet(model_config.clone()),
@@ -230,16 +217,14 @@ fn import_original_unet(
                 version: source_version,
                 file_name,
                 sha256: import.source_sha256,
-                url: None,
-            },
+                url: None},
             licenses_path: licenses.to_owned(),
             created_at: created_at.to_owned(),
             minimum_app_version: config.worker_version().to_owned(),
-            training: TrainingManifest::default(),
-        },
+            training: TrainingManifest::default()},
         &model,
         &device,
-        move |device| model_config.clone().init::<CpuBackend>(device),
+        move |device| model_config.clone().init(device),
     )
     .map_err(|error| failure(TaskStage::Importing, error.to_string()))?;
     Ok(report_json(&ImportReportData {
@@ -250,8 +235,7 @@ fn import_original_unet(
         source_sha256: &package.manifest.source.sha256,
         model_sha256: &package.manifest.model.sha256,
         tensor_count: package.manifest.tensors.tensor_count,
-        total_elements: package.manifest.tensors.total_elements,
-    }))
+        total_elements: package.manifest.tensors.total_elements}))
 }
 
 struct ImportReportData<'a> {
@@ -262,16 +246,14 @@ struct ImportReportData<'a> {
     source_sha256: &'a str,
     model_sha256: &'a str,
     tensor_count: usize,
-    total_elements: u64,
-}
+    total_elements: u64}
 
 fn report_json(report: &ImportReportData<'_>) -> serde_json::Value {
     let model_kind = match report.kind {
         LegacyModelKind::FeatherHubert => "feather_hubert",
         LegacyModelKind::OriginalUnet => "original_unet",
         LegacyModelKind::Pfld => "pfld",
-        LegacyModelKind::MobileOneUnet => "mobileone_unet",
-    };
+        LegacyModelKind::MobileOneUnet => "mobileone_unet"};
     serde_json::json!({
         "kind": "import_legacy_model",
         "model_kind": model_kind,
@@ -281,8 +263,7 @@ fn report_json(report: &ImportReportData<'_>) -> serde_json::Value {
         "source_sha256": report.source_sha256,
         "model_sha256": report.model_sha256,
         "tensor_count": report.tensor_count,
-        "total_elements": report.total_elements,
-    })
+        "total_elements": report.total_elements})
 }
 
 fn source_file_name(source: &Path) -> Result<String, ImportLegacyModelError> {
@@ -311,6 +292,5 @@ fn legacy_version(file_name: &str) -> Result<String, ImportLegacyModelError> {
 fn failure(stage: TaskStage, detail: impl Into<String>) -> ImportLegacyModelError {
     ImportLegacyModelError::Failed {
         detail: detail.into(),
-        stage,
-    }
+        stage}
 }

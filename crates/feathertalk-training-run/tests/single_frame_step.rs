@@ -7,16 +7,14 @@ use feathertalk_training_data::SingleFrameBatch;
 use feathertalk_training_run::train_single_frame_step;
 use support::{
     CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
-    on_step_stack, training_config,
-};
+    on_step_stack, training_config};
 
-fn batch(device: &CpuDevice) -> SingleFrameBatch<CpuAutodiffBackend> {
+fn batch(device: &CpuDevice) -> SingleFrameBatch{
     SingleFrameBatch {
         image: Tensor::ones([2, 6, 160, 160], device),
         audio: Tensor::ones([2, 16, 32, 32], device),
         target: Tensor::zeros([2, 3, 160, 160], device),
-        mouth_mask: Tensor::ones([2, 1, 160, 160], device),
-    }
+        mouth_mask: Tensor::ones([2, 1, 160, 160], device)}
 }
 
 #[test]

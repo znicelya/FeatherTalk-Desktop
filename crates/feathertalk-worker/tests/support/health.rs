@@ -7,16 +7,14 @@ use feathertalk_worker::{GpuFailure, TaskReporter};
 pub struct PublicationFault {
     checks: Cell<usize>,
     fail_on: usize,
-    stage: RefCell<TaskStage>,
-}
+    stage: RefCell<TaskStage>}
 
 impl PublicationFault {
     pub fn on_check(fail_on: usize) -> Self {
         Self {
             checks: Cell::new(0),
             fail_on,
-            stage: RefCell::new(TaskStage::Preparing),
-        }
+            stage: RefCell::new(TaskStage::Preparing)}
     }
 }
 

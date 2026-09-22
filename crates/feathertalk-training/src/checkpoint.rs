@@ -1,35 +1,65 @@
 use std::{collections::BTreeMap, path::Path};
 
-use burn::{module::AutodiffModule, optim::Optimizer, tensor::backend::AutodiffBackend};
+use burn::{
+    module::AutodiffModule,
+    optim::{GradientsParams, ModuleOptimizer, OptimizerRecord},
+};
+
+/// Abstraction over optimizers that can persist and restore their state.
+/// burn 0.22 replaced the Optimizer<B, M> trait with the concrete ModuleOptimizer type;
+/// this trait keeps the checkpoint API generic over the optimizer while delegating to the
+/// inherent 	o_record/load_record methods.
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::{DataLoaderState, TrainingError};
 
+pub trait CheckpointableOptimizer {
+    fn checkpoint_record(&self) -> OptimizerRecord;
+    fn restore_record(self, record: OptimizerRecord) -> Self;
+    fn optimizer_step<M: AutodiffModule>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M;
+}
+
+impl CheckpointableOptimizer for ModuleOptimizer {
+    fn checkpoint_record(&self) -> OptimizerRecord {
+        self.to_record()
+    }
+
+    fn restore_record(self, record: OptimizerRecord) -> Self {
+        self.load_record(record)
+    }
+
+    fn optimizer_step<M: AutodiffModule>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M {
+        self.step(learning_rate, module, grads)
+    }
+}
 pub const TRAINING_CHECKPOINT_MANIFEST_SCHEMA_VERSION: u32 = 1;
 pub const TRAINING_STATE_SCHEMA_VERSION: u32 = 1;
-pub const TRAINING_CHECKPOINT_RECORD_FORMAT: &str = "burn-bin-full-precision-v1";
+// Burn 0.22 replaced the default binary recorder with burn-pack, so a
+// checkpoint's weights and optimizer state now land in `.bpk` files. The
+// record format identifier moves with it: a 0.21 "burn-bin" checkpoint is a
+// different on-disk format and must not pass this check only to fail later
+// inside the reader.
+pub const TRAINING_CHECKPOINT_RECORD_FORMAT: &str = "burn-pack-full-precision-v1";
 pub const TRAINING_CHECKPOINT_OPTIMIZER_KIND: &str = "adam";
 pub const TRAINING_CHECKPOINT_OPTIMIZER_SCHEMA_VERSION: u32 = 1;
 
 pub const CHECKPOINT_MANIFEST_FILE_NAME: &str = "manifest.json";
-pub const CHECKPOINT_MODEL_FILE_NAME: &str = "model.bin";
-pub const CHECKPOINT_OPTIMIZER_FILE_NAME: &str = "optimizer.bin";
+pub const CHECKPOINT_MODEL_FILE_NAME: &str = "model.bpk";
+pub const CHECKPOINT_OPTIMIZER_FILE_NAME: &str = "optimizer.bpk";
 pub const CHECKPOINT_STATE_FILE_NAME: &str = "training-state.json";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Provenance {
-    pub entries: BTreeMap<String, String>,
-}
+    pub entries: BTreeMap<String, String>}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrainingMode {
     Baseline,
     MouthRoi,
-    MouthRoiTemporal,
-}
+    MouthRoiTemporal}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -42,8 +72,7 @@ pub struct TrainingConfig {
     pub mouth_weight: f64,
     pub temporal_weight: f64,
     pub temporal_mouth_weight: f64,
-    pub perceptual_weight: f64,
-}
+    pub perceptual_weight: f64}
 
 impl TrainingConfig {
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -71,8 +100,7 @@ impl TrainingConfig {
             TrainingMode::MouthRoiTemporal if self.temporal_stride == 0 => invalid_checkpoint(
                 "training_config.temporal_stride must be greater than zero for temporal mode",
             ),
-            _ => Ok(()),
-        }
+            _ => Ok(())}
     }
 }
 
@@ -86,8 +114,7 @@ pub struct TrainingCheckpointState {
     pub data_loader: DataLoaderState,
     pub training_config: TrainingConfig,
     pub asset_provenance: Provenance,
-    pub model_provenance: Provenance,
-}
+    pub model_provenance: Provenance}
 
 impl TrainingCheckpointState {
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -126,8 +153,7 @@ impl TrainingCheckpointState {
 pub struct CheckpointFileManifest {
     pub file_name: String,
     pub bytes: u64,
-    pub sha256: String,
-}
+    pub sha256: String}
 
 impl CheckpointFileManifest {
     pub fn validate(&self, expected_file_name: &str) -> Result<(), TrainingError> {
@@ -154,8 +180,7 @@ pub struct CheckpointDescriptor {
     pub architecture_version: String,
     pub model_config_sha256: String,
     pub optimizer_kind: String,
-    pub optimizer_schema_version: u32,
-}
+    pub optimizer_schema_version: u32}
 
 impl CheckpointDescriptor {
     pub fn new(
@@ -168,8 +193,7 @@ impl CheckpointDescriptor {
             architecture_version: architecture_version.into(),
             model_config_sha256: model_config_sha256.into(),
             optimizer_kind: TRAINING_CHECKPOINT_OPTIMIZER_KIND.to_owned(),
-            optimizer_schema_version: TRAINING_CHECKPOINT_OPTIMIZER_SCHEMA_VERSION,
-        }
+            optimizer_schema_version: TRAINING_CHECKPOINT_OPTIMIZER_SCHEMA_VERSION}
     }
 
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -207,8 +231,7 @@ pub struct TrainingCheckpointManifest {
     pub training_state: CheckpointFileManifest,
     pub training_state_sha256: String,
     pub burn_version: String,
-    pub rust_version: String,
-}
+    pub rust_version: String}
 
 impl TrainingCheckpointManifest {
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -229,8 +252,7 @@ impl TrainingCheckpointManifest {
             architecture_version: self.architecture_version.clone(),
             model_config_sha256: self.model_config_sha256.clone(),
             optimizer_kind: self.optimizer_kind.clone(),
-            optimizer_schema_version: self.optimizer_schema_version,
-        }
+            optimizer_schema_version: self.optimizer_schema_version}
         .validate()?;
         self.model.validate(CHECKPOINT_MODEL_FILE_NAME)?;
         self.optimizer.validate(CHECKPOINT_OPTIMIZER_FILE_NAME)?;
@@ -249,8 +271,7 @@ impl TrainingCheckpointManifest {
             architecture_version: self.architecture_version.clone(),
             model_config_sha256: self.model_config_sha256.clone(),
             optimizer_kind: self.optimizer_kind.clone(),
-            optimizer_schema_version: self.optimizer_schema_version,
-        }
+            optimizer_schema_version: self.optimizer_schema_version}
     }
 }
 
@@ -260,8 +281,7 @@ pub struct CheckpointCompatibility {
     pub training_config: TrainingConfig,
     pub frame_count: u64,
     pub asset_provenance: Provenance,
-    pub model_provenance: Provenance,
-}
+    pub model_provenance: Provenance}
 
 impl CheckpointCompatibility {
     pub fn new(
@@ -274,12 +294,9 @@ impl CheckpointCompatibility {
             training_config,
             frame_count,
             asset_provenance: Provenance {
-                entries: BTreeMap::new(),
-            },
+                entries: BTreeMap::new()},
             model_provenance: Provenance {
-                entries: BTreeMap::new(),
-            },
-        }
+                entries: BTreeMap::new()}}
     }
 
     pub fn validate(&self) -> Result<(), TrainingError> {
@@ -336,10 +353,9 @@ pub struct RestoredTrainingState<M, O> {
     pub model: M,
     pub optimizer: O,
     pub state: TrainingCheckpointState,
-    pub manifest: TrainingCheckpointManifest,
-}
+    pub manifest: TrainingCheckpointManifest}
 
-pub fn save_training_checkpoint<B, M, O>(
+pub fn save_training_checkpoint<M, O>(
     destination: impl AsRef<Path>,
     model: &M,
     optimizer: &O,
@@ -347,9 +363,8 @@ pub fn save_training_checkpoint<B, M, O>(
     state: TrainingCheckpointState,
 ) -> Result<TrainingCheckpointManifest, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
+    M: AutodiffModule + Clone,
+    O: CheckpointableOptimizer + Clone,
 {
     descriptor.validate()?;
     state.validate()?;
@@ -370,16 +385,15 @@ where
             )));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error.into()),
-    }
+        Err(error) => return Err(error.into())}
 
     let mut staging = crate::checkpoint_io::create_staging_directory(parent)?;
     let staging_path = staging.path().to_path_buf();
 
     let model_path =
-        crate::checkpoint_io::write_model_record::<B, M>(model, &staging_path.join("model"))?;
+        crate::checkpoint_io::write_model_record::<M>(model, &staging_path.join("model"))?;
     crate::checkpoint_io::sync_file(&model_path)?;
-    let optimizer_path = crate::checkpoint_io::write_optimizer_record::<B, M, O>(
+    let optimizer_path = crate::checkpoint_io::write_optimizer_record::<M, O>(
         optimizer,
         &staging_path.join("optimizer"),
     )?;
@@ -412,12 +426,11 @@ where
         optimizer: optimizer_manifest,
         training_state_sha256: state_manifest.sha256.clone(),
         training_state: state_manifest,
-        // Burn 0.21 is pinned by the workspace dependency.  Keep this
-        // identifier explicit so a checkpoint cannot silently change format
-        // when the training crate's own package version changes.
-        burn_version: "0.21.0".to_owned(),
-        rust_version: "1.94.0".to_owned(),
-    };
+        // The pinned burn version is recorded explicitly so a checkpoint
+        // cannot silently change format when the training crate's own package
+        // version changes. 0.22 moved the default recorder to burn-pack.
+        burn_version: "0.22.0-pre.3".to_owned(),
+        rust_version: "1.95.0".to_owned()};
     manifest.validate()?;
 
     let manifest_bytes = serde_json::to_vec(&manifest)
@@ -441,17 +454,16 @@ where
     Ok(manifest)
 }
 
-pub fn load_training_checkpoint<B, M, O>(
+pub fn load_training_checkpoint<M, O>(
     directory: impl AsRef<Path>,
     model_template: &M,
     optimizer_template: &O,
-    device: &B::Device,
+    _device: &burn::tensor::Device,
     expected: &CheckpointCompatibility,
 ) -> Result<RestoredTrainingState<M, O>, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
+    M: AutodiffModule + Clone,
+    O: CheckpointableOptimizer + Clone,
 {
     let directory = directory.as_ref();
 
@@ -488,38 +500,33 @@ where
 
     // Restore into clones only.  If either record fails, the caller's
     // templates remain untouched and no partially restored value is exposed.
-    let model = crate::checkpoint_io::load_model_record::<B, M>(
+    let model = crate::checkpoint_io::load_model_record::<M>(
         model_template.clone(),
         &directory.join(CHECKPOINT_MODEL_FILE_NAME),
-        device,
     )?;
-    let optimizer = crate::checkpoint_io::load_optimizer_record::<B, M, O>(
+    let optimizer = crate::checkpoint_io::load_optimizer_record::<M, O>(
         optimizer_template.clone(),
         &directory.join(CHECKPOINT_OPTIMIZER_FILE_NAME),
-        device,
     )?;
 
     Ok(RestoredTrainingState {
         model,
         optimizer,
         state,
-        manifest,
-    })
+        manifest})
 }
 
 /// Everything a checkpoint says about itself, with no Burn record read.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainingCheckpointMetadata {
     pub manifest: TrainingCheckpointManifest,
-    pub state: TrainingCheckpointState,
-}
+    pub state: TrainingCheckpointState}
 
 /// A model restored from a checkpoint, next to the metadata that described it.
 #[derive(Debug, Clone)]
 pub struct RestoredCheckpointModel<M> {
     pub model: M,
-    pub metadata: TrainingCheckpointMetadata,
-}
+    pub metadata: TrainingCheckpointMetadata}
 
 /// Reads a checkpoint's manifest and training state, and nothing else.
 ///
@@ -567,15 +574,14 @@ pub fn read_training_checkpoint(
 ///
 /// The template is only ever cloned. A failed load leaves the caller's template
 /// untouched, the same rule `load_training_checkpoint` follows.
-pub fn load_training_checkpoint_model<B, M>(
+pub fn load_training_checkpoint_model<M>(
     directory: impl AsRef<Path>,
     model_template: &M,
-    device: &B::Device,
+    _device: &burn::tensor::Device,
     expected: &CheckpointDescriptor,
 ) -> Result<RestoredCheckpointModel<M>, TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B> + Clone,
+    M: AutodiffModule + Clone,
 {
     let directory = directory.as_ref();
     let metadata = read_training_checkpoint(directory)?;
@@ -586,10 +592,9 @@ where
     }
     let model_path = directory.join(CHECKPOINT_MODEL_FILE_NAME);
     crate::checkpoint_io::validate_declared_file(&model_path, &metadata.manifest.model)?;
-    let model = crate::checkpoint_io::load_model_record::<B, M>(
+    let model = crate::checkpoint_io::load_model_record::<M>(
         model_template.clone(),
         &model_path,
-        device,
     )?;
     Ok(RestoredCheckpointModel { model, metadata })
 }
@@ -649,8 +654,7 @@ fn file_manifest(
     let manifest = CheckpointFileManifest {
         file_name: expected_name.to_owned(),
         bytes,
-        sha256,
-    };
+        sha256};
     manifest.validate(expected_name)?;
     Ok(manifest)
 }

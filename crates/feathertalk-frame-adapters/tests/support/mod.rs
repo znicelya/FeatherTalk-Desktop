@@ -4,8 +4,7 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::{BufReader, Read},
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_frame_pipeline::CommandSpec;
 use feathertalk_image::BgrImage;
@@ -57,24 +56,21 @@ pub const LETTERBOX_KEY: &str = "letterbox_1280x720";
 #[derive(Debug)]
 pub struct VerifiedFixture {
     pub root: PathBuf,
-    pub manifest: Value,
-}
+    pub manifest: Value}
 
 /// Aggregate difference between a computed tensor and its reference.
 #[derive(Debug, Clone, Copy)]
 pub struct ParityMetrics {
     pub max_abs: f64,
     pub mean_abs: f64,
-    pub max_relative: f64,
-}
+    pub max_relative: f64}
 
 /// One entry of `detections_thr002.json`, in SCRFD's xywh convention.
 #[derive(Debug, Clone, Copy)]
 pub struct ExpectedDetection {
     pub score: f32,
     pub bbox: [f32; 4],
-    pub keypoints: [[f32; 2]; 5],
-}
+    pub keypoints: [[f32; 2]; 5]}
 
 /// The contents of `landmarks.json`.
 #[derive(Debug, Clone)]
@@ -83,8 +79,7 @@ pub struct ExpectedLandmarks {
     pub size: u32,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub points: Vec<[i32; 2]>,
-}
+    pub points: Vec<[i32; 2]>}
 
 /// One `crops` entry: the input bbox and the geometry it must produce.
 #[derive(Debug, Clone)]
@@ -97,8 +92,7 @@ pub struct CropCase {
     pub padding: [u32; 4],
     /// The clipped source rectangle as x, y, width, height.
     pub source: [i64; 4],
-    pub array: String,
-}
+    pub array: String}
 
 /// The hash-pinned 1280x720 letterbox blob plus eight spot samples.
 #[derive(Debug, Clone)]
@@ -112,8 +106,7 @@ pub struct LetterboxPin {
     pub new_width: u32,
     pub new_height: u32,
     pub pad_x: u32,
-    pub pad_y: u32,
-}
+    pub pad_y: u32}
 
 pub fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/opencv_cpu_v1")
@@ -228,8 +221,7 @@ pub fn load_and_verify_fixture_at(root: &Path) -> Result<VerifiedFixture, String
                 require_shape(&path, array.shape(), shape)?;
                 check_finite(&path.display().to_string(), &array)?;
             }
-            other => return Err(format!("{}: unsupported dtype {other}", path.display())),
-        }
+            other => return Err(format!("{}: unsupported dtype {other}", path.display()))}
     }
 
     for name in FIXTURE_BLOBS {
@@ -238,8 +230,7 @@ pub fn load_and_verify_fixture_at(root: &Path) -> Result<VerifiedFixture, String
 
     Ok(VerifiedFixture {
         root: root.to_owned(),
-        manifest,
-    })
+        manifest})
 }
 
 /// The generator's `bgr_u8_channel_affine_v1` pattern at any size.
@@ -336,8 +327,7 @@ pub fn compare_f32(actual: &[f32], expected: &[f32]) -> ParityMetrics {
     ParityMetrics {
         max_abs,
         mean_abs: sum_abs / actual.len() as f64,
-        max_relative,
-    }
+        max_relative}
 }
 
 pub fn expected_detections(fixture: &VerifiedFixture) -> Vec<ExpectedDetection> {
@@ -359,8 +349,7 @@ pub fn expected_detections(fixture: &VerifiedFixture) -> Vec<ExpectedDetection> 
             ExpectedDetection {
                 score: entry["score"].as_f64().expect("score must be a number") as f32,
                 bbox: floats::<4>(&entry["bbox"]),
-                keypoints,
-            }
+                keypoints}
         })
         .collect()
 }
@@ -387,8 +376,7 @@ pub fn expected_landmarks(fixture: &VerifiedFixture) -> ExpectedLandmarks {
         size: unsigned_field(crop, "size"),
         origin_x: signed_field(crop, "origin_x"),
         origin_y: signed_field(crop, "origin_y"),
-        points,
-    }
+        points}
 }
 
 pub fn crop_case(fixture: &VerifiedFixture, name: &str) -> CropCase {
@@ -422,8 +410,7 @@ pub fn crop_case(fixture: &VerifiedFixture, name: &str) -> CropCase {
         array: entry["array"]
             .as_str()
             .expect("array must be a string")
-            .to_owned(),
-    }
+            .to_owned()}
 }
 
 pub fn letterbox_pin(fixture: &VerifiedFixture) -> LetterboxPin {
@@ -460,8 +447,7 @@ pub fn letterbox_pin(fixture: &VerifiedFixture) -> LetterboxPin {
         new_width: unsigned_field(entry, "new_width"),
         new_height: unsigned_field(entry, "new_height"),
         pad_x: unsigned_field(entry, "pad_x"),
-        pad_y: unsigned_field(entry, "pad_y"),
-    }
+        pad_y: unsigned_field(entry, "pad_y")}
 }
 
 fn verify_source(label: &str, manifest: &Value) -> Result<(), String> {
@@ -1054,8 +1040,7 @@ pub struct DemoDetection {
     pub score: f32,
     /// `[x, y, width, height]` in source pixels.
     pub bbox: [f32; 4],
-    pub keypoints: [[f32; 2]; 5],
-}
+    pub keypoints: [[f32; 2]; 5]}
 
 #[derive(Debug, Clone, Copy)]
 pub struct DemoCrop {
@@ -1065,8 +1050,7 @@ pub struct DemoCrop {
     /// `[left, top, right, bottom]`.
     pub padding: [u32; 4],
     /// `[x, y, width, height]` of the clipped source rectangle.
-    pub source: [i64; 4],
-}
+    pub source: [i64; 4]}
 
 #[derive(Debug, Clone)]
 pub struct DemoFrame {
@@ -1075,8 +1059,7 @@ pub struct DemoFrame {
     pub level_max_scores: Vec<f32>,
     pub detection: DemoDetection,
     pub crop: DemoCrop,
-    pub landmarks: Vec<[i32; 2]>,
-}
+    pub landmarks: Vec<[i32; 2]>}
 
 pub fn demo_fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/demo_frame_v1")
@@ -1219,15 +1202,13 @@ pub fn demo_frame(fixture: &VerifiedFixture, name: &str) -> DemoFrame {
         detection: DemoDetection {
             score: detection["score"].as_f64().expect("verified above") as f32,
             bbox: floats::<4>(&detection["bbox"]),
-            keypoints,
-        },
+            keypoints},
         crop: DemoCrop {
             size: unsigned_field(crop, "size"),
             origin_x: signed_field(crop, "origin_x"),
             origin_y: signed_field(crop, "origin_y"),
             padding,
-            source,
-        },
+            source},
         landmarks: entry["landmarks"]
             .as_array()
             .expect("verified above")
@@ -1239,8 +1220,7 @@ pub fn demo_frame(fixture: &VerifiedFixture, name: &str) -> DemoFrame {
                     signed_field_at(pair, 1, "landmark"),
                 ]
             })
-            .collect(),
-    }
+            .collect()}
 }
 
 fn verify_demo_source(label: &str, manifest: &Value) -> Result<(), String> {

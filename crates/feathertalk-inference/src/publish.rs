@@ -9,13 +9,11 @@ mod platform {
     use std::{
         fs,
         io::{self, ErrorKind},
-        path::Path,
-    };
+        path::Path};
 
     use rustix::{
         fs::{CWD, RenameFlags, renameat_with},
-        io::Errno,
-    };
+        io::Errno};
 
     pub(super) fn rename_noreplace(source: &Path, destination: &Path) -> std::io::Result<()> {
         match renameat_with(CWD, source, CWD, destination, RenameFlags::NOREPLACE) {
@@ -39,8 +37,7 @@ mod platform {
         match fs::rename(source, destination) {
             Ok(()) => Ok(()),
             Err(error) if cross_device_error(&error) => copy_noreplace(source, destination),
-            Err(error) => Err(error),
-        }
+            Err(error) => Err(error)}
     }
 
     fn copy_noreplace(source: &Path, destination: &Path) -> io::Result<()> {
@@ -64,8 +61,7 @@ mod platform {
         match fs::symlink_metadata(path) {
             Ok(_) => Err(io::Error::from(ErrorKind::AlreadyExists)),
             Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-            Err(error) => Err(error),
-        }
+            Err(error) => Err(error)}
     }
 
     fn retryable_rename_error(error: &io::Error) -> bool {

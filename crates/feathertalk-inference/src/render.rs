@@ -1,8 +1,7 @@
 use std::{
     ffi::OsString,
     fs,
-    path::{Component, Path, PathBuf},
-};
+    path::{Component, Path, PathBuf}};
 
 use crate::InferenceError;
 
@@ -13,8 +12,7 @@ const MAX_TASK_ID_BYTES: usize = 64;
 pub struct RenderGeometry {
     crop_size: u32,
     inner_size: u32,
-    border: u32,
-}
+    border: u32}
 
 impl RenderGeometry {
     pub fn standard() -> Self {
@@ -22,8 +20,7 @@ impl RenderGeometry {
         let geometry = Self {
             crop_size: crop.crop_size,
             inner_size: crop.inner_size,
-            border: crop.border,
-        };
+            border: crop.border};
         debug_assert_eq!(
             geometry.crop_size,
             geometry.inner_size + 2 * geometry.border
@@ -53,8 +50,7 @@ pub struct RawFrameRenderSpec {
     width: u32,
     height: u32,
     audio_path: PathBuf,
-    output_path: PathBuf,
-}
+    output_path: PathBuf}
 
 impl RawFrameRenderSpec {
     pub fn new(
@@ -79,8 +75,7 @@ impl RawFrameRenderSpec {
             width,
             height,
             audio_path: audio_path.to_owned(),
-            output_path: output_path.to_owned(),
-        })
+            output_path: output_path.to_owned()})
     }
 
     pub fn width(&self) -> u32 {
@@ -112,32 +107,24 @@ pub fn validate_output_destination(path: &Path) -> Result<(), InferenceError> {
     let parent = path
         .parent()
         .ok_or_else(|| InferenceError::OutputParentInvalid {
-            path: path.to_owned(),
-        })?;
+            path: path.to_owned()})?;
     let parent_metadata =
         fs::symlink_metadata(parent).map_err(|_| InferenceError::OutputParentInvalid {
-            path: parent.to_owned(),
-        })?;
+            path: parent.to_owned()})?;
     if parent_metadata.file_type().is_symlink() || !parent_metadata.is_dir() {
         return Err(InferenceError::OutputParentInvalid {
-            path: parent.to_owned(),
-        });
+            path: parent.to_owned()});
     }
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => Err(InferenceError::OutputSymlink {
-            path: path.to_owned(),
-        }),
+            path: path.to_owned()}),
         Ok(metadata) if metadata.is_file() => Err(InferenceError::OutputExists {
-            path: path.to_owned(),
-        }),
+            path: path.to_owned()}),
         Ok(_) => Err(InferenceError::OutputNotRegular {
-            path: path.to_owned(),
-        }),
+            path: path.to_owned()}),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(_) => Err(InferenceError::OutputParentInvalid {
-            path: path.to_owned(),
-        }),
-    }
+            path: path.to_owned()})}
 }
 
 pub fn staging_output_path(path: &Path, task_id: &str) -> Result<PathBuf, InferenceError> {
@@ -146,8 +133,7 @@ pub fn staging_output_path(path: &Path, task_id: &str) -> Result<PathBuf, Infere
     let parent = path
         .parent()
         .ok_or_else(|| InferenceError::OutputParentInvalid {
-            path: path.to_owned(),
-        })?;
+            path: path.to_owned()})?;
     let stem = path
         .file_stem()
         .ok_or_else(|| invalid("output_path", "must have a file name"))?;
@@ -177,16 +163,14 @@ fn reject_symlink_components(path: &Path) -> Result<(), InferenceError> {
         match component {
             Component::Prefix(prefix) => current.push(prefix.as_os_str()),
             Component::RootDir => current.push(component.as_os_str()),
-            _ => current.push(component.as_os_str()),
-        }
+            _ => current.push(component.as_os_str())}
         match fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 return Err(InferenceError::OutputSymlink { path: current });
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
-            Err(_) => break,
-        }
+            Err(_) => break}
     }
     Ok(())
 }
@@ -201,8 +185,7 @@ fn validate_task_id(task_id: &str) -> Result<(), InferenceError> {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
     {
         return Err(InferenceError::InvalidTaskId {
-            task_id: task_id.to_owned(),
-        });
+            task_id: task_id.to_owned()});
     }
     Ok(())
 }
@@ -210,6 +193,5 @@ fn validate_task_id(task_id: &str) -> Result<(), InferenceError> {
 fn invalid(field: &'static str, message: &str) -> InferenceError {
     InferenceError::InvalidField {
         field,
-        message: message.to_owned(),
-    }
+        message: message.to_owned()}
 }

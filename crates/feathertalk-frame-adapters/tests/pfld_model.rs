@@ -2,14 +2,12 @@ mod support;
 
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, OnceLock},
-};
+    sync::{Arc, OnceLock}};
 
 use feathertalk_face::{ImageSize, compute_face_crop_geometry};
 use feathertalk_frame_adapters::{FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor};
 use feathertalk_frame_pipeline::{
-    DecodedFrame, FaceDetection, FrameDecoder, LandmarkPredictor, PipelineError,
-};
+    DecodedFrame, FaceDetection, FrameDecoder, LandmarkPredictor, PipelineError};
 use feathertalk_models::backend::CpuBackend;
 
 /// The committed PFLD artifact directory, one crate over. `PfldRuntime::load`
@@ -34,8 +32,8 @@ const PREDICTOR_LOAD_STACK_BYTES: usize = 64 * 1024 * 1024;
 /// Reading the weights costs more than the 192x192 forward pass, so the shared
 /// predictor is loaded once. `&'static` is sound because `LandmarkPredictor` is
 /// `Send + Sync`.
-fn shared_predictor() -> &'static PfldLandmarkPredictor<CpuBackend> {
-    static PREDICTOR: OnceLock<Box<PfldLandmarkPredictor<CpuBackend>>> = OnceLock::new();
+fn shared_predictor() -> &'static PfldLandmarkPredictor {
+    static PREDICTOR: OnceLock<Box<PfldLandmarkPredictor>> = OnceLock::new();
     PREDICTOR.get_or_init(|| {
         std::thread::Builder::new()
             .name("pfld-predictor-load".to_owned())
@@ -69,8 +67,7 @@ fn face(bbox: [f32; 4]) -> FaceDetection {
     FaceDetection {
         bbox,
         score: 1.0,
-        keypoints: [[0.0; 2]; 5],
-    }
+        keypoints: [[0.0; 2]; 5]}
 }
 
 #[test]
@@ -113,8 +110,7 @@ fn the_demo_frame_landmarks_match_the_fixture() {
     let geometry = compute_face_crop_geometry(
         ImageSize {
             width: frame.width(),
-            height: frame.height(),
-        },
+            height: frame.height()},
         expected.detection.bbox,
     )
     .unwrap();
@@ -170,8 +166,7 @@ fn a_degenerate_bbox_is_reported_as_an_adapter_error() {
                 "invalid crop geometry for bbox: integer edges must define a positive rectangle"
             );
         }
-        other => panic!("expected an adapter error, got {other}"),
-    }
+        other => panic!("expected an adapter error, got {other}")}
 }
 
 #[test]

@@ -1,12 +1,10 @@
 use burn_store::ModuleSnapshot;
 use feathertalk_export::onnx::{
     OnnxModelContract, OnnxModelKind, OnnxModelProto, OnnxTensorContract,
-    export_mobileone_unet_onnx, export_original_unet_onnx, validate_model_contract,
-};
+    export_mobileone_unet_onnx, export_original_unet_onnx, validate_model_contract};
 use feathertalk_models::{
     backend::CpuBackend,
-    unet::{MobileOneUnetConfig, OriginalUnetConfig},
-};
+    unet::{MobileOneUnetConfig, OriginalUnetConfig}};
 use prost::Message;
 
 fn contract(kind: OnnxModelKind) -> OnnxModelContract {
@@ -30,7 +28,7 @@ fn has_attribute(node: &feathertalk_export::onnx::OnnxNodeProto, name: &str, val
 fn original_unet_export_contains_bn_relu_resize_concat_and_sigmoid() {
     let config = OriginalUnetConfig::parity_micro();
     let device = Default::default();
-    let model = config.init::<CpuBackend>(&device);
+    let model = config.init(&device);
 
     let bytes = export_original_unet_onnx(&model, &config).unwrap();
     validate_model_contract(&bytes, &contract(OnnxModelKind::OriginalUnet)).unwrap();
@@ -67,7 +65,7 @@ fn original_unet_export_contains_bn_relu_resize_concat_and_sigmoid() {
         .map(|tensor| tensor.name.as_str())
         .collect::<std::collections::BTreeSet<_>>();
     for snapshot in model.collect(None, None, false) {
-        assert!(names.contains(snapshot.full_path().as_str()));
+        assert!(names.contains(snapshot.name.clone().as_str()));
     }
 }
 
@@ -75,7 +73,7 @@ fn original_unet_export_contains_bn_relu_resize_concat_and_sigmoid() {
 fn mobileone_export_accepts_only_reparameterized_inference_graph() {
     let config = MobileOneUnetConfig::parity_micro();
     let device = Default::default();
-    let training = config.init::<CpuBackend>(&device);
+    let training = config.init(&device);
     let inference = training.reparameterize();
 
     let bytes = export_mobileone_unet_onnx(&inference, &config).unwrap();

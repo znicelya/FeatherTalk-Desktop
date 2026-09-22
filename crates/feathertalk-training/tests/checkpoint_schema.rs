@@ -4,8 +4,7 @@ use feathertalk_training::{
     CheckpointCompatibility, CheckpointDescriptor, DATA_LOADER_STATE_SCHEMA_VERSION,
     DataLoaderConfig, DataLoaderState, Provenance, RandomAlgorithm, SamplingConfig, SamplingKind,
     TRAINING_STATE_SCHEMA_VERSION, TrainingCheckpointState, TrainingConfig, TrainingError,
-    TrainingMode,
-};
+    TrainingMode};
 
 fn loader_state() -> DataLoaderState {
     DataLoaderState {
@@ -16,13 +15,10 @@ fn loader_state() -> DataLoaderState {
             seed: 17,
             sampling: SamplingConfig {
                 kind: SamplingKind::SingleFrame,
-                temporal_stride: 0,
-            },
-        },
+                temporal_stride: 0}},
         frame_count: 5,
         epoch: 3,
-        next_position: 4,
-    }
+        next_position: 4}
 }
 
 fn training_config() -> TrainingConfig {
@@ -35,8 +31,7 @@ fn training_config() -> TrainingConfig {
         mouth_weight: 0.0,
         temporal_weight: 0.0,
         temporal_mouth_weight: 0.0,
-        perceptual_weight: 0.01,
-    }
+        perceptual_weight: 0.01}
 }
 
 fn state() -> TrainingCheckpointState {
@@ -48,12 +43,9 @@ fn state() -> TrainingCheckpointState {
         data_loader: loader_state(),
         training_config: training_config(),
         asset_provenance: Provenance {
-            entries: BTreeMap::from([("assets".into(), "a".repeat(64))]),
-        },
+            entries: BTreeMap::from([("assets".into(), "a".repeat(64))])},
         model_provenance: Provenance {
-            entries: BTreeMap::from([("vgg19".into(), "b".repeat(64))]),
-        },
-    }
+            entries: BTreeMap::from([("vgg19".into(), "b".repeat(64))])}}
 }
 
 #[test]

@@ -1,12 +1,12 @@
 mod support;
 
 use burn::{
-    backend::NdArray,
+    backend::Flex,
     tensor::{Tensor, TensorData},
 };
 use feathertalk_scrfd::ScrfdModel;
 
-type CpuBackend = NdArray<f32>;
+type CpuBackend = Flex;
 
 #[test]
 fn all_nine_outputs_match_opencv_cpu() {
@@ -15,14 +15,14 @@ fn all_nine_outputs_match_opencv_cpu() {
     assert_eq!(input.shape(), &[1, 3, 640, 640]);
 
     let device = Default::default();
-    let tensor = Tensor::<CpuBackend, 4>::from_data(
+    let tensor = Tensor::<4>::from_data(
         TensorData::new(
             input.iter().copied().collect::<Vec<_>>(),
             input.shape().to_vec(),
         ),
         &device,
     );
-    let model = ScrfdModel::<CpuBackend>::load(&support::artifact_paths(), &device).unwrap();
+    let model = ScrfdModel::load(&support::artifact_paths(), &device).unwrap();
     let output = model.forward(tensor).unwrap();
 
     for (level_index, level) in output.levels.into_iter().enumerate() {

@@ -5,14 +5,12 @@ use feathertalk_export::ModelConfiguration;
 use feathertalk_models::unet::{MobileOneUnetConfig, OriginalUnetConfig};
 use feathertalk_training::{
     PREVIEW_TENSOR_ELEMENTS, PreviewArtifact, TrainingError, TrainingMetrics, TrainingMode,
-    TrainingSample, read_preview_artifact, read_training_metrics,
-};
+    TrainingSample, read_preview_artifact, read_training_metrics};
 use feathertalk_worker::{
     DEFAULT_BATCH_SIZE, DEFAULT_LEARNING_RATE, MAX_EPOCHS, TRAIN_BACKEND_NAME, TRAINING_SEED,
     TrainingPaths, WORKER_STATE, checkpoint_descriptor, latest_checkpoint, preview_sample,
     publish_checkpoint, sample_count, training_config, training_mode, write_metrics_unless_present,
-    write_preview_unless_present,
-};
+    write_preview_unless_present};
 
 fn params(mode: DomainTrainingMode, epochs: u32) -> TrainParams {
     TrainParams {
@@ -21,8 +19,7 @@ fn params(mode: DomainTrainingMode, epochs: u32) -> TrainParams {
         variant: UnetVariant::OriginalUnet,
         epochs,
         batch_size: 1,
-        resume: false,
-    }
+        resume: false}
 }
 
 #[test]
@@ -78,7 +75,7 @@ fn the_config_combines_request_values_with_worker_defaults() {
     assert_eq!(TRAINING_SEED, 1);
     assert_eq!(MAX_EPOCHS, 10_000);
     assert_eq!(WORKER_STATE, "training");
-    assert_eq!(TRAIN_BACKEND_NAME, "ndarray-cpu");
+    assert_eq!(TRAIN_BACKEND_NAME, "flex-cpu");
 }
 
 #[test]
@@ -169,6 +166,11 @@ fn the_artifact_paths_are_step_numbered() {
         paths
             .metrics(188)
             .ends_with("outputs/metrics/step-00000188.json")
+    );
+    assert!(
+        paths
+            .step_profile()
+            .ends_with("outputs/metrics/step-profile.jsonl")
     );
     assert!(
         paths
@@ -418,15 +420,13 @@ fn the_preview_pairs_the_first_frame_with_the_middle_one() {
         preview_sample(8),
         TrainingSample::SingleFrame {
             target_index: 0,
-            reference_index: 4,
-        }
+            reference_index: 4}
     );
     // A one-frame project has to reference itself, which the dataset allows.
     assert_eq!(
         preview_sample(1),
         TrainingSample::SingleFrame {
             target_index: 0,
-            reference_index: 0,
-        }
+            reference_index: 0}
     );
 }

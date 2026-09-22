@@ -1,13 +1,12 @@
 use std::{fmt, path::Path, sync::Arc};
 
-use burn::tensor::{Tensor, TensorData, backend::Backend};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_face::{FaceCropGeometry, ImageSize, compute_face_crop_geometry};
 use feathertalk_frame_pipeline::{DecodedFrame, FaceDetection, LandmarkPredictor, PipelineError};
 use feathertalk_image::{BgrImage, resize_linear};
 use feathertalk_pfld::{
     CropGeometry, PFLD_INPUT_SHAPE, PFLDLandmarks, PfldRuntime,
-    decode_landmarks_with_default_mean_face,
-};
+    decode_landmarks_with_default_mean_face};
 
 use crate::cache::FrameImageCache;
 
@@ -27,8 +26,7 @@ pub fn pfld_input(
     if size == 0 {
         return Err(PipelineError::Adapter {
             component: "pfld",
-            message: "crop size must be non-zero".to_owned(),
-        });
+            message: "crop size must be non-zero".to_owned()});
     }
 
     // `source` is already clipped to the image, so both coordinates are
@@ -42,8 +40,7 @@ pub fn pfld_input(
             message: format!(
                 "clipped crop origin is negative: ({}, {})",
                 geometry.source.x, geometry.source.y
-            ),
-        });
+            )});
     };
 
     let source_width = geometry.source.width as usize;
@@ -63,16 +60,14 @@ pub fn pfld_input(
             component: "pfld",
             message: format!(
                 "source rectangle {source_width}x{source_height} at ({source_x}, {source_y}) exceeds the {image_width}x{image_height} frame"
-            ),
-        });
+            )});
     }
     if pad_left + source_width > size || pad_top + source_height > size {
         return Err(PipelineError::Adapter {
             component: "pfld",
             message: format!(
                 "source rectangle {source_width}x{source_height} at ({pad_left}, {pad_top}) does not fit the {size}x{size} canvas"
-            ),
-        });
+            )});
     }
 
     // `copyMakeBorder(..., BORDER_CONSTANT, 0)`: the canvas starts black and
@@ -89,14 +84,12 @@ pub fn pfld_input(
     let square = BgrImage::new(geometry.size, geometry.size, canvas).map_err(|error| {
         PipelineError::Adapter {
             component: "pfld",
-            message: format!("crop canvas {size}x{size} is invalid: {error}"),
-        }
+            message: format!("crop canvas {size}x{size} is invalid: {error}")}
     })?;
     let resized =
         resize_linear(&square, PFLD_EDGE, PFLD_EDGE).map_err(|error| PipelineError::Adapter {
             component: "pfld",
-            message: format!("resize to {PFLD_EDGE}x{PFLD_EDGE} failed: {error}"),
-        })?;
+            message: format!("resize to {PFLD_EDGE}x{PFLD_EDGE} failed: {error}")})?;
 
     let plane = PFLD_EDGE as usize * PFLD_EDGE as usize;
     let resized_bytes = resized.as_bytes();
@@ -119,13 +112,12 @@ pub fn pfld_input(
 /// Holds the weights, the device and the shared decode cache. There is nothing
 /// to configure: the crop square is derived from the detection and the mean face
 /// is compiled into `feathertalk-pfld`.
-pub struct PfldLandmarkPredictor<B: Backend> {
-    runtime: PfldRuntime<B>,
-    device: B::Device,
-    cache: Arc<FrameImageCache>,
-}
+pub struct PfldLandmarkPredictor {
+    runtime: PfldRuntime,
+    device: burn::tensor::Device,
+    cache: Arc<FrameImageCache>}
 
-impl<B: Backend> PfldLandmarkPredictor<B> {
+impl PfldLandmarkPredictor {
     /// Load the artifact directory and share `cache` with the decoder.
     ///
     /// The parameter is a directory rather than a manifest and weights pair
@@ -133,36 +125,33 @@ impl<B: Backend> PfldLandmarkPredictor<B> {
     /// takes the pair for the same reason.
     pub fn load(
         artifacts: &Path,
-        device: B::Device,
+        device: burn::tensor::Device,
         cache: Arc<FrameImageCache>,
     ) -> Result<Self, PipelineError> {
         match PfldRuntime::load(artifacts, &device) {
             Ok(runtime) => Ok(Self::from_runtime(runtime, device, cache)),
             Err(error) => Err(PipelineError::Adapter {
                 component: "pfld",
-                message: error.to_string(),
-            }),
-        }
+                message: error.to_string()})}
     }
 
     /// Wrap weights that are already in memory.
     pub fn from_runtime(
-        runtime: PfldRuntime<B>,
-        device: B::Device,
+        runtime: PfldRuntime,
+        device: burn::tensor::Device,
         cache: Arc<FrameImageCache>,
     ) -> Self {
         Self {
             runtime,
             device,
-            cache,
-        }
+            cache}
     }
 }
 
 /// `PfldRuntime` does not implement `Debug` and design §10 freezes the public
 /// surface of `feathertalk-pfld`. There is no configuration to print either, so
 /// this reports the type name and stops.
-impl<B: Backend> fmt::Debug for PfldLandmarkPredictor<B> {
+impl fmt::Debug for PfldLandmarkPredictor {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("PfldLandmarkPredictor")
@@ -170,7 +159,7 @@ impl<B: Backend> fmt::Debug for PfldLandmarkPredictor<B> {
     }
 }
 
-impl<B: Backend> LandmarkPredictor for PfldLandmarkPredictor<B> {
+impl LandmarkPredictor for PfldLandmarkPredictor {
     fn predict(
         &self,
         frame: &DecodedFrame,
@@ -183,17 +172,15 @@ impl<B: Backend> LandmarkPredictor for PfldLandmarkPredictor<B> {
         let geometry: FaceCropGeometry = compute_face_crop_geometry(
             ImageSize {
                 width: frame.width(),
-                height: frame.height(),
-            },
+                height: frame.height()},
             face.bbox,
         )
         .map_err(|error| PipelineError::Adapter {
             component: "pfld",
-            message: error.to_string(),
-        })?;
+            message: error.to_string()})?;
 
         let data = pfld_input(&image, &geometry)?;
-        let input = Tensor::<B, 4>::from_data(
+        let input = Tensor::<4>::from_data(
             TensorData::new(data, PFLD_INPUT_SHAPE.to_vec()),
             &self.device,
         );
@@ -202,16 +189,14 @@ impl<B: Backend> LandmarkPredictor for PfldLandmarkPredictor<B> {
             .forward(input)
             .map_err(|error| PipelineError::Adapter {
                 component: "pfld",
-                message: error.to_string(),
-            })?;
+                message: error.to_string()})?;
         let values =
             output
                 .into_data()
-                .into_vec::<f32>()
+                .try_into_vec::<f32>()
                 .map_err(|error| PipelineError::Adapter {
                     component: "pfld",
-                    message: format!("landmark output: {error}"),
-                })?;
+                    message: format!("landmark output: {error}")})?;
 
         // The decode maps normalised model space back onto source pixels, so it
         // needs the padded square the crop came from, not the frame. `size` is
@@ -222,12 +207,10 @@ impl<B: Backend> LandmarkPredictor for PfldLandmarkPredictor<B> {
                 width: geometry.size,
                 height: geometry.size,
                 offset_x: geometry.origin_x,
-                offset_y: geometry.origin_y,
-            },
+                offset_y: geometry.origin_y},
         )
         .map_err(|error| PipelineError::Adapter {
             component: "pfld",
-            message: error.to_string(),
-        })
+            message: error.to_string()})
     }
 }

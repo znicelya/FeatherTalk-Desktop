@@ -3,28 +3,23 @@ use std::{collections::VecDeque, path::PathBuf, sync::Mutex, time::Duration};
 use feathertalk_domain::{
     ErrorCode, ExtractFeaturesParams, ExtractFramesParams, NormalizeMediaParams, ProbeMediaParams,
     Progress, ProjectDirParams, Recovery, RenderParams, Request, TaskStage, TrainParams,
-    TrainingMode, UnetVariant,
-};
+    TrainingMode, UnetVariant};
 use feathertalk_media::{CancellationToken, CommandSpec, MediaError, ProcessOutput, ProcessRunner};
 use feathertalk_project::{
     AssetManifest, AssetPackageState, FeatureType, ModelSelection, ProjectManifest,
-    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic,
-};
+    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic};
 use feathertalk_worker::{
-    CommandOutcome, NoReporter, TaskReporter, WorkerConfig, execute_with_runner,
-};
+    CommandOutcome, NoReporter, TaskReporter, WorkerConfig, execute_with_runner};
 
 struct FakeRunner {
     outputs: Mutex<VecDeque<Result<ProcessOutput, MediaError>>>,
-    commands: Mutex<Vec<CommandSpec>>,
-}
+    commands: Mutex<Vec<CommandSpec>>}
 
 impl FakeRunner {
     fn new(outputs: Vec<Result<ProcessOutput, MediaError>>) -> Self {
         Self {
             outputs: Mutex::new(outputs.into_iter().collect()),
-            commands: Mutex::new(Vec::new()),
-        }
+            commands: Mutex::new(Vec::new())}
     }
 
     fn call_count(&self) -> usize {
@@ -53,27 +48,22 @@ fn every_compute_command_refuses_an_unavailable_gpu_before_touching_inputs() {
             variant: UnetVariant::OriginalUnet,
             epochs: 1,
             batch_size: 1,
-            resume: false,
-        }),
+            resume: false}),
         Request::Render(RenderParams {
             project_dir: root.clone(),
             checkpoint: root.join("missing-checkpoint"),
             audio: root.join("missing.wav"),
             output: root.join("unused.mp4"),
-            max_output_frames: None,
-        }),
+            max_output_frames: None}),
         Request::ExtractFrames(ExtractFramesParams {
             project_dir: root.clone(),
-            video: root.join("missing.mp4"),
-        }),
+            video: root.join("missing.mp4")}),
         Request::ExtractFeatures(ExtractFeaturesParams {
             project_dir: root.clone(),
-            audio: root.join("missing.wav"),
-        }),
+            audio: root.join("missing.wav")}),
         Request::NormalizeMedia(NormalizeMediaParams {
             input: root.join("missing.mp4"),
-            output_dir: root.join("unused-media"),
-        }),
+            output_dir: root.join("unused-media")}),
     ];
     let runner = FakeRunner::new(vec![]);
     for backend in ["wgpu", "cuda"] {
@@ -139,9 +129,7 @@ fn valid_project() -> ProjectManifest {
             task_id: "task-1".to_owned(),
             kind: "preprocess".to_owned(),
             status: TaskHistoryStatus::Completed,
-            updated_at: "2026-08-20T10:00:00Z".to_owned(),
-        }],
-    }
+            updated_at: "2026-08-20T10:00:00Z".to_owned()}]}
 }
 
 fn locked_manifest() -> AssetManifest {
@@ -157,8 +145,7 @@ fn locked_manifest() -> AssetManifest {
         feature_type: FeatureType::FeatherHubert,
         feature_shape: [12, 2, 1024],
         landmark_model_sha256: "a".repeat(64),
-        feature_model_sha256: "b".repeat(64),
-    }
+        feature_model_sha256: "b".repeat(64)}
 }
 
 fn complete_project() -> tempfile::TempDir {
@@ -182,8 +169,7 @@ fn complete_project() -> tempfile::TempDir {
 fn validating_a_complete_project_completes_without_a_result() {
     let dir = complete_project();
     let request = Request::ValidateProject(ProjectDirParams {
-        project_dir: dir.path().to_path_buf(),
-    });
+        project_dir: dir.path().to_path_buf()});
     let runner = FakeRunner::new(vec![]);
     let outcome = execute_with_runner(
         &request,
@@ -203,8 +189,7 @@ fn validating_a_complete_project_completes_without_a_result() {
 fn validating_a_missing_project_fails_with_a_wire_error() {
     let dir = tempfile::tempdir().unwrap();
     let request = Request::ValidateProject(ProjectDirParams {
-        project_dir: dir.path().join("nope"),
-    });
+        project_dir: dir.path().join("nope")});
     let runner = FakeRunner::new(vec![]);
     let CommandOutcome::Failed(error) = execute_with_runner(
         &request,
@@ -332,8 +317,7 @@ fn an_unsupported_command_is_refused_with_its_slug() {
         variant: UnetVariant::OriginalUnet,
         epochs: 1,
         batch_size: 1,
-        resume: false,
-    });
+        resume: false});
     let runner = FakeRunner::new(vec![]);
     let CommandOutcome::Failed(error) = execute_with_runner(
         &request,
@@ -354,8 +338,7 @@ fn extract_features_reports_a_package_failure_as_a_model_incompatibility() {
     let temp = tempfile::tempdir().unwrap();
     let request = Request::ExtractFeatures(ExtractFeaturesParams {
         project_dir: temp.path().join("project"),
-        audio: temp.path().join("project/assets/audio_16k_mono.wav"),
-    });
+        audio: temp.path().join("project/assets/audio_16k_mono.wav")});
     let config = WorkerConfig::from_values_with_toolchains(
         None,
         None,
@@ -388,8 +371,7 @@ fn extract_features_reports_a_package_failure_as_a_model_incompatibility() {
 fn extract_features_without_a_model_directory_is_refused_with_its_slug() {
     let request = Request::ExtractFeatures(ExtractFeaturesParams {
         project_dir: PathBuf::from("C:/tmp/project"),
-        audio: PathBuf::from("C:/tmp/project/assets/audio_16k_mono.wav"),
-    });
+        audio: PathBuf::from("C:/tmp/project/assets/audio_16k_mono.wav")});
     let runner = FakeRunner::new(vec![]);
     let CommandOutcome::Failed(error) = execute_with_runner(
         &request,
@@ -414,8 +396,7 @@ fn extract_features_without_a_model_directory_is_refused_with_its_slug() {
 fn lock_asset_package_reports_a_package_failure_as_a_model_incompatibility() {
     let temp = tempfile::tempdir().unwrap();
     let request = Request::LockAssetPackage(ProjectDirParams {
-        project_dir: temp.path().join("project"),
-    });
+        project_dir: temp.path().join("project")});
     let config = WorkerConfig::from_values_with_toolchains(
         None,
         None,
@@ -450,8 +431,7 @@ fn lock_asset_package_reports_a_package_failure_as_a_model_incompatibility() {
 #[test]
 fn lock_asset_package_without_a_model_directory_is_refused_with_its_slug() {
     let request = Request::LockAssetPackage(ProjectDirParams {
-        project_dir: PathBuf::from("C:/tmp/project"),
-    });
+        project_dir: PathBuf::from("C:/tmp/project")});
     let runner = FakeRunner::new(vec![]);
     let CommandOutcome::Failed(error) = execute_with_runner(
         &request,
@@ -476,15 +456,13 @@ fn lock_asset_package_without_a_model_directory_is_refused_with_its_slug() {
 /// written, so the normalization pipeline can verify and commit them.
 struct NormalizeRunner {
     outputs: Mutex<VecDeque<Result<ProcessOutput, MediaError>>>,
-    commands: Mutex<Vec<CommandSpec>>,
-}
+    commands: Mutex<Vec<CommandSpec>>}
 
 impl NormalizeRunner {
     fn new(outputs: Vec<Result<ProcessOutput, MediaError>>) -> Self {
         Self {
             outputs: Mutex::new(outputs.into_iter().collect()),
-            commands: Mutex::new(Vec::new()),
-        }
+            commands: Mutex::new(Vec::new())}
     }
 }
 
@@ -503,8 +481,7 @@ impl ProcessRunner for NormalizeRunner {
 /// Records everything a command reports.
 #[derive(Default)]
 struct RecordingReporter {
-    reports: Mutex<Vec<(String, Option<Progress>)>>,
-}
+    reports: Mutex<Vec<(String, Option<Progress>)>>}
 
 impl TaskReporter for RecordingReporter {
     fn report(&self, stage: TaskStage, progress: Option<Progress>) {
@@ -673,8 +650,7 @@ fn a_source_without_audio_fails_before_any_output_is_written() {
 fn a_cancelled_normalization_reports_cancelled() {
     let (temp, source) = media_file();
     let runner = NormalizeRunner::new(vec![Err(MediaError::ToolCancelled {
-        operation: "ffprobe",
-    })]);
+        operation: "ffprobe"})]);
     let outcome = execute_with_runner(
         &normalize_request(source, temp.path().join("assets")),
         &media_config(),

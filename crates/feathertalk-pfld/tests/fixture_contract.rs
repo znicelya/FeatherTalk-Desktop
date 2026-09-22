@@ -1,8 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -19,22 +18,19 @@ struct FixtureManifest {
     source: Source,
     artifact: Artifact,
     generator: Generator,
-    files: BTreeMap<String, FileDescriptor>,
-}
+    files: BTreeMap<String, FileDescriptor>}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Source {
     file_name: String,
-    sha256: String,
-}
+    sha256: String}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Artifact {
     file_name: String,
-    sha256: String,
-}
+    sha256: String}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,8 +40,7 @@ struct Generator {
     numpy_version: String,
     platform: String,
     threads: u32,
-    input_formula: String,
-}
+    input_formula: String}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -54,8 +49,7 @@ struct FileDescriptor {
     dtype: String,
     shape: Vec<usize>,
     bytes: u64,
-    sha256: String,
-}
+    sha256: String}
 
 fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/pytorch_cpu_v1")

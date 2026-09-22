@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use feathertalk_weights::{
     PFLD_ARCHITECTURE_VERSION, PFLD_CHECKPOINT_EPOCH, PfldIgnoredTensors, PfldImportManifest,
-    PfldImportRequest, PfldModelArtifact, PfldSourceManifest, TensorAudit, TensorSummary,
-};
+    PfldImportRequest, PfldModelArtifact, PfldSourceManifest, TensorAudit, TensorSummary};
 
 #[test]
 fn pfld_request_defaults_match_existing_import_limits() {
@@ -25,26 +24,22 @@ fn manifest_round_trips_without_absolute_paths_or_timestamps() {
         architecture_version: PFLD_ARCHITECTURE_VERSION.to_owned(),
         source: PfldSourceManifest {
             file_name: "checkpoint_epoch_335.pth.tar".to_owned(),
-            sha256: "a".repeat(64),
-        },
+            sha256: "a".repeat(64)},
         epoch: PFLD_CHECKPOINT_EPOCH,
         backbone: TensorSummary {
             tensor_count: 2_090,
-            total_elements: 913_663,
-        },
+            total_elements: 913_663},
         model: PfldModelArtifact {
             format: "safetensors".to_owned(),
             file_name: "model.safetensors".to_owned(),
             sha256: "b".repeat(64),
             tensor_count: 1_735,
-            total_elements: 910_902,
-        },
+            total_elements: 910_902},
         ignored: PfldIgnoredTensors {
             batch_norm_counters: TensorAudit {
                 tensor_count: 1,
                 total_elements: 1,
-                keys: vec!["conv1.rbr_conv.0.bn.num_batches_tracked".to_owned()],
-            },
+                keys: vec!["conv1.rbr_conv.0.bn.num_batches_tracked".to_owned()]},
             localization: TensorAudit {
                 tensor_count: 4,
                 total_elements: 2_410,
@@ -53,11 +48,8 @@ fn manifest_round_trips_without_absolute_paths_or_timestamps() {
                     "localization.0.weight".to_owned(),
                     "localization.3.bias".to_owned(),
                     "localization.3.weight".to_owned(),
-                ],
-            },
-            auxiliarynet: None,
-        },
-    };
+                ]},
+            auxiliarynet: None}};
 
     let json = serde_json::to_string_pretty(&manifest).unwrap();
     assert!(!json.contains(r#""destination_dir""#));

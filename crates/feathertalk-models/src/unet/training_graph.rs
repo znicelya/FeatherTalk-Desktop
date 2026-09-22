@@ -1,4 +1,7 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::{
+    module::Module,
+    tensor::Tensor,
+};
 
 use super::{MobileOneUnet, OriginalUnet};
 
@@ -16,22 +19,34 @@ use super::{MobileOneUnet, OriginalUnet};
 ///
 /// let device = Default::default();
 /// let inference_graph = MobileOneUnetConfig::parity_micro()
-///     .init::<CpuBackend>(&device)
+///     .init(&device)
 ///     .reparameterize();
 /// require_training_graph(&inference_graph);
 /// ```
-pub trait TrainableTalkingHead<B: Backend> {
-    fn forward_training(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4>;
+pub trait TrainableTalkingHead {
+    fn forward_training(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4>;
+
+    fn freeze_audio(self) -> Self;
 }
 
-impl<B: Backend> TrainableTalkingHead<B> for OriginalUnet<B> {
-    fn forward_training(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+impl TrainableTalkingHead for OriginalUnet {
+    fn forward_training(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         self.forward(image, audio)
+    }
+
+    fn freeze_audio(mut self) -> Self {
+        self.audio_model = self.audio_model.no_grad();
+        self
     }
 }
 
-impl<B: Backend> TrainableTalkingHead<B> for MobileOneUnet<B> {
-    fn forward_training(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+impl TrainableTalkingHead for MobileOneUnet {
+    fn forward_training(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         self.forward(image, audio)
+    }
+
+    fn freeze_audio(mut self) -> Self {
+        self.audio_model = self.audio_model.no_grad();
+        self
     }
 }

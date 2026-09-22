@@ -1,35 +1,22 @@
 use std::{
     rc::Rc,
-    sync::atomic::{AtomicU64, Ordering},
-};
+    sync::atomic::{AtomicU64, Ordering}};
 
 use burn::{
     module::ParamId,
-    tensor::{DType, Shape, TensorData},
-};
-use burn_store::TensorSnapshot;
+    tensor::{DType, Shape, TensorData}};
+use burn_store::burn_pack::Tensor;
 use feathertalk_export::onnx::{
     InitializerSet, ONNX_FLOAT_DATA_TYPE, OnnxExportError, OnnxTensorProto,
-    add_snapshot_initializers, initializer_from_snapshot,
-};
+    add_snapshot_initializers, initializer_from_snapshot};
 use prost::Message;
 
-fn snapshot_f32(name: &str, values: Vec<f32>, shape: Vec<usize>) -> TensorSnapshot {
-    TensorSnapshot::from_data(
-        TensorData::new(values, shape),
-        name.split('.').map(str::to_owned).collect(),
-        Vec::new(),
-        ParamId::new(),
-    )
+fn snapshot_f32(name: &str, values: Vec<f32>, shape: Vec<usize>) -> burn_store::burn_pack::Tensor {
+    burn_store::bridge::from_data(TensorData::new(values, shape), name.to_owned(), None)
 }
 
-fn snapshot_i32(name: &str, values: Vec<i32>, shape: Vec<usize>) -> TensorSnapshot {
-    TensorSnapshot::from_data(
-        TensorData::new(values, shape),
-        name.split('.').map(str::to_owned).collect(),
-        Vec::new(),
-        ParamId::new(),
-    )
+fn snapshot_i32(name: &str, values: Vec<i32>, shape: Vec<usize>) -> burn_store::burn_pack::Tensor {
+    burn_store::bridge::from_data(TensorData::new(values, shape), name.to_owned(), None)
 }
 
 #[test]
@@ -67,13 +54,12 @@ fn initializer_rejects_snapshot_with_non_f32_dtype() {
 
 #[test]
 fn initializer_rejects_materialized_shape_mismatch() {
-    let snapshot = TensorSnapshot::from_closure(
-        Rc::new(|| Ok(TensorData::new(vec![1.0_f32], [1]))),
+    let snapshot = burn_store::bridge::deferred(
+        "broken".to_owned(),
         DType::F32,
         Shape::new([2]),
-        vec!["broken".to_owned()],
-        Vec::new(),
-        ParamId::new(),
+        None,
+        || Ok(TensorData::new(vec![1.0_f32], [1])),
     );
 
     assert!(matches!(
@@ -106,16 +92,15 @@ fn initializer_set_is_sorted_and_rejects_duplicate_names() {
 #[test]
 fn initializer_rejects_element_count_mismatch_without_partial_output() {
     static CALLS: AtomicU64 = AtomicU64::new(0);
-    let snapshot = TensorSnapshot::from_closure(
-        Rc::new(|| {
-            CALLS.fetch_add(1, Ordering::Relaxed);
-            Ok(TensorData::from_bytes_vec(vec![0; 4], [2], DType::F32))
-        }),
+    let snapshot = burn_store::bridge::deferred(
+        "count".to_owned(),
         DType::F32,
         Shape::new([1]),
-        vec!["count".to_owned()],
-        Vec::new(),
-        ParamId::new(),
+        None,
+        || {
+            CALLS.fetch_add(1, Ordering::Relaxed);
+            Ok(TensorData::from_bytes_vec(vec![0; 4], [2], DType::F32))
+        },
     );
 
     assert!(matches!(

@@ -1,18 +1,15 @@
 use std::{
     fs::{self, File},
     io,
-    path::PathBuf,
-};
+    path::PathBuf};
 
 use burn::tensor::{Tensor, TensorData};
 use feathertalk_export::{
     FeatherHubertPackageRequest, LicenseBundle, LicenseEntry, build_feather_hubert_package,
-    load_model_package,
-};
+    load_model_package};
 use feathertalk_models::{
     backend::CpuBackend,
-    feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder},
-};
+    feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder}};
 use zip::ZipArchive;
 
 #[test]
@@ -28,9 +25,7 @@ fn micro_checkpoint_builds_strict_package_and_runs_after_reload() {
                 component: "synthetic FeatherHuBERT fixture".to_owned(),
                 license_id: "LicenseRef-Test-Only".to_owned(),
                 source_url: "https://example.invalid/feather-hubert".to_owned(),
-                notice: "Local conversion test only; not redistribution approval.".to_owned(),
-            }],
-        })
+                notice: "Local conversion test only; not redistribution approval.".to_owned()}]})
         .unwrap(),
     )
     .unwrap();
@@ -41,8 +36,7 @@ fn micro_checkpoint_builds_strict_package_and_runs_after_reload() {
         licenses: licenses.clone(),
         destination: destination.clone(),
         created_at: "2026-08-27T00:00:00Z".to_owned(),
-        minimum_app_version: "0.1.0".to_owned(),
-    })
+        minimum_app_version: "0.1.0".to_owned()})
     .unwrap();
 
     assert_eq!(report.manifest.model_type, "feather_hubert");
@@ -56,11 +50,11 @@ fn micro_checkpoint_builds_strict_package_and_runs_after_reload() {
     assert_eq!(report.manifest.outputs[0].shape, vec![1, -1, 64]);
 
     let device = Default::default();
-    let (model, manifest) = load_model_package::<CpuBackend, FeatherHubertEncoder<CpuBackend>, _>(
+    let (model, manifest) = load_model_package::<FeatherHubertEncoder, _>(
         &destination,
         &report.manifest.description(),
         &device,
-        |device| FeatherHubertConfig::parity_micro().init::<CpuBackend>(device),
+        |device| FeatherHubertConfig::parity_micro().init(device),
     )
     .unwrap();
     assert_eq!(manifest, report.manifest);
@@ -70,7 +64,7 @@ fn micro_checkpoint_builds_strict_package_and_runs_after_reload() {
     assert!(
         output
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap()
             .iter()
             .all(|value| value.is_finite())

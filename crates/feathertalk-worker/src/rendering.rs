@@ -21,10 +21,10 @@ use crate::error_map::render_task_error;
 pub type RenderBackend = CpuBackend;
 
 /// The device type the render command hands to the model.
-pub type RenderDevice = Device<RenderBackend>;
+pub type RenderDevice = Device;
 
 /// The backend name in results from the CPU convenience functions.
-pub const RENDER_BACKEND_NAME: &str = "ndarray-cpu";
+pub const RENDER_BACKEND_NAME: &str = "flex-cpu";
 
 /// The frame rate inference writes into the container.
 pub const RENDER_FPS: u32 = 25;
@@ -51,22 +51,19 @@ fn project_path(root: &Path, components: &[&str]) -> PathBuf {
 pub struct ProjectAssets {
     pub frame_dir: PathBuf,
     pub landmark_dir: PathBuf,
-    pub feature_path: PathBuf,
-}
+    pub feature_path: PathBuf}
 
 pub fn project_assets(project_dir: &Path) -> ProjectAssets {
     ProjectAssets {
         frame_dir: project_path(project_dir, &FRAME_DIR),
         landmark_dir: project_path(project_dir, &LANDMARK_DIR),
-        feature_path: project_path(project_dir, &FEATURE_PATH),
-    }
+        feature_path: project_path(project_dir, &FEATURE_PATH)}
 }
 
 /// The two architectures a training checkpoint can hold.
 pub enum RenderVariant {
     OriginalUnet(OriginalUnetConfig),
-    MobileOneUnet(MobileOneUnetConfig),
-}
+    MobileOneUnet(MobileOneUnetConfig)}
 
 impl RenderVariant {
     /// The descriptor identity of this variant. `mobileone_unet` is described in
@@ -75,8 +72,7 @@ impl RenderVariant {
     pub fn configuration(&self) -> ModelConfiguration {
         match self {
             Self::OriginalUnet(config) => ModelConfiguration::original_unet(config),
-            Self::MobileOneUnet(config) => ModelConfiguration::mobileone_unet(config, false),
-        }
+            Self::MobileOneUnet(config) => ModelConfiguration::mobileone_unet(config, false)}
     }
 }
 
@@ -112,8 +108,7 @@ pub fn staging_task_id() -> String {
 pub fn progress_total(frame_count: u64, max_output_frames: Option<u64>) -> u64 {
     match max_output_frames {
         Some(max) => max.min(frame_count),
-        None => frame_count,
-    }
+        None => frame_count}
 }
 
 /// Every path in a render request is absolute, because the worker resolves
@@ -177,8 +172,7 @@ pub struct RenderJob {
     pub checkpoint_epoch: u64,
     pub checkpoint_global_step: u64,
     pub source_frame_count: u64,
-    pub max_output_frames: Option<u64>,
-}
+    pub max_output_frames: Option<u64>}
 
 /// Turns an admitted request plus the locked manifest's frame count into a job.
 ///
@@ -230,6 +224,5 @@ pub fn render_job(
         checkpoint_epoch,
         checkpoint_global_step,
         source_frame_count: frame_count,
-        max_output_frames: params.max_output_frames,
-    })
+        max_output_frames: params.max_output_frames})
 }

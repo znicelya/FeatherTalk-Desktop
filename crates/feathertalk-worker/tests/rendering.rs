@@ -6,8 +6,7 @@ use feathertalk_models::unet::OriginalUnetConfig;
 use feathertalk_worker::{
     RENDER_BACKEND_NAME, RENDER_FPS, RenderVariant, check_max_output_frames, check_render_paths,
     checkpoint_descriptor, progress_total, project_assets, render_job, render_variant,
-    staging_task_id,
-};
+    staging_task_id};
 use tempfile::tempdir;
 
 /// A `TempDir` root keeps the fixture absolute on every platform without
@@ -18,8 +17,7 @@ fn params(root: &Path) -> RenderParams {
         checkpoint: root.join("checkpoint"),
         audio: root.join("voice.wav"),
         output: root.join("preview.mp4"),
-        max_output_frames: None,
-    }
+        max_output_frames: None}
 }
 
 /// The trailing names of a path, so an assertion can check the separator was
@@ -29,8 +27,7 @@ fn tail(path: &Path, count: usize) -> Vec<String> {
         .components()
         .filter_map(|component| match component {
             Component::Normal(name) => Some(name.to_string_lossy().into_owned()),
-            _ => None,
-        })
+            _ => None})
         .collect();
     if names.len() > count {
         names.drain(..names.len() - count);
@@ -96,8 +93,7 @@ fn a_relative_path_in_a_render_request_is_refused() {
         match mutate {
             0 => relative.checkpoint = Path::new("checkpoint").to_path_buf(),
             1 => relative.audio = Path::new("voice.wav").to_path_buf(),
-            _ => relative.output = Path::new("preview.mp4").to_path_buf(),
-        }
+            _ => relative.output = Path::new("preview.mp4").to_path_buf()}
         let error = check_render_paths(&relative).expect_err("a relative path is refused");
         assert_eq!(error.code, ErrorCode::MediaInvalid, "{field}");
         assert_eq!(error.stage, TaskStage::Preparing, "{field}");
@@ -152,7 +148,7 @@ fn two_staging_task_ids_never_collide() {
 
 #[test]
 fn the_render_backend_is_the_one_the_payload_reports() {
-    assert_eq!(RENDER_BACKEND_NAME, "ndarray-cpu");
+    assert_eq!(RENDER_BACKEND_NAME, "flex-cpu");
     assert_eq!(RENDER_FPS, 25);
 }
 

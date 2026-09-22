@@ -421,6 +421,8 @@ if $SKIP_BUILD; then
   warn "--skip-build 已指定，跳过 cargo build"
 else
   log "构建 feathertalk-benchmark（首次编译可能较久）..."
+  export CARGO_SOURCE_CRATES_IO_REPLACE_WITH=ustc
+  export CARGO_SOURCE_USTC_REGISTRY='sparse+https://mirrors.ustc.edu.cn/crates.io-index/'
   cargo build --locked --release -p feathertalk-benchmark
 fi
 

@@ -7,17 +7,14 @@ use std::path::{Path, PathBuf};
 use feathertalk_audio::{FeatureMatrix, write_feature_file};
 use feathertalk_inference::{
     BgrFrame, FrameReader, InferenceError, MouthMasking, RenderGeometry, build_face_crop,
-    build_inner_image_planes,
-};
+    build_inner_image_planes};
 use feathertalk_preprocess::{
     Landmarks, MaskRect, PFLD_LANDMARK_COUNT, compute_face_bbox, default_crop_spec,
-    default_mouth_roi_spec, mouth_roi_rect, read_landmarks,
-};
+    default_mouth_roi_spec, mouth_roi_rect, read_landmarks};
 use feathertalk_project::{
     AssetManifest, AssetPackageState, FeatureType, ModelSelection, ProjectManifest,
     TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_asset_manifest_atomic,
-    write_project_manifest_atomic,
-};
+    write_project_manifest_atomic};
 use tempfile::TempDir;
 
 pub const FRAME_WIDTH: u32 = 256;
@@ -39,15 +36,13 @@ impl FrameReader for GradientFrameReader {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_path_buf(),
-                message: format!("expected a file named {expected}"),
-            });
+                message: format!("expected a file named {expected}")});
         }
         if !path.is_file() {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_path_buf(),
-                message: "not a file".to_owned(),
-            });
+                message: "not a file".to_owned()});
         }
         let width = FRAME_WIDTH as usize;
         let height = FRAME_HEIGHT as usize;
@@ -74,8 +69,7 @@ pub struct FixtureSpec {
     pub face_xmax: u32,
     pub face_ymin: u32,
     pub mouth_x: u32,
-    pub mouth_y: u32,
-}
+    pub mouth_y: u32}
 
 impl FixtureSpec {
     /// The 256x256 gradient project the dataset tests start from.
@@ -89,8 +83,7 @@ impl FixtureSpec {
             face_xmax: 200,
             face_ymin: 60,
             mouth_x: 100,
-            mouth_y: 160,
-        }
+            mouth_y: 160}
     }
 
     pub fn manifest(&self) -> AssetManifest {
@@ -106,8 +99,7 @@ impl FixtureSpec {
             feature_type: FeatureType::FeatherHubert,
             feature_shape: [self.frame_count as u64, 2, 1024],
             landmark_model_sha256: "a".repeat(64),
-            feature_model_sha256: "b".repeat(64),
-        }
+            feature_model_sha256: "b".repeat(64)}
     }
 }
 
@@ -214,8 +206,7 @@ pub fn preparing_manifest() -> AssetManifest {
         feature_type: FeatureType::FeatherHubert,
         feature_shape: [0, 0, 0],
         landmark_model_sha256: String::new(),
-        feature_model_sha256: String::new(),
-    }
+        feature_model_sha256: String::new()}
 }
 
 pub fn valid_project() -> ProjectManifest {
@@ -229,7 +220,5 @@ pub fn valid_project() -> ProjectManifest {
             task_id: "task-1".into(),
             kind: "preprocess".into(),
             status: TaskHistoryStatus::Completed,
-            updated_at: "2026-08-20T10:00:00Z".into(),
-        }],
-    }
+            updated_at: "2026-08-20T10:00:00Z".into()}]}
 }

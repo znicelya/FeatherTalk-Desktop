@@ -1,31 +1,31 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::{Tensor};
 
 use crate::{TrainingError, Vgg19Conv3_3};
 
-pub trait PerceptualFeatureExtractor<B: Backend> {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4>;
+pub trait PerceptualFeatureExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4>;
 }
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for Vgg19Conv3_3<B> {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for Vgg19Conv3_3 {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         Vgg19Conv3_3::forward(self, image)
     }
 }
 
-pub fn perceptual_mse<B: Backend>(
-    extractor: &impl PerceptualFeatureExtractor<B>,
-    prediction: Tensor<B, 4>,
-    target: Tensor<B, 4>,
-) -> Result<Tensor<B, 1>, TrainingError> {
+pub fn perceptual_mse(
+    extractor: &impl PerceptualFeatureExtractor,
+    prediction: Tensor<4>,
+    target: Tensor<4>,
+) -> Result<Tensor<1>, TrainingError> {
     validate_image_pair(&prediction, &target)?;
     let predicted = extractor.forward(prediction);
-    let expected = extractor.forward(target).detach();
+    let expected = extractor.forward(target.detach());
     Ok((predicted - expected).square().mean())
 }
 
-pub(crate) fn validate_image_pair<B: Backend>(
-    prediction: &Tensor<B, 4>,
-    target: &Tensor<B, 4>,
+pub(crate) fn validate_image_pair(
+    prediction: &Tensor<4>,
+    target: &Tensor<4>,
 ) -> Result<(), TrainingError> {
     let prediction_shape = prediction.dims();
     let target_shape = target.dims();

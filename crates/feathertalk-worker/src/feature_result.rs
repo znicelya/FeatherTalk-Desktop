@@ -22,8 +22,7 @@ pub fn feature_to_json(output_dir: &Path, artifact: &FeatureArtifact, model_sha2
         "frame_count": artifact.tokens() / 2,
         "bytes": artifact.bytes(),
         "sha256": artifact.sha256(),
-        "model_sha256": model_sha256,
-    })
+        "model_sha256": model_sha256})
 }
 
 fn path_text(path: &Path) -> String {

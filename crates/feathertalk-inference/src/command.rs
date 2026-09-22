@@ -1,7 +1,6 @@
 use std::{
     ffi::OsString,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use crate::{InferenceError, RawFrameRenderSpec};
 
@@ -9,8 +8,7 @@ use crate::{InferenceError, RawFrameRenderSpec};
 pub struct CommandSpec {
     executable: PathBuf,
     arguments: Vec<OsString>,
-    operation: &'static str,
-}
+    operation: &'static str}
 
 impl CommandSpec {
     pub(crate) fn new(
@@ -21,8 +19,7 @@ impl CommandSpec {
         Self {
             executable,
             arguments,
-            operation,
-        }
+            operation}
     }
 
     pub fn executable(&self) -> &Path {
@@ -47,8 +44,7 @@ pub fn raw_video_command(
     }
     if !ffmpeg.is_absolute() {
         return Err(InferenceError::FfmpegPathNotAbsolute {
-            path: ffmpeg.to_owned(),
-        });
+            path: ffmpeg.to_owned()});
     }
 
     let mut arguments = Vec::with_capacity(26);

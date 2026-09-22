@@ -8,8 +8,7 @@ pub enum GraphicsSelection {
     Auto,
     Dx12,
     Metal,
-    Vulkan,
-}
+    Vulkan}
 
 impl GraphicsSelection {
     pub const fn resolved(self) -> Self {
@@ -32,8 +31,7 @@ impl GraphicsSelection {
                     Self::Auto
                 }
             }
-            selected => selected,
-        }
+            selected => selected}
     }
 
     pub fn validate_for_target(self) -> Result<(), ParityError> {
@@ -41,8 +39,7 @@ impl GraphicsSelection {
             Self::Auto => true,
             Self::Dx12 => cfg!(target_os = "windows"),
             Self::Metal => cfg!(target_os = "macos"),
-            Self::Vulkan => cfg!(any(target_os = "windows", target_os = "linux")),
-        };
+            Self::Vulkan => cfg!(any(target_os = "windows", target_os = "linux"))};
         if supported {
             Ok(())
         } else {
@@ -58,8 +55,7 @@ impl GraphicsSelection {
             Self::Auto => "auto",
             Self::Dx12 => "dx12",
             Self::Metal => "metal",
-            Self::Vulkan => "vulkan",
-        }
+            Self::Vulkan => "vulkan"}
     }
 }
 
@@ -68,8 +64,7 @@ pub struct ExecutionEvidence {
     pub backend: String,
     pub graphics: String,
     pub device: String,
-    pub used_cpu_fallback: bool,
-}
+    pub used_cpu_fallback: bool}
 
 pub fn run_wgpu_probe(graphics: GraphicsSelection) -> Result<ExecutionEvidence, ParityError> {
     let graphics = graphics.resolved();

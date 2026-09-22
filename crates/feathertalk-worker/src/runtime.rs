@@ -3,13 +3,11 @@ use std::{
     io::{BufRead, Write},
     panic::{AssertUnwindSafe, catch_unwind},
     sync::mpsc::{self, Receiver, Sender},
-    thread,
-};
+    thread};
 
 use feathertalk_domain::{
     ClientFrame, DomainError, Event, FrameReader, FrameWriter, Metrics, PROTOCOL_VERSION, Progress,
-    RejectedFrame, Request, ServerFrame, TaskId, TaskKind, TaskLifecycle, TaskStage,
-};
+    RejectedFrame, Request, ServerFrame, TaskId, TaskKind, TaskLifecycle, TaskStage};
 use feathertalk_media::CancellationToken;
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
@@ -19,8 +17,7 @@ use crate::reporter::TrackedReporter;
 use crate::{
     AdapterLockError, AdapterLocks, CommandOutcome, ENV_FFMPEG, ENV_FFPROBE, ENV_HUBERT_DIR,
     ENV_PFLD_DIR, ENV_SCRFD_DIR, ENV_VGG19_DIR, TaskReporter, WorkerConfig, execute, ready_frame,
-    supported_commands,
-};
+    supported_commands};
 
 /// The executor thread's stack. A 160x160 training step builds a deep autodiff
 /// graph and overflows the 2 MiB default in a debug build; 64 MiB is the size
@@ -45,8 +42,7 @@ pub type JobExecutor = Box<
 /// already shutting down is not a reason to fail a task.
 struct ChannelReporter {
     task_id: TaskId,
-    control_tx: Sender<ControlMessage>,
-}
+    control_tx: Sender<ControlMessage>}
 
 impl TaskReporter for ChannelReporter {
     fn report(&self, stage: TaskStage, progress: Option<Progress>) {
@@ -68,24 +64,21 @@ enum ControlMessage {
     ClientError(DomainError),
     InputClosed,
     Emit(Event),
-    Finished { task_id: TaskId, adapter_id: String },
-}
+    Finished { task_id: TaskId, adapter_id: String }}
 
 /// One unit of work handed to the execution thread.
 struct Job {
     task_id: TaskId,
     request: Request,
     token: CancellationToken,
-    adapter_id: String,
-}
+    adapter_id: String}
 
 struct TaskState {
     lifecycle: TaskLifecycle,
     token: CancellationToken,
     /// True until the job is handed to the execution thread. A queued task can
     /// be cancelled without ever running.
-    queued: bool,
-}
+    queued: bool}
 
 /// Serve one client session over `input`/`output` until shutdown or EOF.
 pub fn serve<R, W>(input: R, output: W, config: &WorkerConfig) -> Result<(), DomainError>
@@ -134,8 +127,7 @@ where
         .stack_size(EXECUTION_STACK_BYTES)
         .spawn(move || run_jobs(&job_rx, &execution_tx, execution_config, executor))
         .map_err(|error| DomainError::MalformedFrame {
-            reason: format!("cannot start the execution thread: {error}"),
-        })?;
+            reason: format!("cannot start the execution thread: {error}")})?;
 
     let result = control_loop(&control_rx, &mut writer, &job_tx, config);
 
@@ -146,8 +138,7 @@ where
     output
         .flush()
         .map_err(|error| DomainError::MalformedFrame {
-            reason: error.to_string(),
-        })?;
+            reason: error.to_string()})?;
     result
 }
 
@@ -159,10 +150,8 @@ fn read_input<R: BufRead>(input: R, control_tx: &Sender<ControlMessage>) {
         let message = match decoded {
             Ok(frame) => match frame.validate() {
                 Ok(()) => ControlMessage::Client(frame),
-                Err(error) => ControlMessage::ClientError(error),
-            },
-            Err(error) => ControlMessage::ClientError(error),
-        };
+                Err(error) => ControlMessage::ClientError(error)},
+            Err(error) => ControlMessage::ClientError(error)};
         if control_tx.send(message).is_err() {
             return;
         }
@@ -179,8 +168,7 @@ fn run_jobs(
     while let Ok(job) = job_rx.recv() {
         let channel_reporter = ChannelReporter {
             task_id: job.task_id.clone(),
-            control_tx: control_tx.clone(),
-        };
+            control_tx: control_tx.clone()};
         let reporter = TrackedReporter::new(&channel_reporter);
         // Burn reports some failures by unwinding. The control loop still owes
         // the client a terminal event and must release the adapter afterwards.
@@ -203,8 +191,7 @@ fn run_jobs(
             CommandOutcome::Failed(error) => {
                 let stage = TaskStage::Failed {
                     code: error.code,
-                    message: error.summary.clone(),
-                };
+                    message: error.summary.clone()};
                 let mut event = Event::new(job.task_id.clone(), &now_rfc3339(), stage);
                 event.error = Some(error);
                 event
@@ -215,8 +202,7 @@ fn run_jobs(
         // starts before the previous one is reported.
         let _ = control_tx.send(ControlMessage::Finished {
             task_id: job.task_id,
-            adapter_id: job.adapter_id,
-        });
+            adapter_id: job.adapter_id});
     }
 }
 
@@ -271,15 +257,13 @@ fn control_loop<W: Write>(
                         TaskState {
                             lifecycle: TaskLifecycle::new(),
                             token: token.clone(),
-                            queued: true,
-                        },
+                            queued: true},
                     );
                     pending.push_back(Job {
                         task_id: frame.task_id,
                         request: frame.request,
                         token,
-                        adapter_id: adapter.id,
-                    });
+                        adapter_id: adapter.id});
                 }
             }
             ControlMessage::Client(ClientFrame::Cancel(frame)) => {
@@ -292,8 +276,7 @@ fn control_loop<W: Write>(
                         state.queued = false;
                         queued
                     }
-                    _ => false,
-                };
+                    _ => false};
                 if cancel_queued {
                     pending.retain(|job| job.task_id != frame.task_id);
                     let event = Event::new(frame.task_id, &now_rfc3339(), TaskStage::Cancelled);
@@ -308,8 +291,7 @@ fn control_loop<W: Write>(
             ControlMessage::Emit(event) => emit(writer, &mut tasks, event)?,
             ControlMessage::Finished {
                 task_id,
-                adapter_id,
-            } => {
+                adapter_id} => {
                 locks.release(&adapter_id).map_err(lock_failure)?;
                 if active.as_ref() == Some(&task_id) {
                     active = None;
@@ -365,8 +347,7 @@ fn dispatch<W: Write>(
     let event = Event::new(job.task_id.clone(), &now_rfc3339(), TaskStage::Preparing);
     emit(writer, tasks, event)?;
     job_tx.send(job).map_err(|_| DomainError::MalformedFrame {
-        reason: "execution thread stopped before the task was dispatched".to_owned(),
-    })
+        reason: "execution thread stopped before the task was dispatched".to_owned()})
 }
 
 /// Stop accepting work: cancel every queued task with its own `cancelled`
@@ -417,8 +398,7 @@ fn reject<W: Write>(writer: &mut FrameWriter<W>, reason: String) -> Result<(), D
         writer,
         &ServerFrame::Rejected(RejectedFrame {
             protocol_version: PROTOCOL_VERSION,
-            reason,
-        }),
+            reason}),
     )
 }
 
@@ -462,8 +442,7 @@ fn unsupported_reason(request: &Request, config: &WorkerConfig) -> String {
                 .map(TaskKind::as_slug)
                 .collect::<Vec<_>>()
                 .join("、")
-        ),
-    }
+        )}
 }
 
 fn media_reason(slug: &str, config: &WorkerConfig) -> String {
@@ -473,8 +452,7 @@ fn media_reason(slug: &str, config: &WorkerConfig) -> String {
         ),
         None => format!(
             "命令 {slug} 需要媒体工具链，请设置 {ENV_FFPROBE} 与 {ENV_FFMPEG} 后重启 worker。"
-        ),
-    }
+        )}
 }
 
 fn model_reason(slug: &str, config: &WorkerConfig) -> String {
@@ -484,8 +462,7 @@ fn model_reason(slug: &str, config: &WorkerConfig) -> String {
         ),
         None => format!(
             "命令 {slug} 需要人脸与关键点模型，请设置 {ENV_SCRFD_DIR} 与 {ENV_PFLD_DIR} 后重启 worker。"
-        ),
-    }
+        )}
 }
 
 fn feature_reason(slug: &str, config: &WorkerConfig) -> String {
@@ -495,8 +472,7 @@ fn feature_reason(slug: &str, config: &WorkerConfig) -> String {
         ),
         None => format!(
             "命令 {slug} 需要 FeatherHuBERT 特征模型，请设置 {ENV_HUBERT_DIR} 后重启 worker。"
-        ),
-    }
+        )}
 }
 
 fn training_reason(slug: &str, config: &WorkerConfig) -> String {
@@ -515,8 +491,7 @@ fn client_error_reason(error: &DomainError) -> String {
         DomainError::ProtocolVersion { expected, actual } => {
             format!("协议版本不兼容：worker 使用 {expected}，收到 {actual}。请升级桌面端后重试。")
         }
-        other => format!("无法解析请求帧：{other}。请检查帧格式后重试。"),
-    }
+        other => format!("无法解析请求帧：{other}。请检查帧格式后重试。")}
 }
 
 /// An adapter lock error at this point is an internal invariant violation: the
@@ -524,8 +499,7 @@ fn client_error_reason(error: &DomainError) -> String {
 fn lock_failure(error: AdapterLockError) -> DomainError {
     DomainError::InvalidField {
         field: "adapter_id",
-        reason: error.to_string(),
-    }
+        reason: error.to_string()}
 }
 
 fn now_rfc3339() -> String {

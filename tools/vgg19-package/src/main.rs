@@ -11,16 +11,14 @@ struct Arguments {
     #[arg(long)]
     licenses: PathBuf,
     #[arg(long)]
-    destination: PathBuf,
-}
+    destination: PathBuf}
 
 fn main() -> Result<(), feathertalk_vgg19_package::PackageError> {
     let arguments = Arguments::parse();
     let report = build_vgg19_package(&Vgg19PackageRequest {
         source: arguments.source,
         licenses: arguments.licenses,
-        destination: arguments.destination.clone(),
-    })?;
+        destination: arguments.destination.clone()})?;
     println!("destination={}", arguments.destination.display());
     println!("source_sha256={}", report.manifest.source.sha256);
     println!("model_sha256={}", report.manifest.model.sha256);

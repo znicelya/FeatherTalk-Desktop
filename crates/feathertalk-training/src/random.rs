@@ -13,14 +13,12 @@ pub(super) fn epoch_permutation(
     epoch: u64,
 ) -> Result<Vec<u64>, TrainingError> {
     let length = usize::try_from(sample_count).map_err(|_| TrainingError::DataLoaderOverflow {
-        operation: "converting sample count",
-    })?;
+        operation: "converting sample count"})?;
     let mut permutation = Vec::new();
     permutation.try_reserve_exact(length).map_err(|source| {
         TrainingError::PermutationAllocation {
             samples: sample_count,
-            source,
-        }
+            source}
     })?;
     permutation.extend(0..sample_count);
 
@@ -28,16 +26,13 @@ pub(super) fn epoch_permutation(
     for index in (1..length).rev() {
         let upper = u64::try_from(index)
             .map_err(|_| TrainingError::DataLoaderOverflow {
-                operation: "converting shuffle index",
-            })?
+                operation: "converting shuffle index"})?
             .checked_add(1)
             .ok_or(TrainingError::DataLoaderOverflow {
-                operation: "computing shuffle bound",
-            })?;
+                operation: "computing shuffle bound"})?;
         let swap_index = usize::try_from(random.bounded(upper)?).map_err(|_| {
             TrainingError::DataLoaderOverflow {
-                operation: "converting bounded shuffle index",
-            }
+                operation: "converting bounded shuffle index"}
         })?;
         permutation.swap(index, swap_index);
     }
@@ -55,8 +50,7 @@ pub(super) fn reference_index(
 }
 
 struct SplitMix64 {
-    state: u64,
-}
+    state: u64}
 
 impl SplitMix64 {
     fn new(state: u64) -> Self {

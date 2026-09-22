@@ -1,24 +1,23 @@
 use burn::module::Param;
 use burn::nn::{BatchNorm, BatchNormConfig, Relu, conv::Conv2d};
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneBlock<B: Backend> {
-    branches: Vec<(Conv2d<B>, BatchNorm<B>)>,
-    scale: Option<(Conv2d<B>, BatchNorm<B>)>,
-    skip: Option<BatchNorm<B>>,
+pub struct MobileOneBlock {
+    branches: Vec<(Conv2d, BatchNorm)>,
+    scale: Option<(Conv2d, BatchNorm)>,
+    skip: Option<BatchNorm>,
     #[module(skip)]
-    activation: bool,
-}
+    activation: bool}
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneBlock<B: Backend> {
-    pub conv: Conv2d<B>,
+pub struct ReparameterizedMobileOneBlock {
+    pub conv: Conv2d,
     #[module(skip)]
-    activation: bool,
-}
+    activation: bool}
 
-impl<B: Backend> MobileOneBlock<B> {
+impl MobileOneBlock {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         in_channels: usize,
@@ -29,7 +28,7 @@ impl<B: Backend> MobileOneBlock<B> {
         groups: usize,
         num_conv_branches: usize,
         is_linear: bool,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self::new_with_stride(
             in_channels,
@@ -54,7 +53,7 @@ impl<B: Backend> MobileOneBlock<B> {
         groups: usize,
         num_conv_branches: usize,
         is_linear: bool,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         assert!(in_channels > 0);
         assert!(out_channels > 0);
@@ -105,32 +104,28 @@ impl<B: Backend> MobileOneBlock<B> {
             branches,
             scale,
             skip,
-            activation: !is_linear,
-        }
+            activation: !is_linear}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
-        let mut output: Option<Tensor<B, 4>> = None;
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
+        let mut output: Option<Tensor<4>> = None;
         for (conv, bn) in &self.branches {
             let branch = bn.forward(conv.forward(input.clone()));
             output = Some(match output {
                 Some(current) => current + branch,
-                None => branch,
-            });
+                None => branch});
         }
         if let Some((conv, bn)) = &self.scale {
             let branch = bn.forward(conv.forward(input.clone()));
             output = Some(match output {
                 Some(current) => current + branch,
-                None => branch,
-            });
+                None => branch});
         }
         if let Some(skip) = &self.skip {
             let branch = skip.forward(input);
             output = Some(match output {
                 Some(current) => current + branch,
-                None => branch,
-            });
+                None => branch});
         }
         let output = output.expect("MobileOneBlock always has a convolution branch");
         if self.activation {
@@ -140,7 +135,7 @@ impl<B: Backend> MobileOneBlock<B> {
         }
     }
 
-    pub fn reparameterize(&self) -> ReparameterizedMobileOneBlock<B> {
+    pub fn reparameterize(&self) -> ReparameterizedMobileOneBlock {
         let (first_conv, _) = self
             .branches
             .first()
@@ -151,11 +146,11 @@ impl<B: Backend> MobileOneBlock<B> {
         assert!(kernel_height % 2 == 1);
         let device = first_conv.weight.val().device();
 
-        let mut fused_kernel = Tensor::<B, 4>::zeros(
+        let mut fused_kernel = Tensor::<4>::zeros(
             [out_channels, input_per_group, kernel_height, kernel_width],
             &device,
         );
-        let mut fused_bias = Tensor::<B, 1>::zeros([out_channels], &device);
+        let mut fused_bias = Tensor::<1>::zeros([out_channels], &device);
 
         for (conv, batch_norm) in &self.branches {
             let (kernel, bias) = fuse_conv_batch_norm(conv, batch_norm);
@@ -187,17 +182,15 @@ impl<B: Backend> MobileOneBlock<B> {
             kernel_size: first_conv.kernel_size,
             dilation: first_conv.dilation,
             groups: first_conv.groups,
-            padding: first_conv.padding.clone(),
-        };
+            padding: first_conv.padding.clone()};
         ReparameterizedMobileOneBlock {
             conv,
-            activation: self.activation,
-        }
+            activation: self.activation}
     }
 }
 
-impl<B: Backend> ReparameterizedMobileOneBlock<B> {
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneBlock {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self.conv.forward(input);
         if self.activation {
             Relu.forward(output)
@@ -207,10 +200,10 @@ impl<B: Backend> ReparameterizedMobileOneBlock<B> {
     }
 }
 
-fn fuse_conv_batch_norm<B: Backend>(
-    conv: &Conv2d<B>,
-    batch_norm: &BatchNorm<B>,
-) -> (Tensor<B, 4>, Tensor<B, 1>) {
+fn fuse_conv_batch_norm(
+    conv: &Conv2d,
+    batch_norm: &BatchNorm,
+) -> (Tensor<4>, Tensor<1>) {
     let weight = conv.weight.val().detach();
     let running_mean = batch_norm.running_mean.value().detach();
     let running_var = batch_norm.running_var.value().detach();
@@ -223,12 +216,12 @@ fn fuse_conv_batch_norm<B: Backend>(
     (kernel, bias)
 }
 
-fn fuse_identity_batch_norm<B: Backend>(
-    batch_norm: &BatchNorm<B>,
+fn fuse_identity_batch_norm(
+    batch_norm: &BatchNorm,
     channels: usize,
     groups: usize,
     kernel_size: [usize; 2],
-) -> (Tensor<B, 4>, Tensor<B, 1>) {
+) -> (Tensor<4>, Tensor<1>) {
     assert!(channels.is_multiple_of(groups));
     let input_per_group = channels / groups;
     let [kernel_height, kernel_width] = kernel_size;
@@ -242,7 +235,7 @@ fn fuse_identity_batch_norm<B: Backend>(
                 + center;
         identity[index] = 1.0;
     }
-    let identity = Tensor::<B, 1>::from_data(identity.as_slice(), &device).reshape([
+    let identity = Tensor::<1>::from_data(identity.as_slice(), &device).reshape([
         channels,
         input_per_group,
         kernel_height,
@@ -258,14 +251,14 @@ fn fuse_identity_batch_norm<B: Backend>(
     (kernel, bias)
 }
 
-fn center_pad_kernel<B: Backend>(kernel: Tensor<B, 4>, target_size: [usize; 2]) -> Tensor<B, 4> {
+fn center_pad_kernel(kernel: Tensor<4>, target_size: [usize; 2]) -> Tensor<4> {
     let [out_channels, input_per_group, source_height, source_width] = kernel.dims();
     assert_eq!([source_height, source_width], [1, 1]);
     let [target_height, target_width] = target_size;
     let device = kernel.device();
     let top = target_height / 2;
     let left = target_width / 2;
-    Tensor::<B, 4>::zeros(
+    Tensor::<4>::zeros(
         [out_channels, input_per_group, target_height, target_width],
         &device,
     )

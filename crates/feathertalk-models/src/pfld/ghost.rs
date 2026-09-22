@@ -1,22 +1,22 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 use super::mobileone::MobileOneBlock;
 
 #[derive(burn::module::Module, Debug)]
-pub struct GhostOneModule<B: Backend> {
-    primary: MobileOneBlock<B>,
-    cheap: MobileOneBlock<B>,
+pub struct GhostOneModule {
+    primary: MobileOneBlock,
+    cheap: MobileOneBlock,
     #[module(skip)]
-    out_channels: usize,
-}
+    out_channels: usize}
 
-impl<B: Backend> GhostOneModule<B> {
+impl GhostOneModule {
     pub fn new(
         in_channels: usize,
         out_channels: usize,
         is_linear: bool,
         num_conv_branches: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         let half = out_channels.div_ceil(2);
         Self {
@@ -42,11 +42,10 @@ impl<B: Backend> GhostOneModule<B> {
                 is_linear,
                 device,
             ),
-            out_channels,
-        }
+            out_channels}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let primary = self.primary.forward(input);
         let cheap = self.cheap.forward(primary.clone());
         let output = Tensor::cat(vec![primary, cheap], 1);
@@ -56,20 +55,19 @@ impl<B: Backend> GhostOneModule<B> {
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct GhostOneBottleneck<B: Backend> {
-    ghost: GhostOneModule<B>,
-    depthwise: Option<MobileOneBlock<B>>,
-    linear: GhostOneModule<B>,
-}
+pub struct GhostOneBottleneck {
+    ghost: GhostOneModule,
+    depthwise: Option<MobileOneBlock>,
+    linear: GhostOneModule}
 
-impl<B: Backend> GhostOneBottleneck<B> {
+impl GhostOneBottleneck {
     pub fn new(
         in_channels: usize,
         hidden_channels: usize,
         out_channels: usize,
         stride: usize,
         num_conv_branches: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         assert!(matches!(stride, 1 | 2));
         Self {
@@ -103,12 +101,11 @@ impl<B: Backend> GhostOneBottleneck<B> {
         }
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self.ghost.forward(input);
         let output = match &self.depthwise {
             Some(depthwise) => depthwise.forward(output),
-            None => output,
-        };
+            None => output};
         self.linear.forward(output)
     }
 }

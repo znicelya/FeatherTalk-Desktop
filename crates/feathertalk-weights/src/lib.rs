@@ -10,13 +10,11 @@ mod source;
 
 pub use error::WeightImportError;
 pub use feather_hubert::{
-    FeatherHubertCheckpoint, inspect_feather_hubert_checkpoint, load_feather_hubert_checkpoint,
-};
+    FeatherHubertCheckpoint, inspect_feather_hubert_checkpoint, load_feather_hubert_checkpoint};
 pub use key_map::{LegacyModelKind, is_known_ignored_key, is_known_ignored_key_for};
 pub use legacy::{ImportReport, LegacyImportRequest, import_into};
 pub use pfld::{
     PFLD_ARCHITECTURE_VERSION, PFLD_CHECKPOINT_EPOCH, PfldIgnoredTensors, PfldImportManifest,
     PfldImportReport, PfldImportRequest, PfldModelArtifact, PfldSourceManifest, TensorAudit,
-    TensorSummary, import_pfld_checkpoint,
-};
+    TensorSummary, import_pfld_checkpoint};
 pub use safe::save_safetensors;

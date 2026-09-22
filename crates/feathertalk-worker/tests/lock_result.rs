@@ -20,8 +20,7 @@ fn the_payload_carries_every_field_the_desktop_needs() {
         frame_width: 1280,
         frame_height: 720,
         landmark_model_sha256: LANDMARK_SHA256.to_owned(),
-        feature_model_sha256: FEATURE_SHA256.to_owned(),
-    };
+        feature_model_sha256: FEATURE_SHA256.to_owned()};
 
     let value = lock_to_json(&project_dir, &spec, &artifact, -3);
     let object = value.as_object().expect("the payload must be an object");

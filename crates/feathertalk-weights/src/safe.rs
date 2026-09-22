@@ -1,14 +1,12 @@
 use std::path::PathBuf;
 
-use burn::tensor::backend::Backend;
 use burn_store::{ModuleSnapshot, SafetensorsStore};
 
 use crate::WeightImportError;
 
-pub fn save_safetensors<B, M>(module: &M, path: impl Into<PathBuf>) -> Result<(), WeightImportError>
+pub fn save_safetensors<M>(module: &M, path: impl Into<PathBuf>) -> Result<(), WeightImportError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
+    M: ModuleSnapshot,
 {
     let path = path.into();
     let mut store = SafetensorsStore::from_file(&path).overwrite(true);

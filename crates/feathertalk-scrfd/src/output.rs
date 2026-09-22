@@ -1,35 +1,35 @@
-use burn::{tensor::Tensor, tensor::backend::Backend};
+use burn::tensor::Tensor;
 
 use crate::ScrfdError;
 
-pub(crate) type GeneratedOutput<B> = (
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
-    Tensor<B, 3>,
+pub(crate) type GeneratedOutput = (
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
+    Tensor<3>,
 );
 
 #[derive(Debug)]
-pub struct ScrfdRawOutput<B: Backend> {
-    pub levels: [ScrfdLevelOutput<B>; 3],
+pub struct ScrfdRawOutput {
+    pub levels: [ScrfdLevelOutput; 3],
 }
 
 #[derive(Debug)]
-pub struct ScrfdLevelOutput<B: Backend> {
+pub struct ScrfdLevelOutput {
     pub stride: u32,
-    pub scores: Tensor<B, 2>,
-    pub bbox_deltas: Tensor<B, 3>,
-    pub keypoint_deltas: Tensor<B, 3>,
+    pub scores: Tensor<2>,
+    pub bbox_deltas: Tensor<3>,
+    pub keypoint_deltas: Tensor<3>,
 }
 
-pub(crate) fn assemble<B: Backend>(
-    outputs: GeneratedOutput<B>,
-) -> Result<ScrfdRawOutput<B>, ScrfdError> {
+pub(crate) fn assemble(
+    outputs: GeneratedOutput,
+) -> Result<ScrfdRawOutput, ScrfdError> {
     let (out0, out1, out2, out3, out4, out5, out6, out7, out8) = outputs;
     validate("out0", out0.dims().to_vec(), vec![1, 12_800, 1])?;
     validate("out1", out1.dims().to_vec(), vec![1, 3_200, 1])?;
@@ -83,11 +83,12 @@ fn validate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::{NdArray, ndarray::NdArrayDevice};
+    use burn::backend::Flex;
+    use burn::tensor::Device;
 
-    type Cpu = NdArray<f32>;
+    type Cpu = Flex;
 
-    fn valid(device: &NdArrayDevice) -> GeneratedOutput<Cpu> {
+    fn valid(device: &burn::tensor::Device) -> GeneratedOutput {
         (
             Tensor::zeros([1, 12_800, 1], device),
             Tensor::zeros([1, 3_200, 1], device),

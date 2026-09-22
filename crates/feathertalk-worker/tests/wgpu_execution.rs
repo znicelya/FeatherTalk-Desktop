@@ -2,13 +2,12 @@ mod support;
 
 use burn::tensor::Device;
 use feathertalk_domain::Backend;
-use feathertalk_models::backend::{GpuAutodiffBackend, GpuBackend};
 use feathertalk_worker::{ComputeRegistry, GpuContext};
 
 const GPU_BACKEND: Backend = Backend::Wgpu;
 const GPU_NAME: &str = "wgpu";
 
-fn open_gpu(registry: &ComputeRegistry, id: &str) -> (Device<GpuBackend>, GpuContext) {
+fn open_gpu(registry: &ComputeRegistry, id: &str) -> (Device, GpuContext) {
     let context = registry
         .open_wgpu(id)
         .expect("the selected wgpu device opens");

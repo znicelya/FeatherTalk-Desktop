@@ -2,11 +2,10 @@ use std::{fs, path::Path};
 
 use burn::{
     backend::Wgpu,
-    tensor::{Tensor, TensorData},
-};
+    tensor::{Tensor, TensorData}};
 use feathertalk_pfld::PfldRuntime;
 
-type GpuBackend = Wgpu<f32, i32, u32>;
+type GpuBackend = Wgpu;
 
 #[test]
 #[ignore = "requires a certified WGPU adapter"]
@@ -20,12 +19,12 @@ fn committed_pfld_artifact_runs_on_wgpu_without_cpu_fallback() {
         .collect::<Vec<_>>();
     let device = Default::default();
     let input =
-        Tensor::<GpuBackend, 4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
+        Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
     let runtime =
-        PfldRuntime::<GpuBackend>::load(&root.join("artifacts/pfld_ghost_one"), &device).unwrap();
+        PfldRuntime::load(&root.join("artifacts/pfld_ghost_one"), &device).unwrap();
     let output = runtime.forward(input).unwrap();
     assert_eq!(output.dims(), [1, 220]);
-    let actual = output.into_data().to_vec::<f32>().unwrap();
+    let actual = output.into_data().try_to_vec::<f32>().unwrap();
     let expected = fs::read(fixture.join("output.f32"))
         .unwrap()
         .chunks_exact(4)

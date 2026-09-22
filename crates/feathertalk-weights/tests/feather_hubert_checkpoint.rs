@@ -1,11 +1,9 @@
 use std::{
     fs, io,
     path::{Path, PathBuf},
-    sync::{Mutex, OnceLock},
-};
+    sync::{Mutex, OnceLock}};
 
 use burn::tensor::{Tensor, TensorData};
-use feathertalk_models::backend::CpuBackend;
 use feathertalk_weights::{inspect_feather_hubert_checkpoint, load_feather_hubert_checkpoint};
 use zip::ZipArchive;
 
@@ -23,7 +21,7 @@ fn golden_micro_checkpoint_is_inferred_loaded_and_executed() {
     assert_eq!(inspection.source_sha256().len(), 64);
 
     let device = Default::default();
-    let (model, loaded) = load_feather_hubert_checkpoint::<CpuBackend>(&path, &device).unwrap();
+    let (model, loaded) = load_feather_hubert_checkpoint(&path, &device).unwrap();
     assert_eq!(loaded.source_sha256(), inspection.source_sha256());
     let waveform = Tensor::from_data(TensorData::new(vec![0.0_f32; 1360], [1, 1360]), &device);
     let output = model.forward(waveform);
@@ -31,7 +29,7 @@ fn golden_micro_checkpoint_is_inferred_loaded_and_executed() {
     assert!(
         output
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap()
             .iter()
             .all(|value| value.is_finite())

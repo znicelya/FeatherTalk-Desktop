@@ -4,16 +4,14 @@ use crate::InferenceError;
 pub struct PingPongFrames {
     frame_count: usize,
     period: usize,
-    phase: usize,
-}
+    phase: usize}
 
 impl PingPongFrames {
     pub fn new(frame_count: usize) -> Result<Self, InferenceError> {
         if frame_count < 2 {
             return Err(InferenceError::FrameCountTooSmall {
                 actual: frame_count,
-                minimum: 2,
-            });
+                minimum: 2});
         }
         let period = (frame_count - 1)
             .checked_mul(2)
@@ -21,8 +19,7 @@ impl PingPongFrames {
         Ok(Self {
             frame_count,
             period,
-            phase: 0,
-        })
+            phase: 0})
     }
 
     pub fn frame_count(&self) -> usize {
@@ -59,8 +56,7 @@ pub(crate) fn period_for(frame_count: usize) -> Result<usize, InferenceError> {
     if frame_count < 2 {
         return Err(InferenceError::FrameCountTooSmall {
             actual: frame_count,
-            minimum: 2,
-        });
+            minimum: 2});
     }
     (frame_count - 1)
         .checked_mul(2)

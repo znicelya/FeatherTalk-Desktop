@@ -12,8 +12,7 @@ fn pattern_channel(channel: usize, x: usize, y: usize) -> u8 {
         0 => 3 * x + 5 * y + 17,
         1 => 7 * x + 11 * y + 29,
         2 => 13 * x + 17 * y + 43,
-        _ => unreachable!(),
-    };
+        _ => unreachable!()};
     (value % 256) as u8
 }
 

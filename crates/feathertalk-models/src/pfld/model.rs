@@ -3,41 +3,41 @@ use burn::nn::{
     conv::Conv2d,
     pool::{AvgPool2d, AvgPool2dConfig},
 };
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 use super::config::{PFLD_INPUT_CHANNELS, PFLD_OUTPUT_VALUES, PfldConfig};
 use super::ghost::GhostOneBottleneck;
 use super::mobileone::MobileOneBlock;
 
 #[derive(burn::module::Module, Debug)]
-pub struct PfldGhostOne<B: Backend> {
+pub struct PfldGhostOne {
     #[module(skip)]
     config: PfldConfig,
-    conv1: MobileOneBlock<B>,
-    conv2: MobileOneBlock<B>,
-    conv3_1: GhostOneBottleneck<B>,
-    conv3_2: GhostOneBottleneck<B>,
-    conv3_3: GhostOneBottleneck<B>,
-    conv4_1: GhostOneBottleneck<B>,
-    conv4_2: GhostOneBottleneck<B>,
-    conv4_3: GhostOneBottleneck<B>,
-    conv5_1: GhostOneBottleneck<B>,
-    conv5_2: GhostOneBottleneck<B>,
-    conv5_3: GhostOneBottleneck<B>,
-    conv5_4: GhostOneBottleneck<B>,
-    conv6: GhostOneBottleneck<B>,
-    conv7: MobileOneBlock<B>,
-    conv8: Conv2d<B>,
+    conv1: MobileOneBlock,
+    conv2: MobileOneBlock,
+    conv3_1: GhostOneBottleneck,
+    conv3_2: GhostOneBottleneck,
+    conv3_3: GhostOneBottleneck,
+    conv4_1: GhostOneBottleneck,
+    conv4_2: GhostOneBottleneck,
+    conv4_3: GhostOneBottleneck,
+    conv5_1: GhostOneBottleneck,
+    conv5_2: GhostOneBottleneck,
+    conv5_3: GhostOneBottleneck,
+    conv5_4: GhostOneBottleneck,
+    conv6: GhostOneBottleneck,
+    conv7: MobileOneBlock,
+    conv8: Conv2d,
     conv8_activation: Relu,
     pool1: AvgPool2d,
     pool2: AvgPool2d,
     pool3: AvgPool2d,
     pool4: AvgPool2d,
-    head: Conv2d<B>,
-}
+    head: Conv2d}
 
-impl<B: Backend> PfldGhostOne<B> {
-    pub fn new(config: PfldConfig, device: &B::Device) -> Self {
+impl PfldGhostOne {
+    pub fn new(config: PfldConfig, device: &Device) -> Self {
         assert_eq!(config.width_factor, 0.5);
         assert_eq!(config.input_size, 192);
         assert_eq!(config.landmark_count * 2, PFLD_OUTPUT_VALUES);
@@ -103,11 +103,10 @@ impl<B: Backend> PfldGhostOne<B> {
             pool2: pool(48),
             pool3: pool(24),
             pool4: pool(12),
-            head,
-        }
+            head}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 2> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<2> {
         let [batch, channels, height, width] = input.dims();
         assert_eq!(channels, PFLD_INPUT_CHANNELS);
         assert_eq!(height, self.config.input_size);
@@ -147,4 +146,4 @@ impl<B: Backend> PfldGhostOne<B> {
 }
 
 #[allow(non_camel_case_types)]
-pub type PFLD_GhostOne<B> = PfldGhostOne<B>;
+pub type PFLD_GhostOne = PfldGhostOne;

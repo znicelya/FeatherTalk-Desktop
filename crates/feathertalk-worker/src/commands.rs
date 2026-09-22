@@ -3,8 +3,7 @@ use feathertalk_export::read_package_manifest;
 use feathertalk_media::{
     CancellableProcessRunner, CancellationToken, MediaError, MediaInput, NormalizationSpec,
     NormalizePhase, ProcessRunner, normalize_media_observed, probe_media_with_runner,
-    validate_input,
-};
+    validate_input};
 use feathertalk_project::validate_project_dir;
 
 use crate::{
@@ -12,8 +11,7 @@ use crate::{
     execute_import_legacy_model, execute_inspect_model, execute_lock_asset_package,
     execute_migrate_legacy_features, export_task_error, is_media_cancellation,
     legacy_feature_task_error, legacy_task_error, media_task_error, normalize_to_json,
-    onnx_task_error, package_task_error, probe_to_json, project_task_error,
-};
+    onnx_task_error, package_task_error, probe_to_json, project_task_error};
 
 /// How many progress steps `normalize_media` reports. Verification and the
 /// commit are bounded and short, so they end the count rather than extend it.
@@ -25,8 +23,7 @@ pub enum CommandOutcome {
     /// reports; `None` means the command has no result payload.
     Completed(Option<serde_json::Value>),
     Cancelled,
-    Failed(TaskError),
-}
+    Failed(TaskError)}
 
 pub fn execute(
     request: &Request,
@@ -55,8 +52,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             // away rather than reported as a completed task.
             Ok(_) if token.is_cancelled() => CommandOutcome::Cancelled,
             Ok(_) => CommandOutcome::Completed(None),
-            Err(error) => CommandOutcome::Failed(project_task_error(&error)),
-        },
+            Err(error) => CommandOutcome::Failed(project_task_error(&error))},
         Request::ProbeMedia(params) => {
             let Some(toolchain) = config.media() else {
                 // Unreachable through the runtime, which rejects `probe_media`
@@ -65,15 +61,12 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
             let input = match validate_input(&MediaInput {
-                source: params.input.clone(),
-            }) {
+                source: params.input.clone()}) {
                 Ok(input) => input,
-                Err(error) => return media_failure(&error),
-            };
+                Err(error) => return media_failure(&error)};
             match probe_media_with_runner(&input, toolchain, runner) {
                 Ok(probe) => CommandOutcome::Completed(Some(probe_to_json(&probe))),
-                Err(error) => media_failure(&error),
-            }
+                Err(error) => media_failure(&error)}
         }
         Request::NormalizeMedia(params) => {
             let cuda_device = match config.cuda_device_index() {
@@ -89,11 +82,9 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             };
             let toolchain = toolchain.clone().with_cuda_device(cuda_device);
             let input = match validate_input(&MediaInput {
-                source: params.input.clone(),
-            }) {
+                source: params.input.clone()}) {
                 Ok(input) => input,
-                Err(error) => return media_failure(&error),
-            };
+                Err(error) => return media_failure(&error)};
             // The targets are fixed by the asset contract, and
             // `validate_normalization` rejects anything else, so there is
             // nothing here for a caller to configure.
@@ -101,14 +92,12 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
                 target_video_fps: 25,
                 target_audio_sample_rate: 16_000,
                 target_audio_channels: 1,
-                output_dir: params.output_dir.clone(),
-            };
+                output_dir: params.output_dir.clone()};
             match normalize_media_observed(&input, &spec, &toolchain, runner, &|phase| {
                 report_phase(reporter, phase)
             }) {
                 Ok(normalized) => CommandOutcome::Completed(Some(normalize_to_json(&normalized))),
-                Err(error) => media_failure(&error),
-            }
+                Err(error) => media_failure(&error)}
         }
         Request::Train(_)
         | Request::Render(_)
@@ -127,8 +116,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             // `manifest.validate()`, so a broken package is caught here.
             let manifest = match read_package_manifest(features.hubert_dir()) {
                 Ok(manifest) => manifest,
-                Err(error) => return CommandOutcome::Failed(package_task_error(&error)),
-            };
+                Err(error) => return CommandOutcome::Failed(package_task_error(&error))};
             execute_lock_asset_package(params, token, reporter, &manifest.model.sha256)
         }
         // No toolchain guard: inspection reads manifests, so the handshake
@@ -138,8 +126,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             match execute_import_legacy_model(params, config, token, reporter) {
                 Ok(payload) => CommandOutcome::Completed(Some(payload)),
                 Err(error) if error.is_cancelled() => CommandOutcome::Cancelled,
-                Err(error) => CommandOutcome::Failed(legacy_task_error(&error, error.stage())),
-            }
+                Err(error) => CommandOutcome::Failed(legacy_task_error(&error, error.stage()))}
         }
         Request::MigrateLegacyFeatures(params) => {
             match execute_migrate_legacy_features(params, token, reporter) {
@@ -156,8 +143,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
             match execute_export_model_package(params, config, token, reporter) {
                 Ok(payload) => CommandOutcome::Completed(Some(payload)),
                 Err(error) if error.is_cancelled() => CommandOutcome::Cancelled,
-                Err(error) => CommandOutcome::Failed(export_task_error(&error, error.stage())),
-            }
+                Err(error) => CommandOutcome::Failed(export_task_error(&error, error.stage()))}
         }
         // Nor here: the graph is serialised in process, and the reference runtime
         // that validates it lives in `tools/onnx-validate` rather than in the
@@ -165,9 +151,7 @@ pub fn execute_with_runner<R: ProcessRunner + ?Sized>(
         Request::ExportOnnx(params) => match execute_export_onnx(params, token, reporter) {
             Ok(payload) => CommandOutcome::Completed(Some(payload)),
             Err(error) if error.is_cancelled() => CommandOutcome::Cancelled,
-            Err(error) => CommandOutcome::Failed(onnx_task_error(&error, error.stage())),
-        },
-    }
+            Err(error) => CommandOutcome::Failed(onnx_task_error(&error, error.stage()))}}
 }
 
 /// Map a normalization phase onto the protocol stage that names it.
@@ -181,14 +165,12 @@ fn report_phase(reporter: &dyn TaskReporter, phase: NormalizePhase) {
         NormalizePhase::Probing => (TaskStage::Preparing, 1),
         NormalizePhase::NormalizingVideo => (TaskStage::ExtractingFrames, 2),
         NormalizePhase::NormalizingAudio => (TaskStage::ExtractingAudio, 3),
-        NormalizePhase::Verifying | NormalizePhase::Committing => return,
-    };
+        NormalizePhase::Verifying | NormalizePhase::Committing => return};
     reporter.report(
         stage,
         Some(Progress {
             completed,
-            total: Some(NORMALIZE_STEPS),
-        }),
+            total: Some(NORMALIZE_STEPS)}),
     );
 }
 

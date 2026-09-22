@@ -18,8 +18,7 @@ pub fn quality_to_json(spec: &FramePipelineSpec, report: &QualityReport) -> Valu
         "quality_report": path_text(&spec.quality_path()),
         "frame_count": report.frame_count(),
         "frame_width": spec.image_width(),
-        "frame_height": spec.image_height(),
-    })
+        "frame_height": spec.image_height()})
 }
 
 fn path_text(path: &Path) -> String {

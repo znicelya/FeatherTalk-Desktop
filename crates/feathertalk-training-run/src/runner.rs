@@ -1,16 +1,17 @@
-use std::{collections::BTreeMap, path::Path, time::Duration};
+use std::{collections::BTreeMap, path::Path, thread::JoinHandle, time::Duration};
 
-use burn::{module::AutodiffModule, optim::Optimizer, tensor::backend::AutodiffBackend};
+use burn::module::AutodiffModule;
 use feathertalk_models::unet::TrainableTalkingHead;
+use feathertalk_training::PreparedBatchWithTiming;
 use feathertalk_training::{
     CheckpointDescriptor, PerceptualFeatureExtractor, Provenance, RestoredTrainingState,
     TRAINING_STATE_SCHEMA_VERSION, TrainingCheckpointManifest, TrainingCheckpointState,
     TrainingConfig, TrainingDataLoader, TrainingDataset, TrainingError, TrainingMetrics,
-    TrainingMode, save_training_checkpoint,
-};
+    TrainingMode, save_training_checkpoint};
 use feathertalk_training_data::{TrainingItem, stack_single_frame_batch, stack_temporal_batch};
 
-use crate::{LossValues, data_loader_config_for, train_single_frame_step, train_temporal_step};
+use crate::step::{train_single_frame_step_profiled, train_temporal_step_profiled};
+use crate::{LossValues, data_loader_config_for};
 
 const POISONED: &str = "training runner was poisoned by a failed step";
 
@@ -22,6 +23,15 @@ fn overflow(operation: &'static str) -> TrainingError {
     TrainingError::DataLoaderOverflow { operation }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct StepTimings {
+    pub load_secs: f64,
+    pub prefetch_wait_secs: f64,
+    pub forward_secs: f64,
+    pub backward_secs: f64,
+    pub optim_secs: f64,
+    pub total_secs: f64}
+
 /// What one committed optimizer step did.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StepReport {
@@ -29,29 +39,28 @@ pub struct StepReport {
     pub global_step: u64,
     pub samples_in_batch: u64,
     pub losses: LossValues,
-}
+    pub timings: StepTimings}
 
 /// Owns a training run: the loader, the model, the optimizer, and the progress counters.
-pub struct TrainingRunner<B, M, O, D>
+pub struct TrainingRunner<M, O, D>
 where
-    B: AutodiffBackend,
-    D: TrainingDataset<Item = TrainingItem>,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
     model: Option<M>,
     optimizer: O,
     loader: TrainingDataLoader<D>,
     config: TrainingConfig,
-    device: B::Device,
+    device: burn::tensor::Device,
     global_step: u64,
     samples_seen: u64,
-}
+    prefetch: Option<JoinHandle<Result<PreparedBatchWithTiming<D::Item>, TrainingError>>>,
+    prefetch_enabled: bool}
 
-impl<B, M, O, D> TrainingRunner<B, M, O, D>
+impl<M, O, D> TrainingRunner<M, O, D>
 where
-    B: AutodiffBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
-    D: TrainingDataset<Item = TrainingItem>,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    O: feathertalk_training::CheckpointableOptimizer + Clone,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
     pub fn new(
         dataset: D,
@@ -59,7 +68,7 @@ where
         optimizer: O,
         config: TrainingConfig,
         seed: u64,
-        device: B::Device,
+        device: burn::tensor::Device,
     ) -> Result<Self, TrainingError> {
         let loader_config = data_loader_config_for(&config, seed)?;
         let loader = TrainingDataLoader::new(dataset, loader_config)?;
@@ -71,7 +80,8 @@ where
             device,
             global_step: 0,
             samples_seen: 0,
-        })
+            prefetch: None,
+            prefetch_enabled: prefetch_enabled()})
     }
 
     fn run_step<E>(
@@ -79,19 +89,25 @@ where
         model: M,
         items: &[TrainingItem],
         extractor: &E,
-    ) -> Result<(M, LossValues), TrainingError>
+    ) -> Result<(M, LossValues, crate::StepComputeTimings), TrainingError>
     where
-        E: PerceptualFeatureExtractor<B>,
+        E: PerceptualFeatureExtractor,
     {
         let config = &self.config;
         match config.mode {
             TrainingMode::Baseline | TrainingMode::MouthRoi => {
-                let batch = stack_single_frame_batch::<B>(items, &self.device)?;
-                train_single_frame_step(model, &mut self.optimizer, extractor, batch, config)
+                let batch = stack_single_frame_batch(items, &self.device)?;
+                train_single_frame_step_profiled(
+                    model,
+                    &mut self.optimizer,
+                    extractor,
+                    batch,
+                    config,
+                )
             }
             TrainingMode::MouthRoiTemporal => {
-                let batch = stack_temporal_batch::<B>(items, &self.device)?;
-                train_temporal_step(model, &mut self.optimizer, extractor, batch, config)
+                let batch = stack_temporal_batch(items, &self.device)?;
+                train_temporal_step_profiled(model, &mut self.optimizer, extractor, batch, config)
             }
         }
     }
@@ -99,15 +115,18 @@ where
     /// Prepares one batch, trains on it, and commits the loader position.
     pub fn step<E>(&mut self, extractor: &E) -> Result<StepReport, TrainingError>
     where
-        E: PerceptualFeatureExtractor<B>,
+        E: PerceptualFeatureExtractor,
     {
-        let prepared = self.loader.prepare_next_batch()?;
-        let epoch = prepared.epoch();
+        let step_started = std::time::Instant::now();
+        let (prepared, prefetch_wait_secs) = self.take_prepared()?;
+        let load_secs = prepared.load_secs;
+        let batch = prepared.batch;
+        let epoch = batch.epoch();
         let samples_in_batch =
-            u64::try_from(prepared.items().len()).map_err(|_| overflow("counting batch items"))?;
+            u64::try_from(batch.items().len()).map_err(|_| overflow("counting batch items"))?;
         let model = self.model.take().ok_or_else(poisoned)?;
-        let (model, losses) = self.run_step(model, prepared.items(), extractor)?;
-        self.loader.commit_batch(prepared)?;
+        let (model, losses, compute) = self.run_step(model, batch.items(), extractor)?;
+        self.loader.commit_batch(batch)?;
         self.model = Some(model);
         self.global_step = self
             .global_step
@@ -117,12 +136,24 @@ where
             .samples_seen
             .checked_add(samples_in_batch)
             .ok_or_else(|| overflow("counting seen samples"))?;
-        Ok(StepReport {
+        if self.prefetch_enabled && !self.is_finished() {
+            self.prefetch = Some(self.loader.spawn_prefetch_batch()?);
+        }
+        let total_secs = step_started.elapsed().as_secs_f64();
+        let report = StepReport {
             epoch,
             global_step: self.global_step,
             samples_in_batch,
             losses,
-        })
+            timings: StepTimings {
+                load_secs,
+                prefetch_wait_secs,
+                forward_secs: compute.forward_secs,
+                backward_secs: compute.backward_secs,
+                optim_secs: compute.optim_secs,
+                total_secs}};
+        log_step_profile(&report);
+        Ok(report)
     }
 
     pub fn epoch(&self) -> u64 {
@@ -209,12 +240,9 @@ where
             data_loader: state.clone(),
             training_config: self.config.clone(),
             asset_provenance: Provenance {
-                entries: BTreeMap::new(),
-            },
+                entries: BTreeMap::new()},
             model_provenance: Provenance {
-                entries: BTreeMap::new(),
-            },
-        }
+                entries: BTreeMap::new()}}
     }
 
     /// Writes a complete checkpoint directory: weights, optimizer, and state.
@@ -224,7 +252,7 @@ where
         descriptor: CheckpointDescriptor,
     ) -> Result<TrainingCheckpointManifest, TrainingError> {
         let model = self.model()?;
-        save_training_checkpoint::<B, M, O>(
+        save_training_checkpoint::<M, O>(
             destination,
             model,
             &self.optimizer,
@@ -237,7 +265,7 @@ where
     pub fn restore(
         dataset: D,
         restored: RestoredTrainingState<M, O>,
-        device: B::Device,
+        device: burn::tensor::Device,
     ) -> Result<Self, TrainingError> {
         restored.state.validate()?;
         let global_step = restored.state.global_step;
@@ -250,6 +278,47 @@ where
             device,
             global_step,
             samples_seen: 0,
-        })
+            prefetch: None,
+            prefetch_enabled: prefetch_enabled()})
     }
+
+    fn take_prepared(&mut self) -> Result<(PreparedBatchWithTiming<D::Item>, f64), TrainingError> {
+        if self.prefetch_enabled {
+            if let Some(handle) = self.prefetch.take() {
+                let started = std::time::Instant::now();
+                let prepared = handle.join().unwrap_or_else(|_| {
+                    Err(TrainingError::InvalidInput("prefetch worker panic".into()))
+                })?;
+                return Ok((prepared, started.elapsed().as_secs_f64()));
+            }
+            return Ok((self.loader.prepare_next_batch_parallel()?, 0.0));
+        }
+        Ok((self.loader.prepare_next_batch_with_timing()?, 0.0))
+    }
+}
+
+fn prefetch_enabled() -> bool {
+    match std::env::var("FEATHERTALK_TRAIN_PREFETCH") {
+        Ok(value) => !matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no"
+        ),
+        Err(_) => true}
+}
+
+fn log_step_profile(report: &StepReport) {
+    if std::env::var_os("FEATHERTALK_STEP_PROFILE").is_none() {
+        return;
+    }
+    let t = report.timings;
+    eprintln!(
+        "step={} load={:.4} wait={:.4} fwd={:.4} bwd={:.4} optim={:.4} total={:.4}",
+        report.global_step,
+        t.load_secs,
+        t.prefetch_wait_secs,
+        t.forward_secs,
+        t.backward_secs,
+        t.optim_secs,
+        t.total_secs,
+    );
 }

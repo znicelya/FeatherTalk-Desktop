@@ -32,7 +32,7 @@ pins NumPy 2.2.6 plus opencv-python-headless 4.12.0.88. Runtime and ordinary
 Rust tests never invoke Python, OpenCV, or the ONNX parser.
 
 SCRFD acceptance compares every element of all nine raw OpenCV outputs on the
-NdArray CPU backend (`max_abs <= 1e-3`, `mean_abs <= 1e-4`):
+Flex CPU backend (`max_abs <= 1e-3`, `mean_abs <= 1e-4`):
 
 ```powershell
 cargo test -p feathertalk-scrfd --test parity -- --nocapture

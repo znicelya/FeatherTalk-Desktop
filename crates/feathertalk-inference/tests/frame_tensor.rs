@@ -1,7 +1,6 @@
 use feathertalk_inference::{
     BgrFrame, InferenceError, MouthMasking, RenderGeometry, apply_unet_prediction,
-    build_inner_image_planes, build_unet_image_input,
-};
+    build_inner_image_planes, build_unet_image_input};
 
 #[test]
 fn image_input_is_bgr_channel_first_and_masks_only_the_mouth_rectangle() {

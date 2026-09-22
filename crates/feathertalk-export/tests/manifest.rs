@@ -3,8 +3,7 @@ use std::collections::BTreeMap;
 use feathertalk_export::{
     FileManifest, LicenseBundle, LicenseEntry, MODEL_LICENSE_SCHEMA_VERSION,
     MODEL_PACKAGE_SCHEMA_VERSION, ModelConfiguration, ModelDescription, ModelPackageManifest,
-    SourceManifest, TensorContract, TensorSpec, TrainingManifest, TrainingMode,
-};
+    SourceManifest, TensorContract, TensorSpec, TrainingManifest, TrainingMode};
 use feathertalk_models::feather_hubert::FeatherHubertConfig;
 
 fn description() -> ModelDescription {
@@ -13,8 +12,7 @@ fn description() -> ModelDescription {
         expansion: 2,
         num_blocks: 2,
         output_dim: 64,
-        dropout: 0.0,
-    })
+        dropout: 0.0})
 }
 
 fn manifest() -> ModelPackageManifest {
@@ -27,8 +25,7 @@ fn manifest() -> ModelPackageManifest {
             expansion: 2,
             num_blocks: 2,
             output_dim: 64,
-            dropout: 0.0,
-        },
+            dropout: 0.0},
         inputs: description().inputs,
         outputs: description().outputs,
         training: TrainingManifest {
@@ -36,16 +33,14 @@ fn manifest() -> ModelPackageManifest {
             mouth_weight: 0.0,
             temporal_weight: 0.0,
             temporal_mouth_weight: 0.0,
-            perceptual_weight: 0.0,
-        },
+            perceptual_weight: 0.0},
         source: SourceManifest {
             format: "pytorch-pickle-restricted".to_owned(),
             identifier: "fixture".to_owned(),
             version: "1".to_owned(),
             file_name: "fixture.pth".to_owned(),
             sha256: "a".repeat(64),
-            url: None,
-        },
+            url: None},
         created_at: "2026-08-27T00:00:00Z".to_owned(),
         minimum_app_version: "0.1.0".to_owned(),
         tensors: TensorContract {
@@ -54,22 +49,17 @@ fn manifest() -> ModelPackageManifest {
             entries: vec![TensorSpec {
                 name: "weight".to_owned(),
                 shape: vec![2],
-                dtype: "f32".to_owned(),
-            }],
-        },
+                dtype: "f32".to_owned()}]},
         model: FileManifest {
             file_name: "model.safetensors".to_owned(),
             bytes: 2,
-            sha256: "b".repeat(64),
-        },
+            sha256: "b".repeat(64)},
         licenses: FileManifest {
             file_name: "LICENSES.json".to_owned(),
             bytes: 2,
-            sha256: "c".repeat(64),
-        },
+            sha256: "c".repeat(64)},
         optimizer: None,
-        training_state: None,
-    }
+        training_state: None}
 }
 
 #[test]
@@ -99,9 +89,7 @@ fn manifest_and_license_round_trip_as_schema_one() {
             component: "fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/license".to_owned(),
-            notice: "test only".to_owned(),
-        }],
-    };
+            notice: "test only".to_owned()}]};
     licenses.validate().unwrap();
 }
 
@@ -119,8 +107,7 @@ fn strict_validation_rejects_unknown_fields_bad_hashes_and_bad_tensor_order() {
     invalid.tensors.entries.push(TensorSpec {
         name: "aaa".to_owned(),
         shape: vec![1],
-        dtype: "f32".to_owned(),
-    });
+        dtype: "f32".to_owned()});
     assert!(invalid.validate().is_err());
 }
 
@@ -138,16 +125,14 @@ fn strict_validation_rejects_invalid_dimensions_weights_and_unpaired_training_fi
     invalid.optimizer = Some(FileManifest {
         file_name: "optimizer.safetensors".to_owned(),
         bytes: 1,
-        sha256: "d".repeat(64),
-    });
+        sha256: "d".repeat(64)});
     assert!(invalid.validate().is_err());
 }
 
 #[test]
 fn unet_io_contract_preserves_semantic_input_order() {
     let value = ModelDescription::from_configuration(ModelConfiguration::OriginalUnet {
-        channels: [2, 4, 8, 16, 32],
-    });
+        channels: [2, 4, 8, 16, 32]});
     assert_eq!(
         value
             .inputs

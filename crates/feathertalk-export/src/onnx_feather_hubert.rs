@@ -1,19 +1,17 @@
-use burn::tensor::backend::Backend;
 use burn_store::ModuleSnapshot;
 use feathertalk_models::feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder};
 
 use crate::onnx::{
     InitializerSet, ONNX_FLOAT_DATA_TYPE, OnnxAttributeProto, OnnxExportError, OnnxGraph,
     OnnxModel, OnnxModelKind, OnnxNodeProto, OnnxTensorProto, OnnxValue, add_snapshot_initializers,
-    serialize_model, validate_graph_integrity, validate_model_contract,
-};
+    serialize_model, validate_graph_integrity, validate_model_contract};
 
 const FRONTEND_KERNELS: [usize; 7] = [10, 3, 3, 3, 3, 2, 2];
 const FRONTEND_STRIDES: [usize; 7] = [5, 2, 2, 2, 2, 2, 2];
 const FRONTEND_CHANNELS: [usize; 7] = [64, 128, 256, 384, 0, 0, 0];
 
-pub fn export_feather_hubert_onnx<B: Backend>(
-    model: &FeatherHubertEncoder<B>,
+pub fn export_feather_hubert_onnx(
+    model: &FeatherHubertEncoder,
     config: &FeatherHubertConfig,
 ) -> Result<Vec<u8>, OnnxExportError> {
     validate_config(config)?;
@@ -208,17 +206,13 @@ pub fn export_feather_hubert_onnx<B: Backend>(
             inputs: vec![OnnxValue {
                 name: "waveform".to_owned(),
                 shape: vec![1, -1],
-                dtype: ONNX_FLOAT_DATA_TYPE,
-            }],
+                dtype: ONNX_FLOAT_DATA_TYPE}],
             outputs: vec![OnnxValue {
                 name: "hidden".to_owned(),
                 shape: vec![1, -1, 1024],
-                dtype: ONNX_FLOAT_DATA_TYPE,
-            }],
+                dtype: ONNX_FLOAT_DATA_TYPE}],
             nodes,
-            initializers,
-        },
-    };
+            initializers}};
     validate_graph_integrity(&onnx)
         .map_err(|error| OnnxExportError::InvalidGraph(error.to_string()))?;
     let expected = OnnxModelKind::FeatherHubert;
@@ -475,8 +469,7 @@ where
         op_type: op_type.to_owned(),
         attribute,
         doc_string: String::new(),
-        domain: String::new(),
-    }
+        domain: String::new()}
 }
 
 fn attribute_int(name: &str, value: i64) -> OnnxAttributeProto {
@@ -522,8 +515,7 @@ fn add_f32_initializer(
             data_type: ONNX_FLOAT_DATA_TYPE,
             name: name.to_owned(),
             raw_data,
-            doc_string: String::new(),
-        })
+            doc_string: String::new()})
         .expect("generated ONNX initializer names are unique");
 }
 
@@ -538,7 +530,6 @@ fn add_i64_initializer(initializers: &mut InitializerSet, name: &str, values: &[
             data_type: 7,
             name: name.to_owned(),
             raw_data,
-            doc_string: String::new(),
-        })
+            doc_string: String::new()})
         .expect("generated ONNX initializer names are unique");
 }

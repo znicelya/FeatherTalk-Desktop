@@ -15,27 +15,23 @@ pub enum TrainingDataError {
         path: PathBuf,
         expected_tokens: usize,
         actual_tokens: usize,
-        dims: usize,
-    },
+        dims: usize},
     #[error("frame index {index} is out of range for {frame_count} frames")]
     FrameIndexOutOfRange { index: u64, frame_count: u64 },
     #[error("unable to read frame {index} from {path}: {message}")]
     Frame {
         index: usize,
         path: PathBuf,
-        message: String,
-    },
+        message: String},
     #[error("unable to read landmarks for frame {index} from {path}: {message}")]
     Landmarks {
         index: usize,
         path: PathBuf,
-        message: String,
-    },
+        message: String},
     #[error("unable to build the training sample for frame {index}: {message}")]
     Sample { index: usize, message: String },
     #[error("unable to stack a training batch: {message}")]
-    Batch { message: String },
-}
+    Batch { message: String }}
 
 impl From<TrainingDataError> for TrainingError {
     fn from(error: TrainingDataError) -> Self {

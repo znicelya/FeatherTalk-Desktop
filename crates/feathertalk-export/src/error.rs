@@ -14,12 +14,10 @@ pub enum PackageError {
     HashMismatch {
         file: String,
         expected: String,
-        actual: String,
-    },
+        actual: String},
     #[error("Burn store error: {0}")]
     Store(String),
     #[error("legacy weight import error: {0}")]
     WeightImport(#[from] feathertalk_weights::WeightImportError),
     #[error("model package publication error: {0}")]
-    Publication(String),
-}
+    Publication(String)}

@@ -1,20 +1,17 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::{Tensor};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    PerceptualFeatureExtractor, TrainingError, perceptual::validate_image_pair, perceptual_mse,
-};
+    PerceptualFeatureExtractor, TrainingError, perceptual::validate_image_pair, perceptual_mse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct BaselineLossConfig {
-    pub perceptual_weight: f64,
-}
+    pub perceptual_weight: f64}
 
 impl Default for BaselineLossConfig {
     fn default() -> Self {
         Self {
-            perceptual_weight: 0.01,
-        }
+            perceptual_weight: 0.01}
     }
 }
 
@@ -27,15 +24,13 @@ impl BaselineLossConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct MouthRoiLossConfig {
     pub mouth_weight: f64,
-    pub perceptual_weight: f64,
-}
+    pub perceptual_weight: f64}
 
 impl Default for MouthRoiLossConfig {
     fn default() -> Self {
         Self {
             mouth_weight: 4.0,
-            perceptual_weight: 0.01,
-        }
+            perceptual_weight: 0.01}
     }
 }
 
@@ -51,8 +46,7 @@ pub struct TemporalLossConfig {
     pub mouth_weight: f64,
     pub temporal_weight: f64,
     pub temporal_mouth_weight: f64,
-    pub perceptual_weight: f64,
-}
+    pub perceptual_weight: f64}
 
 impl Default for TemporalLossConfig {
     fn default() -> Self {
@@ -60,8 +54,7 @@ impl Default for TemporalLossConfig {
             mouth_weight: 4.0,
             temporal_weight: 0.5,
             temporal_mouth_weight: 4.0,
-            perceptual_weight: 0.01,
-        }
+            perceptual_weight: 0.01}
     }
 }
 
@@ -75,20 +68,19 @@ impl TemporalLossConfig {
 }
 
 #[derive(Debug)]
-pub struct LossBreakdown<B: Backend> {
-    pub total: Tensor<B, 1>,
-    pub full: Tensor<B, 1>,
-    pub perceptual: Tensor<B, 1>,
-    pub mouth: Option<Tensor<B, 1>>,
-    pub temporal: Option<Tensor<B, 1>>,
-    pub temporal_mouth: Option<Tensor<B, 1>>,
-}
+pub struct LossBreakdown {
+    pub total: Tensor<1>,
+    pub full: Tensor<1>,
+    pub perceptual: Tensor<1>,
+    pub mouth: Option<Tensor<1>>,
+    pub temporal: Option<Tensor<1>>,
+    pub temporal_mouth: Option<Tensor<1>>}
 
-pub fn mouth_l1_loss<B: Backend>(
-    prediction: Tensor<B, 4>,
-    target: Tensor<B, 4>,
-    mask: Tensor<B, 4>,
-) -> Result<Tensor<B, 1>, TrainingError> {
+pub fn mouth_l1_loss(
+    prediction: Tensor<4>,
+    target: Tensor<4>,
+    mask: Tensor<4>,
+) -> Result<Tensor<1>, TrainingError> {
     validate_image_pair(&prediction, &target)?;
     validate_mask(&mask, prediction.dims())?;
 
@@ -97,12 +89,12 @@ pub fn mouth_l1_loss<B: Backend>(
     Ok(((prediction - target).abs() * mask).sum() / denominator)
 }
 
-pub fn baseline_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
+pub fn baseline_loss<E: PerceptualFeatureExtractor>(
     extractor: &E,
-    prediction: Tensor<B, 4>,
-    target: Tensor<B, 4>,
+    prediction: Tensor<4>,
+    target: Tensor<4>,
     config: &BaselineLossConfig,
-) -> Result<LossBreakdown<B>, TrainingError> {
+) -> Result<LossBreakdown, TrainingError> {
     config.validate()?;
     validate_image_pair(&prediction, &target)?;
 
@@ -116,17 +108,16 @@ pub fn baseline_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
         perceptual,
         mouth: None,
         temporal: None,
-        temporal_mouth: None,
-    })
+        temporal_mouth: None})
 }
 
-pub fn mouth_roi_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
+pub fn mouth_roi_loss<E: PerceptualFeatureExtractor>(
     extractor: &E,
-    prediction: Tensor<B, 4>,
-    target: Tensor<B, 4>,
-    mask: Tensor<B, 4>,
+    prediction: Tensor<4>,
+    target: Tensor<4>,
+    mask: Tensor<4>,
     config: &MouthRoiLossConfig,
-) -> Result<LossBreakdown<B>, TrainingError> {
+) -> Result<LossBreakdown, TrainingError> {
     config.validate()?;
     validate_image_pair(&prediction, &target)?;
     validate_mask(&mask, prediction.dims())?;
@@ -144,17 +135,16 @@ pub fn mouth_roi_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
         perceptual,
         mouth: Some(mouth),
         temporal: None,
-        temporal_mouth: None,
-    })
+        temporal_mouth: None})
 }
 
-pub fn temporal_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
+pub fn temporal_loss<E: PerceptualFeatureExtractor>(
     extractor: &E,
-    prediction: Tensor<B, 5>,
-    target: Tensor<B, 5>,
-    mask: Tensor<B, 5>,
+    prediction: Tensor<5>,
+    target: Tensor<5>,
+    mask: Tensor<5>,
     config: &TemporalLossConfig,
-) -> Result<LossBreakdown<B>, TrainingError> {
+) -> Result<LossBreakdown, TrainingError> {
     config.validate()?;
     let [batch, pair_len, channels, height, width] = prediction.dims();
     if target.dims() != [batch, pair_len, channels, height, width] {
@@ -251,8 +241,7 @@ pub fn temporal_loss<B: Backend, E: PerceptualFeatureExtractor<B>>(
         perceptual,
         mouth: Some(mouth),
         temporal: Some(temporal),
-        temporal_mouth: Some(temporal_mouth),
-    })
+        temporal_mouth: Some(temporal_mouth)})
 }
 
 fn validate_weight(name: &str, value: f64) -> Result<(), TrainingError> {
@@ -264,8 +253,8 @@ fn validate_weight(name: &str, value: f64) -> Result<(), TrainingError> {
     Ok(())
 }
 
-fn validate_mask<B: Backend>(
-    mask: &Tensor<B, 4>,
+fn validate_mask(
+    mask: &Tensor<4>,
     image_shape: [usize; 4],
 ) -> Result<(), TrainingError> {
     let expected = [image_shape[0], 1, image_shape[2], image_shape[3]];

@@ -5,7 +5,8 @@ use burn::nn::{
     conv::Conv2d,
     interpolate::{Interpolate2d, Interpolate2dConfig, InterpolateMode},
 };
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 use super::{
     blocks::upsample_and_concat,
@@ -13,21 +14,20 @@ use super::{
 };
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneSeparableBlock<B: Backend> {
-    pub depthwise: MobileOneBlock<B>,
-    pub pointwise: MobileOneBlock<B>,
+pub struct MobileOneSeparableBlock {
+    pub depthwise: MobileOneBlock,
+    pub pointwise: MobileOneBlock,
     #[module(skip)]
-    use_residual: bool,
-}
+    use_residual: bool}
 
-impl<B: Backend> MobileOneSeparableBlock<B> {
+impl MobileOneSeparableBlock {
     pub(crate) fn new(
         in_channels: usize,
         out_channels: usize,
         stride: usize,
         num_conv_branches: usize,
         use_residual: bool,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self {
             depthwise: MobileOneBlock::new(
@@ -52,11 +52,10 @@ impl<B: Backend> MobileOneSeparableBlock<B> {
                 false,
                 device,
             ),
-            use_residual: use_residual && stride == 1 && in_channels == out_channels,
-        }
+            use_residual: use_residual && stride == 1 && in_channels == out_channels}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self
             .pointwise
             .forward(self.depthwise.forward(input.clone()));
@@ -67,25 +66,23 @@ impl<B: Backend> MobileOneSeparableBlock<B> {
         }
     }
 
-    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneSeparableBlock<B> {
+    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneSeparableBlock {
         ReparameterizedMobileOneSeparableBlock {
             depthwise: self.depthwise.reparameterize(),
             pointwise: self.pointwise.reparameterize(),
-            use_residual: self.use_residual,
-        }
+            use_residual: self.use_residual}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneSeparableBlock<B: Backend> {
-    pub depthwise: ReparameterizedMobileOneBlock<B>,
-    pub pointwise: ReparameterizedMobileOneBlock<B>,
+pub struct ReparameterizedMobileOneSeparableBlock {
+    pub depthwise: ReparameterizedMobileOneBlock,
+    pub pointwise: ReparameterizedMobileOneBlock,
     #[module(skip)]
-    use_residual: bool,
-}
+    use_residual: bool}
 
-impl<B: Backend> ReparameterizedMobileOneSeparableBlock<B> {
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneSeparableBlock {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self
             .pointwise
             .forward(self.depthwise.forward(input.clone()));
@@ -98,18 +95,17 @@ impl<B: Backend> ReparameterizedMobileOneSeparableBlock<B> {
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneDoubleConv<B: Backend> {
-    pub first: MobileOneSeparableBlock<B>,
-    pub second: MobileOneSeparableBlock<B>,
-}
+pub struct MobileOneDoubleConv {
+    pub first: MobileOneSeparableBlock,
+    pub second: MobileOneSeparableBlock}
 
-impl<B: Backend> MobileOneDoubleConv<B> {
+impl MobileOneDoubleConv {
     pub(crate) fn new(
         in_channels: usize,
         out_channels: usize,
         stride: usize,
         num_conv_branches: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self {
             first: MobileOneSeparableBlock::new(
@@ -127,45 +123,41 @@ impl<B: Backend> MobileOneDoubleConv<B> {
                 num_conv_branches,
                 true,
                 device,
-            ),
-        }
+            )}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         self.second.forward(self.first.forward(input))
     }
 
-    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneDoubleConv<B> {
+    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneDoubleConv {
         ReparameterizedMobileOneDoubleConv {
             first: self.first.reparameterize(),
-            second: self.second.reparameterize(),
-        }
+            second: self.second.reparameterize()}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneDoubleConv<B: Backend> {
-    pub first: ReparameterizedMobileOneSeparableBlock<B>,
-    pub second: ReparameterizedMobileOneSeparableBlock<B>,
-}
+pub struct ReparameterizedMobileOneDoubleConv {
+    pub first: ReparameterizedMobileOneSeparableBlock,
+    pub second: ReparameterizedMobileOneSeparableBlock}
 
-impl<B: Backend> ReparameterizedMobileOneDoubleConv<B> {
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneDoubleConv {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         self.second.forward(self.first.forward(input))
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneDown<B: Backend> {
-    pub maxpool_conv: MobileOneDoubleConv<B>,
-}
+pub struct MobileOneDown {
+    pub maxpool_conv: MobileOneDoubleConv}
 
-impl<B: Backend> MobileOneDown<B> {
+impl MobileOneDown {
     pub(crate) fn new(
         in_channels: usize,
         out_channels: usize,
         num_conv_branches: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self {
             maxpool_conv: MobileOneDoubleConv::new(
@@ -174,44 +166,40 @@ impl<B: Backend> MobileOneDown<B> {
                 2,
                 num_conv_branches,
                 device,
-            ),
-        }
+            )}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         self.maxpool_conv.forward(input)
     }
 
-    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneDown<B> {
+    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneDown {
         ReparameterizedMobileOneDown {
-            maxpool_conv: self.maxpool_conv.reparameterize(),
-        }
+            maxpool_conv: self.maxpool_conv.reparameterize()}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneDown<B: Backend> {
-    pub maxpool_conv: ReparameterizedMobileOneDoubleConv<B>,
-}
+pub struct ReparameterizedMobileOneDown {
+    pub maxpool_conv: ReparameterizedMobileOneDoubleConv}
 
-impl<B: Backend> ReparameterizedMobileOneDown<B> {
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneDown {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         self.maxpool_conv.forward(input)
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneUp<B: Backend> {
+pub struct MobileOneUp {
     pub up: Interpolate2d,
-    pub conv: MobileOneDoubleConv<B>,
-}
+    pub conv: MobileOneDoubleConv}
 
-impl<B: Backend> MobileOneUp<B> {
+impl MobileOneUp {
     pub(crate) fn new(
         in_channels: usize,
         out_channels: usize,
         num_conv_branches: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self {
             up: Interpolate2dConfig::new()
@@ -219,50 +207,46 @@ impl<B: Backend> MobileOneUp<B> {
                 .with_scale_factor(Some([2.0, 2.0]))
                 .with_align_corners(true)
                 .init(),
-            conv: MobileOneDoubleConv::new(in_channels, out_channels, 1, num_conv_branches, device),
-        }
+            conv: MobileOneDoubleConv::new(in_channels, out_channels, 1, num_conv_branches, device)}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>, skip: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>, skip: Tensor<4>) -> Tensor<4> {
         self.conv
             .forward(upsample_and_concat(&self.up, input, skip))
     }
 
-    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneUp<B> {
+    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneUp {
         ReparameterizedMobileOneUp {
             up: self.up.clone(),
-            conv: self.conv.reparameterize(),
-        }
+            conv: self.conv.reparameterize()}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneUp<B: Backend> {
+pub struct ReparameterizedMobileOneUp {
     pub up: Interpolate2d,
-    pub conv: ReparameterizedMobileOneDoubleConv<B>,
-}
+    pub conv: ReparameterizedMobileOneDoubleConv}
 
-impl<B: Backend> ReparameterizedMobileOneUp<B> {
-    pub fn forward(&self, input: Tensor<B, 4>, skip: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneUp {
+    pub fn forward(&self, input: Tensor<4>, skip: Tensor<4>) -> Tensor<4> {
         self.conv
             .forward(upsample_and_concat(&self.up, input, skip))
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ConvBnAct<B: Backend> {
-    pub conv: Conv2d<B>,
-    pub batch_norm: BatchNorm<B>,
-    pub activation: Relu,
-}
+pub struct ConvBnAct {
+    pub conv: Conv2d,
+    pub batch_norm: BatchNorm,
+    pub activation: Relu}
 
-impl<B: Backend> ConvBnAct<B> {
+impl ConvBnAct {
     pub(crate) fn new(
         in_channels: usize,
         out_channels: usize,
         stride: [usize; 2],
         padding: usize,
-        device: &B::Device,
+        device: &Device,
     ) -> Self {
         Self {
             conv: conv2d(
@@ -274,11 +258,10 @@ impl<B: Backend> ConvBnAct<B> {
                 device,
             ),
             batch_norm: batch_norm(out_channels, device),
-            activation: Relu,
-        }
+            activation: Relu}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         self.activation
             .forward(self.batch_norm.forward(self.conv.forward(input)))
     }
@@ -287,24 +270,22 @@ impl<B: Backend> ConvBnAct<B> {
         Self {
             conv: detached_conv2d(&self.conv),
             batch_norm: detached_batch_norm(&self.batch_norm),
-            activation: Relu,
-        }
+            activation: Relu}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneAudioConvHubert<B: Backend> {
-    pub conv1: MobileOneSeparableBlock<B>,
-    pub conv2: MobileOneSeparableBlock<B>,
-    pub conv3: MobileOneBlock<B>,
-    pub conv4: MobileOneSeparableBlock<B>,
-    pub conv5: ConvBnAct<B>,
-    pub conv6: MobileOneSeparableBlock<B>,
-    pub conv7: MobileOneSeparableBlock<B>,
-}
+pub struct MobileOneAudioConvHubert {
+    pub conv1: MobileOneSeparableBlock,
+    pub conv2: MobileOneSeparableBlock,
+    pub conv3: MobileOneBlock,
+    pub conv4: MobileOneSeparableBlock,
+    pub conv5: ConvBnAct,
+    pub conv6: MobileOneSeparableBlock,
+    pub conv7: MobileOneSeparableBlock}
 
-impl<B: Backend> MobileOneAudioConvHubert<B> {
-    pub(crate) fn new(channels: [usize; 5], num_conv_branches: usize, device: &B::Device) -> Self {
+impl MobileOneAudioConvHubert {
+    pub(crate) fn new(channels: [usize; 5], num_conv_branches: usize, device: &Device) -> Self {
         Self {
             conv1: MobileOneSeparableBlock::new(
                 16,
@@ -357,11 +338,10 @@ impl<B: Backend> MobileOneAudioConvHubert<B> {
                 num_conv_branches,
                 true,
                 device,
-            ),
-        }
+            )}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self.conv1.forward(input);
         let output = self.conv2.forward(output);
         let output = self.conv3.forward(output);
@@ -371,7 +351,7 @@ impl<B: Backend> MobileOneAudioConvHubert<B> {
         self.conv7.forward(output)
     }
 
-    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneAudioConvHubert<B> {
+    pub(crate) fn reparameterize(&self) -> ReparameterizedMobileOneAudioConvHubert {
         ReparameterizedMobileOneAudioConvHubert {
             conv1: self.conv1.reparameterize(),
             conv2: self.conv2.reparameterize(),
@@ -379,24 +359,22 @@ impl<B: Backend> MobileOneAudioConvHubert<B> {
             conv4: self.conv4.reparameterize(),
             conv5: self.conv5.detached_clone(),
             conv6: self.conv6.reparameterize(),
-            conv7: self.conv7.reparameterize(),
-        }
+            conv7: self.conv7.reparameterize()}
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct ReparameterizedMobileOneAudioConvHubert<B: Backend> {
-    pub conv1: ReparameterizedMobileOneSeparableBlock<B>,
-    pub conv2: ReparameterizedMobileOneSeparableBlock<B>,
-    pub conv3: ReparameterizedMobileOneBlock<B>,
-    pub conv4: ReparameterizedMobileOneSeparableBlock<B>,
-    pub conv5: ConvBnAct<B>,
-    pub conv6: ReparameterizedMobileOneSeparableBlock<B>,
-    pub conv7: ReparameterizedMobileOneSeparableBlock<B>,
-}
+pub struct ReparameterizedMobileOneAudioConvHubert {
+    pub conv1: ReparameterizedMobileOneSeparableBlock,
+    pub conv2: ReparameterizedMobileOneSeparableBlock,
+    pub conv3: ReparameterizedMobileOneBlock,
+    pub conv4: ReparameterizedMobileOneSeparableBlock,
+    pub conv5: ConvBnAct,
+    pub conv6: ReparameterizedMobileOneSeparableBlock,
+    pub conv7: ReparameterizedMobileOneSeparableBlock}
 
-impl<B: Backend> ReparameterizedMobileOneAudioConvHubert<B> {
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+impl ReparameterizedMobileOneAudioConvHubert {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self.conv1.forward(input);
         let output = self.conv2.forward(output);
         let output = self.conv3.forward(output);
@@ -407,7 +385,7 @@ impl<B: Backend> ReparameterizedMobileOneAudioConvHubert<B> {
     }
 }
 
-pub(crate) fn detached_conv2d<B: Backend>(source: &Conv2d<B>) -> Conv2d<B> {
+pub(crate) fn detached_conv2d(source: &Conv2d) -> Conv2d {
     Conv2d {
         weight: Param::from_tensor(source.weight.val().detach()),
         bias: source
@@ -418,17 +396,15 @@ pub(crate) fn detached_conv2d<B: Backend>(source: &Conv2d<B>) -> Conv2d<B> {
         kernel_size: source.kernel_size,
         dilation: source.dilation,
         groups: source.groups,
-        padding: source.padding.clone(),
-    }
+        padding: source.padding.clone()}
 }
 
-fn detached_batch_norm<B: Backend>(source: &BatchNorm<B>) -> BatchNorm<B> {
+fn detached_batch_norm(source: &BatchNorm) -> BatchNorm {
     BatchNorm {
         gamma: Param::from_tensor(source.gamma.val().detach()),
         beta: Param::from_tensor(source.beta.val().detach()),
         running_mean: RunningState::new(source.running_mean.value().detach()),
         running_var: RunningState::new(source.running_var.value().detach()),
         momentum: source.momentum,
-        epsilon: source.epsilon,
-    }
+        epsilon: source.epsilon}
 }

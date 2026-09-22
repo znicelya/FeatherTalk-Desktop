@@ -4,14 +4,12 @@ mod support;
 use burn::optim::AdamConfig;
 use feathertalk_training::{
     CheckpointCompatibility, CheckpointDescriptor, TRAINING_STATE_SCHEMA_VERSION, TrainingMode,
-    load_training_checkpoint,
-};
+    load_training_checkpoint};
 use feathertalk_training_run::{TrainingRunner, data_loader_config_for};
 use fixture::{dataset, locked_project};
 use support::{
     CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
-    on_step_stack, training_config,
-};
+    on_step_stack, training_config};
 
 fn descriptor() -> CheckpointDescriptor {
     CheckpointDescriptor::new("original-unet", "original-unet-v1", "0".repeat(64))
@@ -22,13 +20,13 @@ fn a_restored_runner_reproduces_the_next_steps() {
     on_step_stack("restore-replay", || {
         let device = CpuDevice::default();
         let (_temp, project_dir) = locked_project(4);
-        let mut runner = TrainingRunner::<CpuAutodiffBackend, _, _, _>::new(
+        let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
             model(&device),
             AdamConfig::new().init(),
             training_config(TrainingMode::Baseline, 2, 2, 0),
             7,
-            device,
+            device.clone(),
         )
         .unwrap();
 
@@ -53,7 +51,7 @@ fn a_restored_runner_reproduces_the_next_steps() {
         );
         let template_model = model(&device);
         let template_optimizer = AdamConfig::new().init();
-        let restored = load_training_checkpoint::<CpuAutodiffBackend, _, _>(
+        let restored = load_training_checkpoint::<_, _>(
             &checkpoint,
             &template_model,
             &template_optimizer,
@@ -62,7 +60,7 @@ fn a_restored_runner_reproduces_the_next_steps() {
         )
         .unwrap();
         let mut replayed =
-            TrainingRunner::<CpuAutodiffBackend, _, _, _>::restore(replay, restored, device)
+            TrainingRunner::<_, _, _>::restore(replay, restored, device.clone())
                 .unwrap();
 
         let replayed_third = replayed.step(&IdentityExtractor).unwrap();
@@ -84,13 +82,13 @@ fn the_checkpoint_state_matches_the_runner() {
         let device = CpuDevice::default();
         let (_temp, project_dir) = locked_project(4);
         let config = training_config(TrainingMode::Baseline, 2, 2, 0);
-        let mut runner = TrainingRunner::<CpuAutodiffBackend, _, _, _>::new(
+        let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
             model(&device),
             AdamConfig::new().init(),
             config.clone(),
             7,
-            device,
+            device.clone(),
         )
         .unwrap();
 
@@ -119,13 +117,13 @@ fn a_mismatched_dataset_refuses_to_restore() {
     on_step_stack("mismatched-dataset", || {
         let device = CpuDevice::default();
         let (_temp, project_dir) = locked_project(4);
-        let mut runner = TrainingRunner::<CpuAutodiffBackend, _, _, _>::new(
+        let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
             model(&device),
             AdamConfig::new().init(),
             training_config(TrainingMode::Baseline, 2, 2, 0),
             7,
-            device,
+            device.clone(),
         )
         .unwrap();
 
@@ -144,7 +142,7 @@ fn a_mismatched_dataset_refuses_to_restore() {
         );
         let template_model = model(&device);
         let template_optimizer = AdamConfig::new().init();
-        let restored = load_training_checkpoint::<CpuAutodiffBackend, _, _>(
+        let restored = load_training_checkpoint::<_, _>(
             &checkpoint,
             &template_model,
             &template_optimizer,
@@ -154,7 +152,7 @@ fn a_mismatched_dataset_refuses_to_restore() {
         .unwrap();
 
         let error =
-            TrainingRunner::<CpuAutodiffBackend, _, _, _>::restore(replay, restored, device)
+            TrainingRunner::<_, _, _>::restore(replay, restored, device.clone())
                 .map(|_| ())
                 .unwrap_err();
         assert_eq!(
@@ -169,13 +167,13 @@ fn a_poisoned_runner_refuses_to_save() {
     on_step_stack("poisoned-save", || {
         let device = CpuDevice::default();
         let (_temp, project_dir) = locked_project(4);
-        let mut runner = TrainingRunner::<CpuAutodiffBackend, _, _, _>::new(
+        let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
             model(&device),
             AdamConfig::new().init(),
             training_config(TrainingMode::Baseline, 2, 2, 0),
             7,
-            device,
+            device.clone(),
         )
         .unwrap();
 

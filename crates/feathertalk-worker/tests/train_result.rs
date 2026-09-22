@@ -32,8 +32,7 @@ fn payload_of(mode: DomainTrainingMode, variant: UnetVariant) -> Value {
         checkpoint_dir: None,
         checkpoints_written: 1,
         metrics_written: 1,
-        previews_written: 1,
-    })
+        previews_written: 1})
 }
 
 #[test]
@@ -55,8 +54,7 @@ fn a_finished_run_reports_every_field_the_design_lists() {
         checkpoint_dir: Some(&checkpoint),
         checkpoints_written: 2,
         metrics_written: 2,
-        previews_written: 2,
-    });
+        previews_written: 2});
 
     assert_eq!(
         payload,
@@ -77,8 +75,7 @@ fn a_finished_run_reports_every_field_the_design_lists() {
             "checkpoint_dir": "C:/tmp/project/models/unet/checkpoint-00000376",
             "checkpoints_written": 2,
             "metrics_written": 2,
-            "previews_written": 2,
-        })
+            "previews_written": 2})
     );
 }
 
@@ -101,8 +98,7 @@ fn a_resume_with_nothing_left_to_do_invents_nothing() {
         checkpoint_dir: None,
         checkpoints_written: 0,
         metrics_written: 0,
-        previews_written: 0,
-    });
+        previews_written: 0});
 
     // The checkpoint had already finished all four epochs, so the loop never
     // ran: no loss was observed and no checkpoint was published. Both stay null

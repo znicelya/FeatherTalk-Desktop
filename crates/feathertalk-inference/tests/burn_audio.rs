@@ -1,7 +1,6 @@
 use feathertalk_audio::FeatureMatrix;
 use feathertalk_inference::{
-    InferenceError, InferenceFramePlan, build_unet_audio_input, build_unet_audio_window,
-};
+    InferenceError, InferenceFramePlan, build_unet_audio_input, build_unet_audio_window};
 
 fn features(frame_count: usize) -> FeatureMatrix {
     let tokens = frame_count * 2;
@@ -17,8 +16,7 @@ fn audio_window_flattens_two_tokens_per_slot_without_transpose() {
         output_index: 1,
         source_frame_index: 0,
         reference_frame_index: 0,
-        audio_window: [None, None, Some(0), Some(1), Some(2), None, None, None],
-    };
+        audio_window: [None, None, Some(0), Some(1), Some(2), None, None, None]};
     let input = build_unet_audio_input(&features(3), &plan).unwrap();
 
     assert_eq!(input.shape(), [1, 16, 32, 32]);
@@ -47,8 +45,7 @@ fn audio_window_rejects_invalid_feature_matrix_contracts() {
             output_index: 0,
             source_frame_index: 0,
             reference_frame_index: 0,
-            audio_window: [None; 8],
-        };
+            audio_window: [None; 8]};
         assert!(matches!(
             build_unet_audio_input(&matrix, &plan),
             Err(InferenceError::InvalidFeatureShape { .. })
@@ -63,8 +60,7 @@ fn audio_window_rejects_output_and_slot_indices_beyond_feature_frames() {
         output_index: 2,
         source_frame_index: 0,
         reference_frame_index: 0,
-        audio_window: [None; 8],
-    };
+        audio_window: [None; 8]};
     assert!(matches!(
         build_unet_audio_input(&matrix, &output_plan),
         Err(InferenceError::OutputFrameOutOfRange { index: 2, count: 2 })
@@ -74,8 +70,7 @@ fn audio_window_rejects_output_and_slot_indices_beyond_feature_frames() {
         output_index: 0,
         source_frame_index: 0,
         reference_frame_index: 0,
-        audio_window: [Some(2), None, None, None, None, None, None, None],
-    };
+        audio_window: [Some(2), None, None, None, None, None, None, None]};
     assert!(matches!(
         build_unet_audio_input(&matrix, &slot_plan),
         Err(InferenceError::InvalidAudioWindowIndex {
@@ -94,8 +89,7 @@ fn plan_free_audio_window_matches_the_planned_window() {
         output_index: 1,
         source_frame_index: 0,
         reference_frame_index: 0,
-        audio_window,
-    };
+        audio_window};
     let planned = build_unet_audio_input(&matrix, &plan).unwrap();
     let direct = build_unet_audio_window(&matrix, &audio_window).unwrap();
     assert_eq!(direct.shape(), [1, 16, 32, 32]);

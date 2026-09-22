@@ -55,8 +55,7 @@ fn a_directory_without_scrfd_artifacts_reports_an_adapter_failure() {
             assert_eq!(component, "scrfd");
             assert!(!message.is_empty());
         }
-        other => panic!("expected an adapter failure, got {other:?}"),
-    }
+        other => panic!("expected an adapter failure, got {other:?}")}
 }
 
 #[test]
@@ -70,6 +69,5 @@ fn a_directory_without_pfld_artifacts_reports_an_adapter_failure() {
 
     match error {
         PipelineError::Adapter { component, .. } => assert_eq!(component, "pfld"),
-        other => panic!("expected an adapter failure, got {other:?}"),
-    }
+        other => panic!("expected an adapter failure, got {other:?}")}
 }

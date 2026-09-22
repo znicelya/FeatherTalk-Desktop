@@ -25,8 +25,7 @@ pub struct RenderSummary<'a> {
     /// The locked manifest's frame count, which is the render's upper bound.
     pub source_frame_count: u64,
     /// The request's cap, echoed as `null` when it did not set one.
-    pub max_output_frames: Option<u64>,
-}
+    pub max_output_frames: Option<u64>}
 
 /// Shapes the payload the `completed` event of a render task carries.
 ///
@@ -53,8 +52,7 @@ pub(crate) fn render_to_json_on(summary: &RenderSummary<'_>, backend: &str) -> V
         "checkpoint_epoch": summary.checkpoint_epoch,
         "checkpoint_global_step": summary.checkpoint_global_step,
         "source_frame_count": summary.source_frame_count,
-        "max_output_frames": summary.max_output_frames,
-    })
+        "max_output_frames": summary.max_output_frames})
 }
 
 fn path_text(path: &Path) -> String {

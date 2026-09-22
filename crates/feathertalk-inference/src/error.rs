@@ -8,8 +8,7 @@ pub enum InferenceError {
     InvalidInputArtifact {
         field: &'static str,
         path: PathBuf,
-        message: String,
-    },
+        message: String},
     #[error("frame index {index} is outside source frame count {count}")]
     FrameIndexOutOfRange { index: usize, count: usize },
     #[error(
@@ -20,14 +19,12 @@ pub enum InferenceError {
         expected_width: u32,
         expected_height: u32,
         actual_width: u32,
-        actual_height: u32,
-    },
+        actual_height: u32},
     #[error("frame reader failed for frame {index} at {path}: {message}")]
     FrameReader {
         index: usize,
         path: PathBuf,
-        message: String,
-    },
+        message: String},
     #[error("failed to start raw video sink: {message}")]
     SinkStart { message: String },
     #[error("raw video sink write failed: {message}")]
@@ -44,8 +41,7 @@ pub enum InferenceError {
     ToolFailed {
         operation: &'static str,
         exit_code: Option<i32>,
-        stderr: String,
-    },
+        stderr: String},
     #[error("source frame count {actual} is too small; expected at least {minimum}")]
     FrameCountTooSmall { actual: usize, minimum: usize },
     #[error("feature frame count must be greater than zero")]
@@ -55,8 +51,7 @@ pub enum InferenceError {
     #[error("invalid inference field {field}: {message}")]
     InvalidField {
         field: &'static str,
-        message: String,
-    },
+        message: String},
     #[error("arithmetic overflow while building inference plan")]
     ArithmeticOverflow,
     #[error("output destination already exists: {path}")]
@@ -82,8 +77,7 @@ pub enum InferenceError {
         x: u32,
         y: u32,
         width: u32,
-        height: u32,
-    },
+        height: u32},
     #[error(
         "invalid bounding box ({xmin}, {ymin})..({xmax}, {ymax}) for frame {frame_width}x{frame_height}"
     )]
@@ -93,16 +87,14 @@ pub enum InferenceError {
         xmax: i32,
         ymax: i32,
         frame_width: u32,
-        frame_height: u32,
-    },
+        frame_height: u32},
     #[error("resize target must be non-zero: {width}x{height}")]
     InvalidResizeTarget { width: u32, height: u32 },
     #[error("tensor shape mismatch for {context}: expected {expected:?}, got {actual:?}")]
     TensorShapeMismatch {
         context: &'static str,
         expected: Vec<usize>,
-        actual: Vec<usize>,
-    },
+        actual: Vec<usize>},
     #[error("invalid feature shape: tokens={tokens}, dims={dims}")]
     InvalidFeatureShape { tokens: usize, dims: usize },
     #[error(
@@ -111,15 +103,13 @@ pub enum InferenceError {
     InvalidAudioWindowIndex {
         slot: usize,
         index: usize,
-        frame_count: usize,
-    },
+        frame_count: usize},
     #[error("model input value at {context}[{index}] is not finite")]
     NonFiniteModelInput { context: &'static str, index: usize },
     #[error("failed to read model tensor data for {context}: {message}")]
     ModelTensorData {
         context: &'static str,
-        message: String,
-    },
+        message: String},
     #[error("model output value at index {index} is not finite")]
     NonFiniteModelOutput { index: usize },
     #[error("model output value at index {index} is outside [0,1]: {value}")]
@@ -135,13 +125,11 @@ pub enum InferenceError {
         source_width: u32,
         source_height: u32,
         destination_width: u32,
-        destination_height: u32,
-    },
+        destination_height: u32},
     #[error("allocation of {bytes} bytes failed")]
     AllocationFailure { bytes: usize },
     /// The caller stopped the render. A cancelled operation is not a failure of
     /// the render, which is why it has its own variant instead of borrowing a
     /// sink error and a sentinel message.
     #[error("cancelled during {operation}")]
-    Cancelled { operation: &'static str },
-}
+    Cancelled { operation: &'static str }}

@@ -2,8 +2,7 @@ mod support;
 
 use feathertalk_face::{ImageSize, compute_face_crop_geometry};
 use feathertalk_frame_pipeline::{
-    BLUR_VARIANCE_THRESHOLD, FACE_CONFIDENCE_THRESHOLD, NMS_IOU_THRESHOLD,
-};
+    BLUR_VARIANCE_THRESHOLD, FACE_CONFIDENCE_THRESHOLD, NMS_IOU_THRESHOLD};
 use serde_json::Value;
 
 fn committed_manifest() -> Value {
@@ -134,8 +133,7 @@ fn the_pinned_crops_match_compute_face_crop_geometry() {
     let fixture = support::load_and_verify_demo_fixture().unwrap();
     let image = ImageSize {
         width: 1280,
-        height: 720,
-    };
+        height: 720};
     for name in support::DEMO_FRAMES {
         let frame = support::demo_frame(&fixture, name);
         let geometry = compute_face_crop_geometry(image, frame.detection.bbox).unwrap();

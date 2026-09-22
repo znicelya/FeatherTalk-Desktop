@@ -5,8 +5,7 @@ use std::path::Path;
 
 use feathertalk_inference::{
     InferenceError, RawFrameRenderSpec, RenderGeometry, staging_output_path,
-    validate_output_destination,
-};
+    validate_output_destination};
 
 #[test]
 fn standard_geometry_matches_preprocess_contract() {

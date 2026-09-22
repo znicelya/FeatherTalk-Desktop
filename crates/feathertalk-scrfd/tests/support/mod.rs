@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use burn::{backend::NdArray, tensor::Tensor};
+use burn::{backend::Flex, tensor::Tensor};
 use feathertalk_scrfd::ScrfdArtifactPaths;
 use ndarray::ArrayD;
 use ndarray_npy::ReadNpyExt;
@@ -317,7 +317,7 @@ pub fn compare_f32(actual: &[f32], expected: &[f32]) -> Result<ParityMetrics, St
 }
 
 pub fn assert_cpu_tensor_matches_fixture<const D: usize>(
-    tensor: Tensor<NdArray<f32>, D>,
+    tensor: Tensor<D>,
     path: &Path,
 ) {
     let expected = read_array(path).unwrap();
@@ -337,7 +337,7 @@ pub fn assert_cpu_tensor_matches_fixture<const D: usize>(
         path.display()
     );
 
-    let actual = tensor.into_data().to_vec::<f32>().unwrap();
+    let actual = tensor.into_data().try_to_vec::<f32>().unwrap();
     let expected = expected.iter().copied().collect::<Vec<_>>();
     let metrics = compare_f32(&actual, &expected).unwrap();
     assert!(metrics.max_abs <= 1e-3, "{}: {metrics:?}", path.display());

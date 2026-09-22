@@ -4,8 +4,7 @@ mod health;
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::Mutex,
-};
+    sync::Mutex};
 
 use feathertalk_audio::{AudioError, ChunkEncoder, expected_hubert_frames};
 use feathertalk_domain::{ErrorCode, ExtractFeaturesParams, Progress, TaskError, TaskStage};
@@ -23,16 +22,14 @@ const MODEL_SHA256: &str = "a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2c3d4a1b2
 struct FakeEncoder {
     dims: usize,
     chunks: Vec<usize>,
-    cancel_on_first_chunk: Option<CancellationToken>,
-}
+    cancel_on_first_chunk: Option<CancellationToken>}
 
 impl FakeEncoder {
     fn new(dims: usize) -> Self {
         Self {
             dims,
             chunks: Vec::new(),
-            cancel_on_first_chunk: None,
-        }
+            cancel_on_first_chunk: None}
     }
 }
 
@@ -53,14 +50,12 @@ impl ChunkEncoder for FakeEncoder {
 }
 
 struct Recorder {
-    events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
-}
+    events: Mutex<Vec<(TaskStage, Option<Progress>)>>}
 
 impl Recorder {
     fn new() -> Self {
         Self {
-            events: Mutex::new(Vec::new()),
-        }
+            events: Mutex::new(Vec::new())}
     }
 
     fn events(&self) -> Vec<(TaskStage, Option<Progress>)> {
@@ -129,15 +124,13 @@ fn run(
 fn progress(completed: u64, total: u64) -> Option<Progress> {
     Some(Progress {
         completed,
-        total: Some(total),
-    })
+        total: Some(total)})
 }
 
 fn expect_failure(outcome: CommandOutcome) -> TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failure, got {other:?}"),
-    }
+        other => panic!("expected a failure, got {other:?}")}
 }
 
 #[test]
@@ -169,8 +162,7 @@ fn a_two_second_wav_becomes_an_even_token_feature_file() {
 
     let result = match run(&params, &token, &recorder, &mut encoder) {
         CommandOutcome::Completed(Some(result)) => result,
-        other => panic!("expected a completed command, got {other:?}"),
-    };
+        other => panic!("expected a completed command, got {other:?}")};
 
     let features = params.project_dir.join("assets").join("features");
     let file = features.join("feather_hubert.f32");
@@ -205,8 +197,7 @@ fn a_long_wav_reports_progress_for_every_chunk() {
 
     let result = match run(&params, &token, &recorder, &mut encoder) {
         CommandOutcome::Completed(Some(result)) => result,
-        other => panic!("expected a completed command, got {other:?}"),
-    };
+        other => panic!("expected a completed command, got {other:?}")};
 
     assert_eq!(result["tokens"], 1_998);
     assert_eq!(result["frame_count"], 999);
@@ -248,12 +239,10 @@ fn relative_paths_are_rejected_before_anything_is_touched() {
     let mut encoder = FakeEncoder::new(4);
     let relative_dir = ExtractFeaturesParams {
         project_dir: PathBuf::from("project"),
-        audio: params.audio.clone(),
-    };
+        audio: params.audio.clone()};
     let relative_audio = ExtractFeaturesParams {
         project_dir: params.project_dir.clone(),
-        audio: PathBuf::from("assets/audio_16k_mono.wav"),
-    };
+        audio: PathBuf::from("assets/audio_16k_mono.wav")};
 
     let first = expect_failure(run(&relative_dir, &token, &NoReporter, &mut encoder));
     let second = expect_failure(run(&relative_audio, &token, &NoReporter, &mut encoder));

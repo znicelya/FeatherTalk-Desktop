@@ -1,18 +1,15 @@
-use burn::tensor::backend::Backend;
 use burn_store::ModuleSnapshot;
 use feathertalk_models::unet::{
-    MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet, OriginalUnetConfig,
-};
+    MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet, OriginalUnetConfig};
 
 use crate::onnx::{
     InitializerSet, ONNX_FLOAT_DATA_TYPE, OnnxAttributeProto, OnnxExportError, OnnxGraph,
     OnnxModel, OnnxModelContract, OnnxModelKind, OnnxNodeProto, OnnxTensorContract,
     OnnxTensorProto, OnnxValue, add_snapshot_initializers, serialize_model,
-    validate_graph_integrity, validate_model_contract,
-};
+    validate_graph_integrity, validate_model_contract};
 
-pub fn export_original_unet_onnx<B: Backend>(
-    model: &OriginalUnet<B>,
+pub fn export_original_unet_onnx(
+    model: &OriginalUnet,
     config: &OriginalUnetConfig,
 ) -> Result<Vec<u8>, OnnxExportError> {
     validate_channels(&config.channels)?;
@@ -103,8 +100,8 @@ pub fn export_original_unet_onnx<B: Backend>(
     finish(OnnxModelKind::OriginalUnet, builder)
 }
 
-pub fn export_mobileone_unet_onnx<B: Backend>(
-    model: &MobileOneUnetInference<B>,
+pub fn export_mobileone_unet_onnx(
+    model: &MobileOneUnetInference,
     config: &MobileOneUnetConfig,
 ) -> Result<Vec<u8>, OnnxExportError> {
     validate_channels(&config.channels)?;
@@ -176,19 +173,17 @@ pub fn export_mobileone_unet_onnx<B: Backend>(
 
 struct Builder {
     nodes: Vec<OnnxNodeProto>,
-    initializers: InitializerSet,
-}
+    initializers: InitializerSet}
 
 impl Builder {
     fn new<'a>(
-        snapshots: impl IntoIterator<Item = &'a burn_store::TensorSnapshot>,
+        snapshots: impl IntoIterator<Item = &'a burn_store::burn_pack::Tensor>,
     ) -> Result<Self, OnnxExportError> {
         let mut initializers = InitializerSet::new();
         add_snapshot_initializers(&mut initializers, snapshots)?;
         Ok(Self {
             nodes: Vec::new(),
-            initializers,
-        })
+            initializers})
     }
 
     fn original_audio(&mut self, channels: &[usize; 5]) -> Result<String, OnnxExportError> {
@@ -775,19 +770,16 @@ fn finish(kind: OnnxModelKind, builder: Builder) -> Result<Vec<u8>, OnnxExportEr
                 OnnxValue {
                     name: "input".to_owned(),
                     shape: vec![1, 6, 160, 160],
-                    dtype: ONNX_FLOAT_DATA_TYPE,
-                },
+                    dtype: ONNX_FLOAT_DATA_TYPE},
                 OnnxValue {
                     name: "audio".to_owned(),
                     shape: vec![1, 16, 32, 32],
-                    dtype: ONNX_FLOAT_DATA_TYPE,
-                },
+                    dtype: ONNX_FLOAT_DATA_TYPE},
             ],
             vec![OnnxValue {
                 name: "output".to_owned(),
                 shape: vec![1, 3, 160, 160],
-                dtype: ONNX_FLOAT_DATA_TYPE,
-            }],
+                dtype: ONNX_FLOAT_DATA_TYPE}],
             "feathertalk.original_unet",
         ),
         OnnxModelKind::MobileOneUnet => (
@@ -795,23 +787,19 @@ fn finish(kind: OnnxModelKind, builder: Builder) -> Result<Vec<u8>, OnnxExportEr
                 OnnxValue {
                     name: "input".to_owned(),
                     shape: vec![1, 6, 160, 160],
-                    dtype: ONNX_FLOAT_DATA_TYPE,
-                },
+                    dtype: ONNX_FLOAT_DATA_TYPE},
                 OnnxValue {
                     name: "audio".to_owned(),
                     shape: vec![1, 16, 32, 32],
-                    dtype: ONNX_FLOAT_DATA_TYPE,
-                },
+                    dtype: ONNX_FLOAT_DATA_TYPE},
             ],
             vec![OnnxValue {
                 name: "output".to_owned(),
                 shape: vec![1, 3, 160, 160],
-                dtype: ONNX_FLOAT_DATA_TYPE,
-            }],
+                dtype: ONNX_FLOAT_DATA_TYPE}],
             "feathertalk.mobileone_unet.reparameterized",
         ),
-        OnnxModelKind::FeatherHubert => unreachable!(),
-    };
+        OnnxModelKind::FeatherHubert => unreachable!()};
     let model = OnnxModel {
         ir_version: crate::onnx::ONNX_IR_VERSION,
         opset_version: crate::onnx::ONNX_OPSET_VERSION,
@@ -821,9 +809,7 @@ fn finish(kind: OnnxModelKind, builder: Builder) -> Result<Vec<u8>, OnnxExportEr
             inputs,
             outputs,
             nodes: builder.nodes,
-            initializers: builder.initializers,
-        },
-    };
+            initializers: builder.initializers}};
     validate_graph_integrity(&model)
         .map_err(|error| OnnxExportError::InvalidGraph(error.to_string()))?;
     let bytes = serialize_model(&model)?;
@@ -958,8 +944,7 @@ where
         op_type: op_type.to_owned(),
         attribute,
         doc_string: String::new(),
-        domain: String::new(),
-    }
+        domain: String::new()}
 }
 
 fn attribute_int(name: &str, value: i64) -> OnnxAttributeProto {
@@ -1012,8 +997,7 @@ fn add_f32_initializer(
                 data_type: ONNX_FLOAT_DATA_TYPE,
                 name: name.to_owned(),
                 raw_data,
-                doc_string: String::new(),
-            })
+                doc_string: String::new()})
             .expect("generated initializer names are unique");
     }
 }
@@ -1030,8 +1014,7 @@ fn add_i64_initializer(initializers: &mut InitializerSet, name: &str, values: &[
                 data_type: 7,
                 name: name.to_owned(),
                 raw_data,
-                doc_string: String::new(),
-            })
+                doc_string: String::new()})
             .expect("generated initializer names are unique");
     }
 }

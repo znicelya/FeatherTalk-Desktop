@@ -1,15 +1,13 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_domain::{ErrorCode, TaskStage};
 use feathertalk_export::read_package_manifest;
 use feathertalk_training::{CheckpointDescriptor, read_training_checkpoint};
 use feathertalk_worker::{
     ModelSourceKind, checkpoint_descriptor, checkpoint_files, checkpoint_incompatibilities,
-    model_source_kind, package_files, package_incompatibilities, render_variant,
-};
+    model_source_kind, package_files, package_incompatibilities, render_variant};
 
 #[path = "support/mod.rs"]
 mod support;
@@ -43,7 +41,7 @@ fn a_directory_with_a_safetensors_model_is_a_package() {
 fn a_directory_with_a_binary_model_is_a_checkpoint() {
     let root = tempfile::tempdir().expect("the temporary root is created");
     let dir = directory(root.path(), "checkpoint");
-    touch(&dir.join("model.bin"));
+    touch(&dir.join("model.bpk"));
     touch(&dir.join("manifest.json"));
     assert_eq!(
         model_source_kind(&dir).expect("the layout is recognized"),
@@ -56,7 +54,7 @@ fn a_directory_holding_both_model_files_is_refused() {
     let root = tempfile::tempdir().expect("the temporary root is created");
     let dir = directory(root.path(), "both");
     touch(&dir.join("model.safetensors"));
-    touch(&dir.join("model.bin"));
+    touch(&dir.join("model.bpk"));
     let error = model_source_kind(&dir).expect_err("two layouts at once is no layout");
     assert_eq!(error.code, ErrorCode::ModelIncompatible);
     assert_eq!(error.summary, "无法识别的模型目录");
@@ -171,8 +169,8 @@ fn a_checkpoint_this_build_can_rebuild_is_compatible() {
     let checkpoint = read_training_checkpoint(&dir).expect("the checkpoint is readable");
     let files = checkpoint_files(&dir, &checkpoint.manifest);
     assert_eq!(files.len(), 3);
-    assert_eq!(files[0].file_name, "model.bin");
-    assert_eq!(files[1].file_name, "optimizer.bin");
+    assert_eq!(files[0].file_name, "model.bpk");
+    assert_eq!(files[1].file_name, "optimizer.bpk");
     assert_eq!(files[2].file_name, "training-state.json");
     assert!(checkpoint_incompatibilities(&checkpoint.manifest, &files).is_empty());
 }

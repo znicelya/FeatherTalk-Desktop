@@ -5,31 +5,26 @@ use std::path::{Path, PathBuf};
 
 use burn::optim::AdamConfig;
 use feathertalk_domain::{
-    ErrorCode, Progress, TaskStage, TrainParams, TrainingMode as DomainTrainingMode, UnetVariant,
-};
+    ErrorCode, Progress, TaskStage, TrainParams, TrainingMode as DomainTrainingMode, UnetVariant};
 use feathertalk_media::CancellationToken;
 use feathertalk_worker::{
     CommandOutcome, MAX_EPOCHS, TrainDevice, TrainingPaths, WorkerConfig, check_frame_count,
-    execute_train, latest_checkpoint, run_training,
-};
+    execute_train, latest_checkpoint, run_training};
 use serde_json::{Value, json};
 
 use support::{
-    IdentityExtractor, PoisonedExtractor, Recorder, StubDataset, micro_plan, model, on_step_stack,
-};
+    IdentityExtractor, PoisonedExtractor, Recorder, StubDataset, micro_plan, model, on_step_stack};
 
 fn completed(outcome: CommandOutcome) -> Value {
     match outcome {
         CommandOutcome::Completed(Some(payload)) => payload,
-        other => panic!("expected a completed outcome, got {other:?}"),
-    }
+        other => panic!("expected a completed outcome, got {other:?}")}
 }
 
 fn failed(outcome: CommandOutcome) -> feathertalk_domain::TaskError {
     match outcome {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected a failed outcome, got {other:?}"),
-    }
+        other => panic!("expected a failed outcome, got {other:?}")}
 }
 
 #[test]
@@ -153,8 +148,7 @@ fn names(directory: &Path) -> Vec<String> {
 fn first_step(events: &[(TaskStage, Option<Progress>)]) -> u64 {
     match events.first().expect("at least one event") {
         (TaskStage::Training { step, .. }, _) => *step,
-        (other, _) => panic!("expected a training stage, got {other:?}"),
-    }
+        (other, _) => panic!("expected a training stage, got {other:?}")}
 }
 
 #[test]
@@ -245,16 +239,14 @@ fn a_baseline_run_trains_publishes_and_reports() {
         let (stage, progress) = events.last().expect("eight events").clone();
         let expected = Progress {
             completed: 8,
-            total: Some(8),
-        };
+            total: Some(8)};
         assert_eq!(progress, Some(expected));
         match stage {
             TaskStage::Training { epoch, step, loss } => {
                 assert_eq!((epoch, step), (1, 8));
                 assert!(loss.is_finite(), "{loss}");
             }
-            other => panic!("expected a training stage, got {other:?}"),
-        }
+            other => panic!("expected a training stage, got {other:?}")}
     });
 }
 
@@ -456,8 +448,7 @@ fn a_step_that_fails_reports_the_step_it_reached() {
         // step two says step two, not "preparing".
         match error.stage {
             TaskStage::Training { epoch, step, .. } => assert_eq!((epoch, step), (0, 1)),
-            other => panic!("expected the last training stage, got {other:?}"),
-        }
+            other => panic!("expected the last training stage, got {other:?}")}
         // The failed run reached no epoch boundary, so it published nothing.
         assert!(!paths.checkpoints().exists());
         assert_eq!(reporter.events().len(), 1);
@@ -485,8 +476,7 @@ fn train_params(project_dir: &Path, mode: DomainTrainingMode, epochs: u32) -> Tr
         variant: UnetVariant::OriginalUnet,
         epochs,
         batch_size: 1,
-        resume: false,
-    }
+        resume: false}
 }
 
 /// A directory that gets past `check_project_dir`: absolute, a real directory,

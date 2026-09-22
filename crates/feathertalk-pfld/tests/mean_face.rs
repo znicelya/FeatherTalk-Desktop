@@ -2,16 +2,14 @@ use std::path::PathBuf;
 
 use feathertalk_pfld::{
     CropGeometry, MEAN_FACE, MeanFace, PFLD_OUTPUT_VALUE_COUNT, PfldError, decode_landmarks,
-    decode_landmarks_with_default_mean_face, decode_landmarks_with_mean_face, read_mean_face,
-};
+    decode_landmarks_with_default_mean_face, decode_landmarks_with_mean_face, read_mean_face};
 
 fn crop() -> CropGeometry {
     CropGeometry {
         width: 100,
         height: 80,
         offset_x: 3,
-        offset_y: -2,
-    }
+        offset_y: -2}
 }
 
 fn values() -> Vec<f32> {

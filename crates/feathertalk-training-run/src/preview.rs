@@ -1,14 +1,14 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::{Tensor};
 use feathertalk_models::unet::TrainableTalkingHead;
 use feathertalk_training::{PreviewArtifact, TrainingDataset, TrainingError, TrainingSample};
 use feathertalk_training_data::{TrainingItem, stack_single_frame_batch};
 
 /// Renders one single-frame sample into a wire-ready preview artifact.
 #[allow(clippy::too_many_arguments)]
-pub fn build_preview_artifact<B, M, D>(
+pub fn build_preview_artifact<M, D>(
     model: &M,
     dataset: &D,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     sample: &TrainingSample,
     epoch: u64,
     global_step: u64,
@@ -17,14 +17,12 @@ pub fn build_preview_artifact<B, M, D>(
     worker_state: &str,
 ) -> Result<PreviewArtifact, TrainingError>
 where
-    B: Backend,
-    M: TrainableTalkingHead<B>,
+    M: TrainableTalkingHead,
     D: TrainingDataset<Item = TrainingItem>,
 {
     let TrainingSample::SingleFrame {
         target_index,
-        reference_index,
-    } = sample
+        reference_index} = sample
     else {
         return Err(TrainingError::InvalidInput(
             "a preview needs a single-frame sample".to_owned(),
@@ -32,7 +30,7 @@ where
     };
 
     let item = dataset.load_sample(sample)?;
-    let batch = stack_single_frame_batch::<B>(&[item], device)?;
+    let batch = stack_single_frame_batch(&[item], device)?;
     let prediction = model.forward_training(batch.image, batch.audio).detach();
     let mouth_roi = prediction.clone() * batch.mouth_mask;
 
@@ -50,12 +48,12 @@ where
     )
 }
 
-fn preview_values<B: Backend>(
-    tensor: Tensor<B, 4>,
+fn preview_values(
+    tensor: Tensor<4>,
     context: &str,
 ) -> Result<Vec<f32>, TrainingError> {
     tensor
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| TrainingError::InvalidInput(format!("preview {context}: {error}")))
 }

@@ -9,8 +9,7 @@ pub enum PfldError {
         operation: &'static str,
         path: PathBuf,
         #[source]
-        source: std::io::Error,
-    },
+        source: std::io::Error},
     #[error("mean face file is not valid UTF-8: {path}")]
     InvalidUtf8 { path: PathBuf },
     #[error("invalid mean face token at index {index} in {path}")]
@@ -19,21 +18,18 @@ pub enum PfldError {
     InvalidMeanFaceCount {
         path: PathBuf,
         expected: usize,
-        actual: usize,
-    },
+        actual: usize},
     #[error("invalid vector length for {field}: expected {expected}, got {actual}")]
     InvalidVectorLength {
         field: &'static str,
         expected: usize,
-        actual: usize,
-    },
+        actual: usize},
     #[error("non-finite value for {field} at index {index}")]
     NonFiniteValue { field: &'static str, index: usize },
     #[error("crop width and height must be non-zero")]
     InvalidCropGeometry,
     #[error("decoded coordinate {axis} at landmark index {index} is outside i32 range")]
-    CoordinateOutOfRange { index: usize, axis: &'static str },
-}
+    CoordinateOutOfRange { index: usize, axis: &'static str }}
 
 #[derive(Debug, thiserror::Error)]
 pub enum PfldRuntimeError {
@@ -42,8 +38,7 @@ pub enum PfldRuntimeError {
         operation: &'static str,
         path: std::path::PathBuf,
         #[source]
-        source: std::io::Error,
-    },
+        source: std::io::Error},
     #[error("manifest exceeds {limit} bytes: {actual}")]
     ManifestTooLarge { limit: u64, actual: u64 },
     #[error("weights exceed {limit} bytes: {actual}")]
@@ -60,8 +55,7 @@ pub enum PfldRuntimeError {
     HashMismatch {
         artifact: &'static str,
         expected: String,
-        actual: String,
-    },
+        actual: String},
     #[error("weight byte count mismatch: expected {expected}, got {actual}")]
     WeightSizeMismatch { expected: u64, actual: u64 },
     #[error("Burn store error: {0}")]
@@ -83,5 +77,4 @@ pub enum PfldRuntimeError {
     #[error("PFLD output contains a non-finite value")]
     NonFiniteOutput,
     #[error("artifact directory contains an unexpected entry: {0}")]
-    UnexpectedArtifactEntry(String),
-}
+    UnexpectedArtifactEntry(String)}

@@ -6,8 +6,7 @@ use feathertalk_models::unet::OriginalUnetConfig;
 use feathertalk_training::CheckpointDescriptor;
 use feathertalk_worker::{
     RenderBackend, RenderDevice, RenderSummary, checkpoint_descriptor, project_assets,
-    render_to_json,
-};
+    render_to_json};
 use tempfile::TempDir;
 
 #[path = "support/mod.rs"]
@@ -67,8 +66,7 @@ fn a_render_payload_names_the_weights_the_video_came_from() {
         checkpoint_epoch: 1,
         checkpoint_global_step: 4,
         source_frame_count: 2,
-        max_output_frames: None,
-    });
+        max_output_frames: None});
 
     let object = payload.as_object().expect("the payload is an object");
     assert_eq!(object.len(), 14, "{payload}");
@@ -79,7 +77,7 @@ fn a_render_payload_names_the_weights_the_video_came_from() {
     assert_eq!(payload["height"], 168);
     // The container's frame rate is fixed by inference, not by the request.
     assert_eq!(payload["fps"], 25);
-    assert_eq!(payload["backend"], "ndarray-cpu");
+    assert_eq!(payload["backend"], "flex-cpu");
     assert_eq!(payload["model_kind"], "original_unet");
     assert_eq!(payload["checkpoint_epoch"], 1);
     assert_eq!(payload["checkpoint_global_step"], 4);
@@ -112,8 +110,7 @@ fn a_capped_render_reports_the_cap_next_to_what_it_wrote() {
         checkpoint_epoch: 2,
         checkpoint_global_step: 6,
         source_frame_count: 3,
-        max_output_frames: Some(2),
-    });
+        max_output_frames: Some(2)});
 
     assert_eq!(payload["frame_count"], 2);
     assert_eq!(payload["source_frame_count"], 3);
@@ -136,8 +133,7 @@ fn a_render_payload_keeps_the_paths_as_the_host_spells_them() {
         checkpoint_epoch: 1,
         checkpoint_global_step: 4,
         source_frame_count: 2,
-        max_output_frames: None,
-    });
+        max_output_frames: None});
 
     let output = payload["output_path"]
         .as_str()

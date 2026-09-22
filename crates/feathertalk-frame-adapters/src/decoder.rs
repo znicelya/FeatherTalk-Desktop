@@ -8,8 +8,7 @@ use crate::cache::FrameImageCache;
 /// `FrameDecoder` built on the JPEG decoder and the Laplacian blur measure.
 #[derive(Debug)]
 pub struct JpegFrameDecoder {
-    cache: Arc<FrameImageCache>,
-}
+    cache: Arc<FrameImageCache>}
 
 impl JpegFrameDecoder {
     /// Share `cache` with the detector and the landmark predictor so that a

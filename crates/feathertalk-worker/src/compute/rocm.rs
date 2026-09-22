@@ -3,40 +3,37 @@
 use std::{
     ffi::CStr,
     panic::{AssertUnwindSafe, catch_unwind},
-    sync::Arc,
-};
+    sync::Arc};
 
 use burn::{
-    backend::wgpu::CubeBackend,
+    backend::{DispatchDevice, wgpu::CubeBackend},
     cubecl::{
         Runtime,
         future::block_on,
-        hip::{AmdDevice, HipRuntime},
-    },
-    tensor::Tensor,
-};
+        hip::{AmdDevice, HipRuntime}},
+    tensor::{Device, Tensor}};
 use cubecl_hip_sys::{
-    HIP_SUCCESS, hipDeviceProp_tR0600, hipGetDeviceCount, hipGetDevicePropertiesR0600,
-};
+    HIP_SUCCESS, hipDeviceProp_tR0600, hipGetDeviceCount, hipGetDevicePropertiesR0600};
 use feathertalk_domain::{AdapterInfo, AdapterKind, Backend};
-use feathertalk_models::backend::RocmBackend;
 
 use super::{FaultState, GpuFailure, diagnostic, panic_detail, server_failure};
 
 /// The UUID-selected device and its persistent fault state.
 #[derive(Clone, Debug)]
 pub struct RocmContext {
-    pub device: AmdDevice,
-    faults: Arc<FaultState>,
-}
+    pub device: Device,
+    faults: Arc<FaultState>}
 
 impl RocmContext {
     pub fn check(&self) -> Result<(), GpuFailure> {
         self.faults.check()?;
         let result = catch_unwind(AssertUnwindSafe(|| {
-            burn_fusion::get_client::<CubeBackend<HipRuntime, f32, i32, u8>>(&self.device)
+            let native = rocm_device(&self.device).ok_or_else(|| {
+                GpuFailure::Other("RocmContext holds a non-ROCm device".into())
+            })?;
+            burn_fusion::get_client::<CubeBackend<HipRuntime>>(native)
                 .sync(|| ());
-            let client = HipRuntime::client(&self.device);
+            let client = HipRuntime::client(native);
             client.flush().map_err(server_failure)?;
             block_on(client.sync()).map_err(server_failure)
         }));
@@ -46,13 +43,25 @@ impl RocmContext {
             Err(payload) => self.faults.record(GpuFailure::Other(format!(
                 "ROCm synchronization failed: {}",
                 panic_detail(payload)
-            ))),
-        }
+            )))}
         self.faults.check()
     }
 }
 
-pub(crate) fn memory_usage_bytes(device: &AmdDevice) -> Option<u64> {
+/// Extract the native ROCm device from the unified [`Device`], or `None` when
+/// the device belongs to another backend.
+fn rocm_device(device: &Device) -> Option<&AmdDevice> {
+    let mut dispatch = device.as_dispatch();
+    while let DispatchDevice::Autodiff(inner) = dispatch {
+        dispatch = inner;
+    }
+    match dispatch {
+        DispatchDevice::Rocm(native) => Some(native),
+        _ => None}
+}
+
+pub(crate) fn memory_usage_bytes(device: &Device) -> Option<u64> {
+    let device = rocm_device(device)?;
     catch_unwind(AssertUnwindSafe(|| {
         HipRuntime::client(device)
             .memory_usage()
@@ -106,8 +115,7 @@ fn discover_checked() -> Result<Vec<(AdapterInfo, RocmContext)>, String> {
             Err(payload) => diagnostic(format_args!(
                 "ROCm device {index} failed its runtime probe: {}",
                 panic_detail(payload)
-            )),
-        }
+            ))}
     }
     Ok(adapters)
 }
@@ -135,12 +143,11 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, RocmContext), String> {
     }
 
     let context = RocmContext {
-        device: AmdDevice::new(index),
-        faults: Arc::new(FaultState::default()),
-    };
-    let values = (Tensor::<RocmBackend, 1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
+        device: Device::new(AmdDevice::new(index)),
+        faults: Arc::new(FaultState::default())};
+    let values = (Tensor::<1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| format!("ROCm readback failed: {error:?}"))?;
     context.check().map_err(|error| error.to_string())?;
     if values != [2.0, 4.0, 6.0] {
@@ -158,8 +165,7 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, RocmContext), String> {
                 AdapterKind::Discrete
             },
             certified: true,
-            vram_bytes: Some(properties.totalGlobalMem as u64),
-        },
+            vram_bytes: Some(properties.totalGlobalMem as u64)},
         context,
     ))
 }

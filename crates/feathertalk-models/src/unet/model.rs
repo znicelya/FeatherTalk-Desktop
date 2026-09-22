@@ -3,27 +3,27 @@ use super::{
     blocks::{DoubleConvDw, Down, InConvDw, OutConv, Up},
     config::{AudioConvHubertConfig, DownConfig},
 };
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 #[derive(burn::module::Module, Debug)]
-pub struct OriginalUnet<B: Backend> {
-    pub audio_model: AudioConvHubert<B>,
-    pub fuse_first: DoubleConvDw<B>,
-    pub fuse_second: DoubleConvDw<B>,
-    pub inc: InConvDw<B>,
-    pub down1: Down<B>,
-    pub down2: Down<B>,
-    pub down3: Down<B>,
-    pub down4: Down<B>,
-    pub up1: Up<B>,
-    pub up2: Up<B>,
-    pub up3: Up<B>,
-    pub up4: Up<B>,
-    pub outc: OutConv<B>,
-}
+pub struct OriginalUnet {
+    pub audio_model: AudioConvHubert,
+    pub fuse_first: DoubleConvDw,
+    pub fuse_second: DoubleConvDw,
+    pub inc: InConvDw,
+    pub down1: Down,
+    pub down2: Down,
+    pub down3: Down,
+    pub down4: Down,
+    pub up1: Up,
+    pub up2: Up,
+    pub up3: Up,
+    pub up4: Up,
+    pub outc: OutConv}
 
-impl<B: Backend> OriginalUnet<B> {
-    pub(crate) fn new(channels: [usize; 5], device: &B::Device) -> Self {
+impl OriginalUnet {
+    pub(crate) fn new(channels: [usize; 5], device: &Device) -> Self {
         Self {
             audio_model: AudioConvHubertConfig::new(channels).init(device),
             fuse_first: DoubleConvDw::new(channels[4] * 2, channels[4], 1, device),
@@ -37,11 +37,10 @@ impl<B: Backend> OriginalUnet<B> {
             up2: Up::new(channels[3] / 2 + channels[2], channels[2] / 2, device),
             up3: Up::new(channels[2] / 2 + channels[1], channels[1] / 2, device),
             up4: Up::new(channels[1] / 2 + channels[0], channels[0], device),
-            outc: OutConv::new(channels[0], device),
-        }
+            outc: OutConv::new(channels[0], device)}
     }
 
-    pub fn forward(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         let x1 = self.inc.forward(image);
         let x2 = self.down1.forward(x1.clone());
         let x3 = self.down2.forward(x2.clone());

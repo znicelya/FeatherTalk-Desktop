@@ -1,10 +1,8 @@
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
-use burn_store::TensorSnapshot;
 use sha2::{Digest, Sha256};
 
 use crate::WeightImportError;
@@ -17,8 +15,7 @@ pub(crate) struct SnapshotFile {
     _directory: tempfile::TempDir,
     _handle: File,
     path: PathBuf,
-    sha256: String,
-}
+    sha256: String}
 
 impl SnapshotFile {
     pub(crate) fn copy_from(path: &Path, max_file_bytes: u64) -> Result<Self, WeightImportError> {
@@ -66,8 +63,7 @@ impl SnapshotFile {
             _directory: directory,
             _handle: destination,
             path: snapshot_path,
-            sha256: hex::encode(hasher.finalize()),
-        })
+            sha256: hex::encode(hasher.finalize())})
     }
 
     pub(crate) fn path(&self) -> &Path {
@@ -95,7 +91,7 @@ pub(crate) fn sha256_file(path: &Path) -> Result<String, WeightImportError> {
     Ok(hex::encode(hasher.finalize()))
 }
 
-pub(crate) fn tensor_elements(snapshot: &TensorSnapshot) -> Result<u64, WeightImportError> {
+pub(crate) fn tensor_elements(snapshot: &burn_store::burn_pack::Tensor) -> Result<u64, WeightImportError> {
     snapshot.shape.iter().try_fold(1u64, |total, dimension| {
         let dimension = u64::try_from(*dimension).map_err(|_| {
             WeightImportError::UnsafeLimit("tensor dimension exceeds u64".to_owned())

@@ -1,12 +1,10 @@
 use std::{
     io::{Cursor, Read},
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use burn::{
-    backend::NdArray,
-    tensor::{Tensor, TensorData},
-};
+    backend::Flex,
+    tensor::{Tensor, TensorData}};
 use feathertalk_training::{load_vgg19_package, read_vgg19_manifest};
 use ndarray::ArrayD;
 use ndarray_npy::ReadNpyExt;
@@ -14,7 +12,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
-type CpuBackend = NdArray<f32>;
+type CpuBackend = Flex;
 
 const GOLDEN_ARCHIVE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -30,8 +28,7 @@ struct GoldenManifest {
     output_layer: String,
     input_contract: InputContract,
     input: ArrayManifest,
-    expected: ArrayManifest,
-}
+    expected: ArrayManifest}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -39,8 +36,7 @@ struct InputContract {
     channels: usize,
     color_order: String,
     value_range: String,
-    normalization: String,
-}
+    normalization: String}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -48,8 +44,7 @@ struct ArrayManifest {
     path: String,
     shape: Vec<usize>,
     dtype: String,
-    sha256: String,
-}
+    sha256: String}
 
 #[test]
 #[ignore = "requires an explicitly supplied licensed VGG19 package"]
@@ -103,8 +98,8 @@ fn official_python_golden_matches_burn_package() {
     assert_eq!(package_manifest.source.sha256, manifest.source_sha256);
 
     let device = Default::default();
-    let model = load_vgg19_package::<CpuBackend>(&package, &device).expect("load VGG19 package");
-    let input_tensor = Tensor::<CpuBackend, 4>::from_data(
+    let model = load_vgg19_package(&package, &device).expect("load VGG19 package");
+    let input_tensor = Tensor::<4>::from_data(
         TensorData::new(
             input.iter().copied().collect::<Vec<_>>(),
             input.shape().to_vec(),
@@ -114,7 +109,7 @@ fn official_python_golden_matches_burn_package() {
     let actual = model
         .forward(input_tensor)
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .unwrap();
     let expected = expected.iter().copied().collect::<Vec<_>>();
     assert_eq!(actual.len(), expected.len());

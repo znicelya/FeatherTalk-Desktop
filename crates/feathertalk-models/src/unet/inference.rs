@@ -1,4 +1,4 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
 
 use super::{MobileOneUnetInference, OriginalUnet};
 
@@ -15,21 +15,21 @@ use super::{MobileOneUnetInference, OriginalUnet};
 /// fn require_inference_graph<M: TalkingHeadModel<CpuBackend>>(_model: &M) {}
 ///
 /// let device = Default::default();
-/// let training_graph = MobileOneUnetConfig::parity_micro().init::<CpuBackend>(&device);
+/// let training_graph = MobileOneUnetConfig::parity_micro().init(&device);
 /// require_inference_graph(&training_graph);
 /// ```
-pub trait TalkingHeadModel<B: Backend> {
-    fn forward_talking_head(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4>;
+pub trait TalkingHeadModel {
+    fn forward_talking_head(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4>;
 }
 
-impl<B: Backend> TalkingHeadModel<B> for OriginalUnet<B> {
-    fn forward_talking_head(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+impl TalkingHeadModel for OriginalUnet {
+    fn forward_talking_head(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         self.forward(image, audio)
     }
 }
 
-impl<B: Backend> TalkingHeadModel<B> for MobileOneUnetInference<B> {
-    fn forward_talking_head(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+impl TalkingHeadModel for MobileOneUnetInference {
+    fn forward_talking_head(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         self.forward(image, audio)
     }
 }

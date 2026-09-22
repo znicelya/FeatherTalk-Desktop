@@ -12,20 +12,19 @@ use std::{
     io::Write,
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{Arc, Mutex, OnceLock},
-    time::Duration,
-};
+    time::Duration};
 
 use burn::{
-    backend::wgpu::{CubeBackend, RuntimeOptions, WgpuDevice, WgpuRuntime, WgpuSetup, init_device},
+    backend::{
+        DispatchDevice,
+        wgpu::{AutoCompiler, CubeBackend, RuntimeOptions, WgpuDevice, WgpuRuntime, WgpuSetup, init_device}},
     cubecl::{
         Runtime,
         future::block_on,
-        server::{IoError, LaunchError, ProfileError, ServerError},
-    },
-};
+        server::{IoError, LaunchError, ProfileError, ServerError}},
+    tensor::Device};
 use feathertalk_domain::{
-    AdapterInfo, AdapterKind, Backend, ErrorCode, MAX_DETAIL_CHARS, Recovery, TaskError, TaskStage,
-};
+    AdapterInfo, AdapterKind, Backend, ErrorCode, MAX_DETAIL_CHARS, Recovery, TaskError, TaskStage};
 use sha2::{Digest, Sha256};
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
@@ -45,8 +44,7 @@ pub struct ComputeRegistry {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     cuda: BTreeMap<String, cuda::CudaContext>,
     #[cfg(target_os = "linux")]
-    rocm: BTreeMap<String, rocm::RocmContext>,
-}
+    rocm: BTreeMap<String, rocm::RocmContext>}
 
 impl ComputeRegistry {
     pub fn cpu_only() -> Self {
@@ -56,8 +54,7 @@ impl ComputeRegistry {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             cuda: BTreeMap::new(),
             #[cfg(target_os = "linux")]
-            rocm: BTreeMap::new(),
-        }
+            rocm: BTreeMap::new()}
     }
 
     /// Enumerate Vulkan/Metal and independently probe CUDA on Windows/Linux.
@@ -132,8 +129,7 @@ impl ComputeRegistry {
                     Arc::new(NativeAdapter {
                         instance: instance.clone(),
                         adapter,
-                        opened: OnceLock::new(),
-                    }),
+                        opened: OnceLock::new()}),
                 )
             })
             .collect();
@@ -145,8 +141,7 @@ impl ComputeRegistry {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             cuda: BTreeMap::new(),
             #[cfg(target_os = "linux")]
-            rocm: BTreeMap::new(),
-        })
+            rocm: BTreeMap::new()})
     }
 
     pub fn adapters(&self) -> &[AdapterInfo] {
@@ -173,7 +168,11 @@ impl ComputeRegistry {
     pub fn cuda_device_index(&self, id: &str) -> Option<usize> {
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
-            self.cuda.get(id).map(|context| context.device.index)
+            self.cuda.get(id).and_then(|context| {
+                match context.device.as_dispatch() {
+                    DispatchDevice::Cuda(device) => Some(device.index),
+                    _ => None}
+            })
         }
         #[cfg(not(any(target_os = "windows", target_os = "linux")))]
         {
@@ -210,8 +209,7 @@ impl ComputeRegistry {
                         "Could not initialize WGPU adapter {id}: {}",
                         panic_detail(payload)
                     ))
-                })),
-            }
+                }))}
         });
         let context = result.as_ref().map_err(Clone::clone)?;
         context.check()?;
@@ -244,8 +242,7 @@ fn physical_adapters<T>(
                     backend: Backend::Wgpu,
                     kind: adapter_kind(info.device_type),
                     certified: certified(platform, &info),
-                    vram_bytes: metadata.vram_bytes,
-                },
+                    vram_bytes: metadata.vram_bytes},
                 handle,
             ))
         })
@@ -256,8 +253,7 @@ fn physical_adapters<T>(
 struct NativeAdapter {
     instance: wgpu::Instance,
     adapter: wgpu::Adapter,
-    opened: OnceLock<Result<WgpuContext, GpuFailure>>,
-}
+    opened: OnceLock<Result<WgpuContext, GpuFailure>>}
 
 impl NativeAdapter {
     fn open(&self, faults: Arc<FaultState>) -> Result<WgpuContext, GpuFailure> {
@@ -275,8 +271,7 @@ impl NativeAdapter {
             trace: wgpu::Trace::Off,
             // SAFETY: This is the feature configuration used by the pinned
             // CubeCL WGSL backend, which owns shader generation and validation.
-            experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
-        };
+            experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() }};
         let (device, queue) = if self.adapter.get_info().backend == wgpu::Backend::Vulkan {
             block_on(burn::cubecl::wgpu::vulkan::request_vulkan_device(
                 &self.adapter,
@@ -309,24 +304,25 @@ impl NativeAdapter {
             adapter: self.adapter.clone(),
             device,
             queue,
-            backend: self.adapter.get_info().backend,
-        };
-        let device = init_device(setup.clone(), RuntimeOptions::default());
+            backend: self.adapter.get_info().backend};
+        let native = init_device(setup.clone(), RuntimeOptions::default());
         Ok(WgpuContext {
-            device,
+            // CubeCL's init_device registers WgpuRuntime<AutoCompiler>.
+            // Device::new(WgpuDevice) would become DispatchDevice::Vulkan
+            // when the vulkan feature is on, so tensor work would look up
+            // SpirvCompiler and miss the registered runtime.
+            device: Device::new(DispatchDevice::Wgpu(native)),
             setup,
-            faults,
-        })
+            faults})
     }
 }
 
 /// Registered Burn device, its exact native setup, and persistent fault state.
 #[derive(Clone, Debug)]
 pub struct WgpuContext {
-    pub device: WgpuDevice,
+    pub device: Device,
     setup: WgpuSetup,
-    faults: Arc<FaultState>,
-}
+    faults: Arc<FaultState>}
 
 /// Checks the actual GPU backend, including the PFLD model-loading stream.
 #[derive(Clone, Debug)]
@@ -335,8 +331,7 @@ pub enum GpuContext {
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     Cuda(cuda::CudaContext),
     #[cfg(target_os = "linux")]
-    Rocm(rocm::RocmContext),
-}
+    Rocm(rocm::RocmContext)}
 
 impl GpuContext {
     pub fn check(&self) -> Result<(), GpuFailure> {
@@ -345,8 +340,7 @@ impl GpuContext {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             Self::Cuda(context) => context.check(),
             #[cfg(target_os = "linux")]
-            Self::Rocm(context) => context.check(),
-        }
+            Self::Rocm(context) => context.check()}
     }
 
     pub fn graphics_api(&self) -> &'static str {
@@ -355,8 +349,7 @@ impl GpuContext {
             #[cfg(any(target_os = "windows", target_os = "linux"))]
             Self::Cuda(_) => "cuda",
             #[cfg(target_os = "linux")]
-            Self::Rocm(_) => "rocm",
-        }
+            Self::Rocm(_) => "rocm"}
     }
 }
 
@@ -364,6 +357,12 @@ impl WgpuContext {
     /// Native API of the registered setup that actually executes this task.
     pub fn graphics_api(&self) -> &'static str {
         api_slug(self.setup.backend)
+    }
+
+    /// Native WGPU device backing this context, for direct CubeCL kernel
+    /// launches in tests. Returns None when the context is not WGPU-backed.
+    pub fn native_wgpu_device(&self) -> Option<WgpuDevice> {
+        wgpu_device(&self.device).cloned()
     }
 
     /// Bytes occupied by active CubeCL tensor allocations on the calling
@@ -383,12 +382,15 @@ impl WgpuContext {
                 .poll(wgpu::PollType::Poll)
                 .map_err(|error| GpuFailure::Other(error.to_string()))?;
             self.faults.check()?;
+            let native = wgpu_device(&self.device).ok_or_else(|| {
+                GpuFailure::Other("WgpuContext holds a non-wgpu device".into())
+            })?;
             // Fusion can retain the last optimizer or upload operations above
             // CubeCL's queue. Drain it without Backend::sync's unbounded wait;
             // the native poll below owns the timeout and typed fault boundary.
-            burn_fusion::get_client::<CubeBackend<WgpuRuntime, f32, i32, u32>>(&self.device)
+            burn_fusion::get_client::<CubeBackend<WgpuRuntime<AutoCompiler>>>(native)
                 .sync(|| ());
-            WgpuRuntime::client(&self.device)
+            WgpuRuntime::<AutoCompiler>::client(native)
                 .flush()
                 .map_err(server_failure)?;
             // CubeCL can leave a final upload batch without compute commands
@@ -398,8 +400,7 @@ impl WgpuContext {
                 .device
                 .poll(wgpu::PollType::Wait {
                     submission_index: Some(submission),
-                    timeout: Some(Duration::from_secs(30)),
-                })
+                    timeout: Some(Duration::from_secs(30))})
                 .map_err(|error| {
                     GpuFailure::Other(format!("GPU synchronization failed: {error}"))
                 })?;
@@ -411,8 +412,7 @@ impl WgpuContext {
             Err(payload) => Some(GpuFailure::Other(format!(
                 "GPU runtime failed: {}",
                 panic_detail(payload)
-            ))),
-        };
+            )))};
         if let Some(failure) = failure {
             self.faults.record(failure);
         }
@@ -422,12 +422,25 @@ impl WgpuContext {
 
 /// Real allocator usage for generic worker execution paths. The telemetry
 /// helper must never initialize an implicit/default or software device.
-pub(crate) fn wgpu_memory_usage_bytes(device: &WgpuDevice) -> Option<u64> {
+/// Extract the native WGPU device from the unified [`Device`], or `None` when
+/// the device belongs to another backend.
+fn wgpu_device(device: &Device) -> Option<&WgpuDevice> {
+    let mut dispatch = device.as_dispatch();
+    while let DispatchDevice::Autodiff(inner) = dispatch {
+        dispatch = inner;
+    }
+    match dispatch {
+        DispatchDevice::Vulkan(native) | DispatchDevice::Wgpu(native) => Some(native),
+        _ => None}
+}
+
+pub(crate) fn wgpu_memory_usage_bytes(device: &Device) -> Option<u64> {
+    let device = wgpu_device(device)?;
     if !matches!(device, WgpuDevice::Existing(_)) {
         return None;
     }
     catch_unwind(AssertUnwindSafe(|| {
-        WgpuRuntime::client(device)
+        WgpuRuntime::<AutoCompiler>::client(device)
             .memory_usage()
             .ok()
             .map(|usage| usage.bytes_in_use)
@@ -445,8 +458,7 @@ pub enum GpuFailure {
     #[error("{0}")]
     Unavailable(String),
     #[error("{0}")]
-    Other(String),
-}
+    Other(String)}
 
 impl GpuFailure {
     pub fn task_error(&self, stage: TaskStage) -> TaskError {
@@ -470,8 +482,7 @@ impl GpuFailure {
                 ErrorCode::WorkerCrashed,
                 "GPU 计算失败，请重试或从检查点恢复",
                 Recovery::ResumeFromCheckpoint,
-            ),
-        };
+            )};
         let detail: String = self.to_string().chars().take(MAX_DETAIL_CHARS).collect();
         let mut error = TaskError::new(code, summary, &detail, stage);
         error.recovery = recovery;
@@ -489,8 +500,7 @@ enum Platform {
     Linux,
     AppleSilicon,
     IntelMac,
-    Other,
-}
+    Other}
 
 impl Platform {
     fn current() -> Self {
@@ -511,8 +521,7 @@ impl Platform {
         match self {
             Self::Windows | Self::Linux => Some(wgpu::Backend::Vulkan),
             Self::AppleSilicon | Self::IntelMac => Some(wgpu::Backend::Metal),
-            Self::Other => None,
-        }
+            Self::Other => None}
     }
 }
 
@@ -536,8 +545,7 @@ fn certified(platform: Platform, info: &wgpu::AdapterInfo) -> bool {
                         .name
                         .split(|c: char| !c.is_ascii_alphanumeric())
                         .any(|token| token.eq_ignore_ascii_case("arc")),
-                    _ => false,
-                }
+                    _ => false}
         }
         Platform::AppleSilicon => {
             info.backend == wgpu::Backend::Metal
@@ -545,8 +553,7 @@ fn certified(platform: Platform, info: &wgpu::AdapterInfo) -> bool {
                 && info.name.starts_with("Apple ")
                 && info.device_type == wgpu::DeviceType::IntegratedGpu
         }
-        Platform::IntelMac | Platform::Other => false,
-    }
+        Platform::IntelMac | Platform::Other => false}
 }
 
 fn is_software_adapter(info: &wgpu::AdapterInfo) -> bool {
@@ -569,8 +576,7 @@ fn adapter_kind(kind: wgpu::DeviceType) -> AdapterKind {
         wgpu::DeviceType::DiscreteGpu => AdapterKind::Discrete,
         wgpu::DeviceType::IntegratedGpu => AdapterKind::Integrated,
         wgpu::DeviceType::Cpu => AdapterKind::Cpu,
-        wgpu::DeviceType::Other | wgpu::DeviceType::VirtualGpu => AdapterKind::Other,
-    }
+        wgpu::DeviceType::Other | wgpu::DeviceType::VirtualGpu => AdapterKind::Other}
 }
 
 fn api_name(api: wgpu::Backend) -> &'static str {
@@ -580,8 +586,7 @@ fn api_name(api: wgpu::Backend) -> &'static str {
         wgpu::Backend::Vulkan => "Vulkan",
         wgpu::Backend::Gl => "OpenGL",
         wgpu::Backend::BrowserWebGpu => "WebGPU",
-        wgpu::Backend::Noop => "Noop",
-    }
+        wgpu::Backend::Noop => "Noop"}
 }
 
 fn api_slug(api: wgpu::Backend) -> &'static str {
@@ -591,8 +596,7 @@ fn api_slug(api: wgpu::Backend) -> &'static str {
         wgpu::Backend::Vulkan => "vulkan",
         wgpu::Backend::Gl => "opengl",
         wgpu::Backend::BrowserWebGpu => "webgpu",
-        wgpu::Backend::Noop => "noop",
-    }
+        wgpu::Backend::Noop => "noop"}
 }
 
 fn adapter_id(info: &wgpu::AdapterInfo, native_id: Option<&str>) -> String {
@@ -657,8 +661,7 @@ fn resolve_adapter(
                     .cmp(&(right.backend.selection_priority(), &right.id))
             })
             .cloned()
-            .ok_or_else(|| format!("No certified {backend:?} hardware adapter is available")),
-    }
+            .ok_or_else(|| format!("No certified {backend:?} hardware adapter is available"))}
 }
 
 fn disambiguate_ids(adapters: &mut [AdapterInfo]) {
@@ -683,8 +686,7 @@ fn disambiguate_ids(adapters: &mut [AdapterInfo]) {
 
 #[derive(Debug, Default)]
 struct FaultState {
-    failure: Mutex<Option<GpuFailure>>,
-}
+    failure: Mutex<Option<GpuFailure>>}
 
 impl FaultState {
     fn record(&self, failure: GpuFailure) {
@@ -710,8 +712,7 @@ impl FaultState {
                 GpuFailure::OutOfMemory(format!("WGPU allocation failed: {source}"))
             }
             wgpu::Error::Validation { description, .. }
-            | wgpu::Error::Internal { description, .. } => GpuFailure::Other(description),
-        };
+            | wgpu::Error::Internal { description, .. } => GpuFailure::Other(description)};
         self.record(failure);
     }
 
@@ -723,8 +724,7 @@ impl FaultState {
             .as_ref()
         {
             Some(failure) => Err(failure.clone()),
-            None => Ok(()),
-        }
+            None => Ok(())}
     }
 }
 
@@ -735,14 +735,12 @@ fn server_failure(error: ServerError) -> GpuFailure {
                 match error {
                     LaunchError::OutOfMemory { .. } => true,
                     LaunchError::IoError(IoError::Execution(error)) => allocation_failure(error),
-                    _ => false,
-                }
+                    _ => false}
             }
             ServerError::ServerUnhealthy { errors, .. } => errors.iter().any(allocation_failure),
             ServerError::Io(IoError::Execution(error))
             | ServerError::Profile(ProfileError::Server(error)) => allocation_failure(error),
-            _ => false,
-        }
+            _ => false}
     }
     if allocation_failure(&error) {
         GpuFailure::OutOfMemory(error.to_string())

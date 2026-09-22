@@ -7,15 +7,13 @@ use std::{
     fs::File,
     io::Read,
     panic::{AssertUnwindSafe, catch_unwind},
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_scrfd::{SCRFD_SOURCE_ONNX_BYTES, SCRFD_SOURCE_ONNX_SHA256};
 use sha2::{Digest, Sha256};
 
 pub use artifact::{
-    compare_snapshots, ensure_destination_absent, snapshot_map, validate_apply_result,
-};
+    compare_snapshots, ensure_destination_absent, snapshot_map, validate_apply_result};
 
 pub const SOURCE_RELATIVE_PATH: &str = "data_utils/scrfd_2.5g_kps.onnx";
 
@@ -26,14 +24,12 @@ pub struct OnnxContract {
     pub input_elem_type: i32,
     pub input_shape: Vec<usize>,
     pub output_names: [String; 9],
-    pub output_shapes: Vec<Vec<usize>>,
-}
+    pub output_shapes: Vec<Vec<usize>>}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GeneratedBurnFiles {
     pub source: PathBuf,
-    pub burnpack: PathBuf,
-}
+    pub burnpack: PathBuf}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ToolError {
@@ -42,8 +38,7 @@ pub enum ToolError {
         operation: &'static str,
         path: PathBuf,
         #[source]
-        source: std::io::Error,
-    },
+        source: std::io::Error},
     #[error("source contract error: {0}")]
     SourceContract(String),
     #[error("ONNX protobuf decode error: {0}")]
@@ -63,8 +58,7 @@ pub enum ToolError {
     #[error("converter process failed with status {status:?}: {stderr}")]
     ConversionProcess { status: Option<i32>, stderr: String },
     #[error("generated tree differs at {}", .0.display())]
-    TreeMismatch(PathBuf),
-}
+    TreeMismatch(PathBuf)}
 
 pub fn inspect_source(repo_root: &Path) -> Result<OnnxContract, ToolError> {
     let path = repo_root.join(SOURCE_RELATIVE_PATH);
@@ -161,8 +155,7 @@ pub fn generate_burn_files(
 
     Ok(GeneratedBurnFiles {
         source: destination.join("scrfd_2_5g.rs"),
-        burnpack: destination.join("scrfd_2.5g_kps.bpk"),
-    })
+        burnpack: destination.join("scrfd_2.5g_kps.bpk")})
 }
 
 fn absolute_path(path: &Path) -> Result<PathBuf, ToolError> {
@@ -203,8 +196,7 @@ fn io_error(operation: &'static str, path: &Path, source: std::io::Error) -> Too
     ToolError::Io {
         operation,
         path: path.to_path_buf(),
-        source,
-    }
+        source}
 }
 
 fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {

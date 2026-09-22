@@ -1,12 +1,11 @@
 use std::{fs::OpenOptions, path::Path};
 
 use burn::{
-    backend::NdArray,
-    tensor::{Tensor, TensorData},
-};
+    backend::Flex,
+    tensor::{Tensor, TensorData}};
 use feathertalk_pfld::{PfldRuntime, PfldRuntimeError};
 
-type CpuBackend = NdArray<f32>;
+type CpuBackend = Flex;
 
 fn artifact_dir() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts/pfld_ghost_one")
@@ -44,7 +43,7 @@ fn on_load_stack(name: &str, body: impl FnOnce() + Send + 'static) {
 fn committed_artifact_loads_and_runs_the_fixed_cpu_contract() {
     on_load_stack("pfld-cpu-contract", || {
         let device = Default::default();
-        let runtime = PfldRuntime::<CpuBackend>::load(&artifact_dir(), &device).unwrap();
+        let runtime = PfldRuntime::load(&artifact_dir(), &device).unwrap();
         assert_eq!(runtime.manifest().schema_version, 1);
         assert_eq!(runtime.tensor_count(), 1735);
 
@@ -54,7 +53,7 @@ fn committed_artifact_loads_and_runs_the_fixed_cpu_contract() {
             [1, 3, 191, 192],
             [1, 3, 192, 191],
         ] {
-            let input = Tensor::<CpuBackend, 4>::zeros(shape, &device);
+            let input = Tensor::<4>::zeros(shape, &device);
             assert!(matches!(
                 runtime.forward(input),
                 Err(PfldRuntimeError::InvalidInputShape { actual }) if actual == shape
@@ -64,20 +63,20 @@ fn committed_artifact_loads_and_runs_the_fixed_cpu_contract() {
         let mut values = vec![0.0_f32; 3 * 192 * 192];
         values[0] = f32::NAN;
         let input =
-            Tensor::<CpuBackend, 4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
+            Tensor::<4>::from_data(TensorData::new(values, [1, 3, 192, 192]), &device);
         assert!(matches!(
             runtime.forward(input),
             Err(PfldRuntimeError::NonFiniteInput)
         ));
 
         let output = runtime
-            .forward(Tensor::<CpuBackend, 4>::zeros([1, 3, 192, 192], &device))
+            .forward(Tensor::<4>::zeros([1, 3, 192, 192], &device))
             .unwrap();
         assert_eq!(output.dims(), [1, 220]);
         assert!(
             output
                 .into_data()
-                .to_vec::<f32>()
+                .try_to_vec::<f32>()
                 .unwrap()
                 .iter()
                 .all(|value| value.is_finite())
@@ -91,7 +90,7 @@ fn artifact_loader_rejects_extra_entries_before_model_construction() {
     std::fs::write(temp.path().join("extra.bin"), b"unexpected").unwrap();
     let device = Default::default();
     assert!(matches!(
-        PfldRuntime::<CpuBackend>::load(temp.path(), &device),
+        PfldRuntime::load(temp.path(), &device),
         Err(PfldRuntimeError::UnexpectedArtifactEntry(_))
     ));
 }
@@ -111,7 +110,7 @@ fn artifact_loader_rejects_manifest_and_weight_tampering() {
     )
     .unwrap();
     assert!(matches!(
-        PfldRuntime::<CpuBackend>::load(manifest_temp.path(), &device),
+        PfldRuntime::load(manifest_temp.path(), &device),
         Err(PfldRuntimeError::InvalidManifest { field, .. }) if field == "model.sha256"
     ));
 
@@ -122,7 +121,7 @@ fn artifact_loader_rejects_manifest_and_weight_tampering() {
     bytes[last] ^= 1;
     std::fs::write(&path, bytes).unwrap();
     assert!(matches!(
-        PfldRuntime::<CpuBackend>::load(weight_temp.path(), &device),
+        PfldRuntime::load(weight_temp.path(), &device),
         Err(PfldRuntimeError::HashMismatch {
             artifact: "weights",
             ..
@@ -140,7 +139,7 @@ fn artifact_loader_bounds_manifest_and_weight_reads() {
         .unwrap();
     file.set_len(1024 * 1024 + 1).unwrap();
     assert!(matches!(
-        PfldRuntime::<CpuBackend>::load(manifest_temp.path(), &device),
+        PfldRuntime::load(manifest_temp.path(), &device),
         Err(PfldRuntimeError::ManifestTooLarge { .. })
     ));
 
@@ -151,7 +150,7 @@ fn artifact_loader_bounds_manifest_and_weight_reads() {
         .unwrap();
     file.set_len(32 * 1024 * 1024 + 1).unwrap();
     assert!(matches!(
-        PfldRuntime::<CpuBackend>::load(weight_temp.path(), &device),
+        PfldRuntime::load(weight_temp.path(), &device),
         Err(PfldRuntimeError::WeightsTooLarge { .. })
     ));
 }

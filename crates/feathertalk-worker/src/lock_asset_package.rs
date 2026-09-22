@@ -4,8 +4,7 @@ use std::path::PathBuf;
 
 use feathertalk_audio::{
     FeatureCommitSpec, FeatureMatrix, commit_feature_artifact, fit_feature_tokens,
-    read_feature_file,
-};
+    read_feature_file};
 use feathertalk_domain::{ProjectDirParams, TaskStage};
 use feathertalk_frame_pipeline::{QualityReport, read_quality_report};
 use feathertalk_media::CancellationToken;
@@ -16,8 +15,7 @@ use crate::{
     CommandOutcome, TaskReporter,
     admission::{check_project_dir, invalid_request},
     asset_scan::{count_asset_files, verify_frames},
-    audio_task_error, lock_to_json, pipeline_task_error, project_task_error,
-};
+    audio_task_error, lock_to_json, pipeline_task_error, project_task_error};
 
 /// The asset directory the earlier commands write into.
 const ASSETS_DIR: &str = "assets";
@@ -70,8 +68,7 @@ pub fn execute_lock_asset_package(
     reporter.report(TaskStage::Preparing, None);
     let admitted = match admit(params) {
         Ok(admitted) => admitted,
-        Err(outcome) => return outcome,
-    };
+        Err(outcome) => return outcome};
     // The runtime checks the token before dispatch; this covers the seconds
     // admission just spent reading.
     if token.is_cancelled() {
@@ -80,8 +77,7 @@ pub fn execute_lock_asset_package(
     let (frame_width, frame_height) =
         match verify_frames(&admitted.assets, &admitted.report, token, reporter) {
             Ok(geometry) => geometry,
-            Err(outcome) => return outcome,
-        };
+            Err(outcome) => return outcome};
     if let Err(outcome) = count_asset_files(&admitted.assets, admitted.report.frame_count()) {
         return outcome;
     }
@@ -91,8 +87,7 @@ pub fn execute_lock_asset_package(
         frame_width,
         frame_height,
         landmark_model_sha256: PFLD_MODEL_SHA256.to_owned(),
-        feature_model_sha256: feature_model_sha256.to_owned(),
-    };
+        feature_model_sha256: feature_model_sha256.to_owned()};
     // The commit sits past the last cancellation point on purpose: it stages,
     // backs up, renames and rolls back on failure, and interrupting it halfway
     // is exactly what would leave a package neither prepared nor locked.
@@ -106,8 +101,7 @@ pub fn execute_lock_asset_package(
             );
             CommandOutcome::Completed(Some(payload))
         }
-        Err(error) => CommandOutcome::Failed(audio_task_error(&error)),
-    }
+        Err(error) => CommandOutcome::Failed(audio_task_error(&error))}
 }
 
 /// Everything admission established, so the command body never re-reads the
@@ -116,8 +110,7 @@ struct Admitted {
     assets: PathBuf,
     report: QualityReport,
     matrix: FeatureMatrix,
-    token_adjustment: i64,
-}
+    token_adjustment: i64}
 
 /// Everything that has to hold before the package is walked, ordered so that
 /// the cheapest refusal happens first.
@@ -137,8 +130,7 @@ fn admit(params: &ProjectDirParams) -> Result<Admitted, CommandOutcome> {
                 )));
             }
             Ok(_) => {}
-            Err(error) => return Err(CommandOutcome::Failed(project_task_error(&error))),
-        }
+            Err(error) => return Err(CommandOutcome::Failed(project_task_error(&error)))}
     }
     let report = read_quality_report(&assets.join(QUALITY_FILE))
         .map_err(|error| CommandOutcome::Failed(pipeline_task_error(&error)))?;
@@ -200,6 +192,5 @@ fn admit(params: &ProjectDirParams) -> Result<Admitted, CommandOutcome> {
         assets,
         report,
         matrix,
-        token_adjustment,
-    })
+        token_adjustment})
 }

@@ -4,23 +4,19 @@ use std::{
     path::PathBuf,
     sync::{
         Arc, Mutex,
-        mpsc::{self, Receiver, Sender},
-    },
+        mpsc::{self, Receiver, Sender}},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
-};
+    time::{Duration, Instant}};
 
 use feathertalk_domain::{
     CancelFrame, ClientFrame, DomainError, ErrorCode, Event, ExtractFeaturesParams,
     ExtractFramesParams, NormalizeMediaParams, PROTOCOL_VERSION, ProbeMediaParams, Progress,
     ProjectDirParams, RenderParams, Request, ServerFrame, ShutdownFrame, StartFrame, TaskId,
-    TaskKind, TaskStage, TrainParams, TrainingMode, UnetVariant, decode_line, encode_line,
-};
+    TaskKind, TaskStage, TrainParams, TrainingMode, UnetVariant, decode_line, encode_line};
 use feathertalk_media::{CancellationToken, CommandSpec, MediaError, ProcessOutput, ProcessRunner};
 use feathertalk_worker::{
     CPU_ADAPTER_ID, CommandOutcome, JobExecutor, NoReporter, TaskReporter, WorkerConfig,
-    execute_with_runner, serve_with_executor,
-};
+    execute_with_runner, serve_with_executor};
 
 /// An output sink the test can read while the worker is still writing to it.
 #[derive(Clone, Default)]
@@ -49,8 +45,7 @@ impl SharedSink {
         let text = String::from_utf8(bytes).unwrap();
         let complete = match text.rfind('\n') {
             Some(index) => &text[..=index],
-            None => "",
-        };
+            None => ""};
         complete
             .lines()
             .filter(|line| !line.trim().is_empty())
@@ -69,8 +64,7 @@ struct ChannelReader {
     receiver: Receiver<Vec<u8>>,
     buffer: Vec<u8>,
     cursor: usize,
-    closed: bool,
-}
+    closed: bool}
 
 impl ChannelReader {
     fn new(receiver: Receiver<Vec<u8>>) -> Self {
@@ -78,8 +72,7 @@ impl ChannelReader {
             receiver,
             buffer: Vec::new(),
             cursor: 0,
-            closed: false,
-        }
+            closed: false}
     }
 }
 
@@ -121,8 +114,7 @@ impl Read for ChannelReader {
 struct Harness {
     input: Option<Sender<Vec<u8>>>,
     sink: SharedSink,
-    worker: Option<JoinHandle<Result<(), DomainError>>>,
-}
+    worker: Option<JoinHandle<Result<(), DomainError>>>}
 
 impl Harness {
     fn start(config: WorkerConfig, executor: JobExecutor) -> Self {
@@ -135,8 +127,7 @@ impl Harness {
         Self {
             input: Some(input),
             sink,
-            worker: Some(worker),
-        }
+            worker: Some(worker)}
     }
 
     fn send(&self, frame: &ClientFrame) {
@@ -193,27 +184,23 @@ fn start(task_id: &TaskId, request: Request) -> ClientFrame {
     ClientFrame::Start(StartFrame {
         protocol_version: PROTOCOL_VERSION,
         task_id: task_id.clone(),
-        request,
-    })
+        request})
 }
 
 fn cancel(task_id: &TaskId) -> ClientFrame {
     ClientFrame::Cancel(CancelFrame {
         protocol_version: PROTOCOL_VERSION,
-        task_id: task_id.clone(),
-    })
+        task_id: task_id.clone()})
 }
 
 fn shutdown() -> ClientFrame {
     ClientFrame::Shutdown(ShutdownFrame {
-        protocol_version: PROTOCOL_VERSION,
-    })
+        protocol_version: PROTOCOL_VERSION})
 }
 
 fn validate_project(dir: &str) -> Request {
     Request::ValidateProject(ProjectDirParams {
-        project_dir: PathBuf::from(dir),
-    })
+        project_dir: PathBuf::from(dir)})
 }
 
 fn train_request() -> Request {
@@ -223,8 +210,7 @@ fn train_request() -> Request {
         variant: UnetVariant::OriginalUnet,
         epochs: 1,
         batch_size: 1,
-        resume: false,
-    })
+        resume: false})
 }
 
 fn render_request() -> Request {
@@ -233,28 +219,24 @@ fn render_request() -> Request {
         checkpoint: PathBuf::from("C:/tmp/project/models/unet/checkpoint-00000004"),
         audio: PathBuf::from("C:/tmp/project/assets/audio_16k_mono.wav"),
         output: PathBuf::from("C:/tmp/preview.mp4"),
-        max_output_frames: None,
-    })
+        max_output_frames: None})
 }
 
 fn extract_frames_request() -> Request {
     Request::ExtractFrames(ExtractFramesParams {
         project_dir: PathBuf::from("C:/tmp/project"),
-        video: PathBuf::from("C:/tmp/project/assets/video_25fps.mp4"),
-    })
+        video: PathBuf::from("C:/tmp/project/assets/video_25fps.mp4")})
 }
 
 fn extract_features_request() -> Request {
     Request::ExtractFeatures(ExtractFeaturesParams {
         project_dir: PathBuf::from("C:/tmp/project"),
-        audio: PathBuf::from("C:/tmp/project/assets/audio_16k_mono.wav"),
-    })
+        audio: PathBuf::from("C:/tmp/project/assets/audio_16k_mono.wav")})
 }
 
 fn lock_asset_package_request() -> Request {
     Request::LockAssetPackage(ProjectDirParams {
-        project_dir: PathBuf::from("C:/tmp/project"),
-    })
+        project_dir: PathBuf::from("C:/tmp/project")})
 }
 
 fn absolute(name: &str) -> String {
@@ -345,8 +327,7 @@ fn gated_executor(started: Sender<()>, release: Receiver<()>) -> JobExecutor {
 /// cancellation the real `CancellableProcessRunner` reports after a kill.
 struct BlockingRunner {
     started: Mutex<Sender<()>>,
-    token: CancellationToken,
-}
+    token: CancellationToken}
 
 impl ProcessRunner for BlockingRunner {
     fn run(&self, _spec: &CommandSpec, _timeout: Duration) -> Result<ProcessOutput, MediaError> {
@@ -355,8 +336,7 @@ impl ProcessRunner for BlockingRunner {
             thread::sleep(Duration::from_millis(5));
         }
         Err(MediaError::ToolCancelled {
-            operation: "ffprobe",
-        })
+            operation: "ffprobe"})
     }
 }
 
@@ -364,8 +344,7 @@ fn blocking_probe_executor(started: Sender<()>) -> JobExecutor {
     Box::new(move |request, config, token, reporter| {
         let runner = BlockingRunner {
             started: Mutex::new(started.clone()),
-            token: token.clone(),
-        };
+            token: token.clone()};
         execute_with_runner(request, config, token, reporter, &runner)
     })
 }
@@ -377,15 +356,13 @@ fn reporting_executor() -> JobExecutor {
             TaskStage::ExtractingFrames,
             Some(Progress {
                 completed: 1,
-                total: Some(2),
-            }),
+                total: Some(2)}),
         );
         reporter.report(
             TaskStage::ExtractingAudio,
             Some(Progress {
                 completed: 2,
-                total: Some(2),
-            }),
+                total: Some(2)}),
         );
         CommandOutcome::Completed(None)
     })
@@ -396,8 +373,7 @@ fn events(frames: &[ServerFrame]) -> Vec<&Event> {
         .iter()
         .filter_map(|frame| match frame {
             ServerFrame::Event(event) => Some(event),
-            _ => None,
-        })
+            _ => None})
         .collect()
 }
 
@@ -413,8 +389,7 @@ fn rejections(frames: &[ServerFrame]) -> Vec<&str> {
         .iter()
         .filter_map(|frame| match frame {
             ServerFrame::Rejected(rejected) => Some(rejected.reason.as_str()),
-            _ => None,
-        })
+            _ => None})
         .collect()
 }
 
@@ -432,8 +407,7 @@ fn assert_serialized(frames: &[ServerFrame]) {
                 "only a queued task may terminate without running: {frames:?}"
             ),
             (None, false) => in_flight = Some(event.task_id.clone()),
-            (Some(_), false) => panic!("two tasks were in flight at once: {frames:?}"),
-        }
+            (Some(_), false) => panic!("two tasks were in flight at once: {frames:?}")}
     }
 }
 
@@ -526,8 +500,7 @@ fn gpu_memory_metrics_reach_the_wire_alongside_progress() {
                 TaskStage::ExtractingFeatures,
                 Some(Progress {
                     completed: 1,
-                    total: Some(2),
-                }),
+                    total: Some(2)}),
                 feathertalk_domain::Metrics {
                     vram_bytes: Some(4096),
                     ..Default::default()
@@ -702,8 +675,7 @@ fn commands_run_on_the_named_execution_thread() {
     harness.send(&start(
         &task("0000000a"),
         Request::ValidateProject(ProjectDirParams {
-            project_dir: PathBuf::from("C:/tmp/project"),
-        }),
+            project_dir: PathBuf::from("C:/tmp/project")}),
     ));
     let observed = name_rx
         .recv_timeout(Duration::from_secs(5))
@@ -717,8 +689,7 @@ fn commands_run_on_the_named_execution_thread() {
 fn probe_media_is_rejected_when_the_media_toolchain_is_unavailable() {
     let harness = Harness::start(broken_config(), instant_executor());
     let request = Request::ProbeMedia(ProbeMediaParams {
-        input: PathBuf::from("C:/tmp/input.mp4"),
-    });
+        input: PathBuf::from("C:/tmp/input.mp4")});
     harness.send(&start(&task("0000000a"), request));
     let frames = harness.finish();
 
@@ -733,8 +704,7 @@ fn normalize_media_is_rejected_when_the_media_toolchain_is_unavailable() {
     let harness = Harness::start(broken_config(), instant_executor());
     let request = Request::NormalizeMedia(NormalizeMediaParams {
         input: PathBuf::from("C:/tmp/clip.mp4"),
-        output_dir: PathBuf::from("C:/tmp/assets"),
-    });
+        output_dir: PathBuf::from("C:/tmp/assets")});
     harness.send(&start(&task("00000023"), request));
     let frames = harness.finish();
 
@@ -756,8 +726,7 @@ fn a_protocol_version_mismatch_is_rejected() {
     harness.send(&ClientFrame::Start(StartFrame {
         protocol_version: PROTOCOL_VERSION - 1,
         task_id: task("0000000a"),
-        request: validate_project("C:/tmp/project"),
-    }));
+        request: validate_project("C:/tmp/project")}));
     let frames = harness.finish();
 
     let reasons = rejections(&frames);
@@ -1134,8 +1103,7 @@ fn a_cancelled_task_keeps_the_progress_it_already_reported() {
             TaskStage::ExtractingFrames,
             Some(Progress {
                 completed: 1,
-                total: Some(2),
-            }),
+                total: Some(2)}),
         );
         started.send(()).unwrap();
         while !token.is_cancelled() {
@@ -1168,8 +1136,7 @@ fn the_noop_reporter_emits_nothing() {
         TaskStage::ExtractingAudio,
         Some(Progress {
             completed: 1,
-            total: None,
-        }),
+            total: None}),
     );
 }
 

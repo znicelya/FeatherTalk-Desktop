@@ -1,41 +1,42 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering}},
+    thread::{self, JoinHandle},
+    time::Instant};
 
 use serde::{Deserialize, Serialize};
 
+use crate::prefetch::load_samples;
 use crate::{
     TrainingError,
-    random::{epoch_permutation, reference_index as choose_reference_index},
-};
+    random::{epoch_permutation, reference_index as choose_reference_index}};
 
 pub const DATA_LOADER_STATE_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RandomAlgorithm {
-    Splitmix64FisherYatesV1,
-}
+    Splitmix64FisherYatesV1}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SamplingKind {
     SingleFrame,
-    TemporalPair,
-}
+    TemporalPair}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SamplingConfig {
     pub kind: SamplingKind,
-    pub temporal_stride: u64,
-}
+    pub temporal_stride: u64}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DataLoaderConfig {
     pub batch_size: u64,
     pub seed: u64,
-    pub sampling: SamplingConfig,
-}
+    pub sampling: SamplingConfig}
 
 impl DataLoaderConfig {
     pub const fn single_frame(batch_size: u64, seed: u64) -> Self {
@@ -44,9 +45,7 @@ impl DataLoaderConfig {
             seed,
             sampling: SamplingConfig {
                 kind: SamplingKind::SingleFrame,
-                temporal_stride: 0,
-            },
-        }
+                temporal_stride: 0}}
     }
 
     pub const fn temporal_pair(batch_size: u64, seed: u64, temporal_stride: u64) -> Self {
@@ -55,9 +54,7 @@ impl DataLoaderConfig {
             seed,
             sampling: SamplingConfig {
                 kind: SamplingKind::TemporalPair,
-                temporal_stride,
-            },
-        }
+                temporal_stride}}
     }
 
     pub fn validate(&self, frame_count: u64) -> Result<(), TrainingError> {
@@ -72,16 +69,14 @@ impl DataLoaderConfig {
             ));
         }
         usize::try_from(self.batch_size).map_err(|_| TrainingError::DataLoaderOverflow {
-            operation: "converting batch size",
-        })?;
+            operation: "converting batch size"})?;
         if frame_count == 0 {
             return Err(TrainingError::InvalidDataLoaderConfig(
                 "frame_count must be greater than zero".into(),
             ));
         }
         usize::try_from(frame_count).map_err(|_| TrainingError::DataLoaderOverflow {
-            operation: "converting frame count",
-        })?;
+            operation: "converting frame count"})?;
 
         let sample_count = match self.sampling.kind {
             SamplingKind::SingleFrame => {
@@ -102,13 +97,11 @@ impl DataLoaderConfig {
                 frame_count
                     .checked_sub(stride)
                     .ok_or(TrainingError::DataLoaderOverflow {
-                        operation: "computing temporal sample count",
-                    })?
+                        operation: "computing temporal sample count"})?
             }
         };
         usize::try_from(sample_count).map_err(|_| TrainingError::DataLoaderOverflow {
-            operation: "converting sample count",
-        })?;
+            operation: "converting sample count"})?;
         Ok(sample_count)
     }
 }
@@ -121,8 +114,7 @@ pub struct DataLoaderState {
     pub config: DataLoaderConfig,
     pub frame_count: u64,
     pub epoch: u64,
-    pub next_position: u64,
-}
+    pub next_position: u64}
 
 impl DataLoaderState {
     pub fn validate(&self, dataset_frame_count: u64) -> Result<(), TrainingError> {
@@ -155,14 +147,11 @@ impl DataLoaderState {
 pub enum TrainingSample {
     SingleFrame {
         target_index: u64,
-        reference_index: u64,
-    },
+        reference_index: u64},
     TemporalPair {
         first_target_index: u64,
         second_target_index: u64,
-        reference_index: u64,
-    },
-}
+        reference_index: u64}}
 
 pub trait TrainingDataset {
     type Item;
@@ -180,8 +169,7 @@ pub struct PreparedBatch<T> {
     samples: Vec<TrainingSample>,
     items: Vec<T>,
     next_epoch: Option<u64>,
-    next_permutation: Option<Vec<u64>>,
-}
+    next_permutation: Option<Vec<u64>>}
 
 impl<T> PreparedBatch<T> {
     pub fn epoch(&self) -> u64 {
@@ -201,13 +189,67 @@ impl<T> PreparedBatch<T> {
     }
 }
 
+impl<D> TrainingDataLoader<D>
+where
+    D: TrainingDataset + Send + Sync + 'static,
+    D::Item: Send,
+{
+    pub fn spawn_prefetch_batch(
+        &self,
+    ) -> Result<JoinHandle<Result<PreparedBatchWithTiming<D::Item>, TrainingError>>, TrainingError>
+    {
+        let plan = self.plan_next_batch()?;
+        let dataset = self.dataset_handle();
+        Ok(thread::spawn(move || {
+            let started = Instant::now();
+            let items = load_samples(&*dataset, &plan.samples)?;
+            Ok(from_plan(plan, items, started.elapsed().as_secs_f64()))
+        }))
+    }
+
+    pub fn prepare_next_batch_parallel(
+        &self,
+    ) -> Result<PreparedBatchWithTiming<D::Item>, TrainingError> {
+        let plan = self.plan_next_batch()?;
+        let started = Instant::now();
+        let items = load_samples(&*self.dataset, &plan.samples)?;
+        Ok(from_plan(plan, items, started.elapsed().as_secs_f64()))
+    }
+}
+
+pub struct PreparedBatchWithTiming<T> {
+    pub batch: PreparedBatch<T>,
+    pub load_secs: f64}
+
+struct BatchPlan {
+    loader_id: u64,
+    epoch: u64,
+    start_position: u64,
+    end_position: u64,
+    samples: Vec<TrainingSample>,
+    next_epoch: Option<u64>,
+    next_permutation: Option<Vec<u64>>}
+
+fn from_plan<T>(plan: BatchPlan, items: Vec<T>, load_secs: f64) -> PreparedBatchWithTiming<T> {
+    PreparedBatchWithTiming {
+        batch: PreparedBatch {
+            loader_id: plan.loader_id,
+            epoch: plan.epoch,
+            start_position: plan.start_position,
+            end_position: plan.end_position,
+            samples: plan.samples,
+            items,
+            next_epoch: plan.next_epoch,
+            next_permutation: plan.next_permutation},
+        load_secs}
+}
+
 pub struct TrainingDataLoader<D: TrainingDataset> {
-    dataset: D,
+    dataset: Arc<D>,
     state: DataLoaderState,
     sample_count: u64,
     permutation: Vec<u64>,
-    loader_id: u64,
-}
+    loader_id: u64}
 
 static NEXT_LOADER_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -217,8 +259,7 @@ fn allocate_loader_id() -> Result<u64, TrainingError> {
             current.checked_add(1)
         })
         .map_err(|_| TrainingError::DataLoaderOverflow {
-            operation: "allocating loader identifier",
-        })
+            operation: "allocating loader identifier"})
 }
 
 impl<D: TrainingDataset> TrainingDataLoader<D> {
@@ -231,17 +272,15 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
             config,
             frame_count,
             epoch: 0,
-            next_position: 0,
-        };
+            next_position: 0};
         let permutation = epoch_permutation(sample_count, config.seed, 0)?;
         let loader_id = allocate_loader_id()?;
         Ok(Self {
-            dataset,
+            dataset: Arc::new(dataset),
             state,
             sample_count,
             permutation,
-            loader_id,
-        })
+            loader_id})
     }
 
     pub fn restore(dataset: D, state: DataLoaderState) -> Result<Self, TrainingError> {
@@ -251,12 +290,11 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
         let permutation = epoch_permutation(sample_count, state.config.seed, state.epoch)?;
         let loader_id = allocate_loader_id()?;
         Ok(Self {
-            dataset,
+            dataset: Arc::new(dataset),
             state,
             sample_count,
             permutation,
-            loader_id,
-        })
+            loader_id})
     }
 
     pub fn state(&self) -> &DataLoaderState {
@@ -268,7 +306,24 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
         &self.dataset
     }
 
+    pub fn dataset_handle(&self) -> Arc<D> {
+        Arc::clone(&self.dataset)
+    }
+
     pub fn prepare_next_batch(&self) -> Result<PreparedBatch<D::Item>, TrainingError> {
+        Ok(self.prepare_next_batch_with_timing()?.batch)
+    }
+
+    pub fn prepare_next_batch_with_timing(
+        &self,
+    ) -> Result<PreparedBatchWithTiming<D::Item>, TrainingError> {
+        let plan = self.plan_next_batch()?;
+        let started = Instant::now();
+        let items = self.load_samples_sequential(&plan.samples)?;
+        Ok(from_plan(plan, items, started.elapsed().as_secs_f64()))
+    }
+
+    fn plan_next_batch(&self) -> Result<BatchPlan, TrainingError> {
         let start_position = self.state.next_position;
         let remaining = self
             .sample_count
@@ -281,19 +336,16 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
             start_position
                 .checked_add(batch_items)
                 .ok_or(TrainingError::DataLoaderOverflow {
-                    operation: "computing batch end",
-                })?;
+                    operation: "computing batch end"})?;
         let batch_length =
             usize::try_from(batch_items).map_err(|_| TrainingError::DataLoaderOverflow {
-                operation: "converting batch length",
-            })?;
+                operation: "converting batch length"})?;
 
         let mut samples = Vec::new();
         samples.try_reserve_exact(batch_length).map_err(|source| {
             TrainingError::BatchAllocation {
                 items: batch_items,
-                source,
-            }
+                source}
         })?;
         for position in start_position..end_position {
             samples.push(self.sample_at_position(position)?);
@@ -305,8 +357,7 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
                     .epoch
                     .checked_add(1)
                     .ok_or(TrainingError::DataLoaderOverflow {
-                        operation: "advancing epoch",
-                    })?;
+                        operation: "advancing epoch"})?;
             let next_permutation =
                 epoch_permutation(self.sample_count, self.state.config.seed, next_epoch)?;
             (Some(next_epoch), Some(next_permutation))
@@ -314,27 +365,14 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
             (None, None)
         };
 
-        let mut items = Vec::new();
-        items
-            .try_reserve_exact(batch_length)
-            .map_err(|source| TrainingError::BatchAllocation {
-                items: batch_items,
-                source,
-            })?;
-        for sample in &samples {
-            items.push(self.dataset.load_sample(sample)?);
-        }
-
-        Ok(PreparedBatch {
+        Ok(BatchPlan {
             loader_id: self.loader_id,
             epoch: self.state.epoch,
             start_position,
             end_position,
             samples,
-            items,
             next_epoch,
-            next_permutation,
-        })
+            next_permutation})
     }
 
     pub fn commit_batch(&mut self, prepared: PreparedBatch<D::Item>) -> Result<(), TrainingError> {
@@ -390,10 +428,25 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
         Ok(())
     }
 
+    fn load_samples_sequential(
+        &self,
+        samples: &[TrainingSample],
+    ) -> Result<Vec<D::Item>, TrainingError> {
+        let mut items = Vec::new();
+        items.try_reserve_exact(samples.len()).map_err(|source| {
+            TrainingError::BatchAllocation {
+                items: samples.len() as u64,
+                source}
+        })?;
+        for sample in samples {
+            items.push(self.dataset.load_sample(sample)?);
+        }
+        Ok(items)
+    }
+
     fn sample_at_position(&self, position: u64) -> Result<TrainingSample, TrainingError> {
         let index = usize::try_from(position).map_err(|_| TrainingError::DataLoaderOverflow {
-            operation: "converting sample position",
-        })?;
+            operation: "converting sample position"})?;
         let target_index = *self.permutation.get(index).ok_or_else(|| {
             TrainingError::InvalidDataLoaderState(
                 "sample position is outside the epoch permutation".into(),
@@ -408,14 +461,12 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
         match self.state.config.sampling.kind {
             SamplingKind::SingleFrame => Ok(TrainingSample::SingleFrame {
                 target_index,
-                reference_index,
-            }),
+                reference_index}),
             SamplingKind::TemporalPair => {
                 let second_target_index = target_index
                     .checked_add(self.state.config.sampling.temporal_stride)
                     .ok_or(TrainingError::DataLoaderOverflow {
-                        operation: "computing temporal second target",
-                    })?;
+                        operation: "computing temporal second target"})?;
                 if second_target_index >= self.state.frame_count {
                     return Err(TrainingError::InvalidDataLoaderState(
                         "temporal target is outside frame_count".into(),
@@ -424,8 +475,7 @@ impl<D: TrainingDataset> TrainingDataLoader<D> {
                 Ok(TrainingSample::TemporalPair {
                     first_target_index: target_index,
                     second_target_index,
-                    reference_index,
-                })
+                    reference_index})
             }
         }
     }

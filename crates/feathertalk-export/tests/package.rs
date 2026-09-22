@@ -2,24 +2,21 @@ use std::{collections::BTreeMap, fs};
 
 use burn::{
     nn::{Linear, LinearConfig},
-    tensor::backend::Backend,
-};
+    };
 use burn_store::ModuleSnapshot;
 use feathertalk_export::{
     LicenseBundle, LicenseEntry, MAX_MANIFEST_BYTES, ModelConfiguration, ModelDescription,
     ModelPackageManifest, PackageBuildRequest, PackageError, SourceManifest, TrainingManifest,
-    load_model_package, read_package_manifest, write_model_package,
-};
+    load_model_package, read_package_manifest, write_model_package};
 use feathertalk_models::backend::CpuBackend;
 use sha2::{Digest, Sha256};
 
 fn description() -> ModelDescription {
     ModelDescription::from_configuration(ModelConfiguration::OriginalUnet {
-        channels: [2, 4, 8, 16, 32],
-    })
+        channels: [2, 4, 8, 16, 32]})
 }
 
-fn fixture() -> (tempfile::TempDir, PackageBuildRequest, Linear<CpuBackend>) {
+fn fixture() -> (tempfile::TempDir, PackageBuildRequest, Linear) {
     let root = tempfile::tempdir().unwrap();
     let source_path = root.path().join("source.pth");
     fs::write(&source_path, b"source-fixture").unwrap();
@@ -31,12 +28,10 @@ fn fixture() -> (tempfile::TempDir, PackageBuildRequest, Linear<CpuBackend>) {
             component: "test component".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/test".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(&licenses_path, serde_json::to_vec(&licenses).unwrap()).unwrap();
     let device = Default::default();
-    let model = LinearConfig::new(2, 2).init::<CpuBackend>(&device);
+    let model = LinearConfig::new(2, 2).init(&device);
     let request = PackageBuildRequest {
         destination: root.path().join("published"),
         description: description(),
@@ -47,13 +42,11 @@ fn fixture() -> (tempfile::TempDir, PackageBuildRequest, Linear<CpuBackend>) {
             version: "1".to_owned(),
             file_name: "source.pth".to_owned(),
             sha256: source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path,
         created_at: "2026-08-27T00:00:00Z".to_owned(),
         minimum_app_version: "0.1.0".to_owned(),
-        training: TrainingManifest::default(),
-    };
+        training: TrainingManifest::default()};
     (root, request, model)
 }
 
@@ -61,8 +54,8 @@ fn fixture() -> (tempfile::TempDir, PackageBuildRequest, Linear<CpuBackend>) {
 fn package_round_trip_contains_exact_three_files_and_preserves_tensor_data() {
     let (root, request, model) = fixture();
     let device = Default::default();
-    let report = write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    let report = write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
 
@@ -78,11 +71,11 @@ fn package_round_trip_contains_exact_three_files_and_preserves_tensor_data() {
     assert_eq!(report.manifest.model.file_name, "model.safetensors");
     assert_eq!(report.manifest.licenses.file_name, "LICENSES.json");
 
-    let (loaded, manifest) = load_model_package::<CpuBackend, _, _>(
+    let (loaded, manifest) = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap();
     assert_eq!(manifest, report.manifest);
@@ -94,8 +87,8 @@ fn package_round_trip_contains_exact_three_files_and_preserves_tensor_data() {
 fn manifest_reader_returns_the_published_manifest_and_enforces_the_directory_contract() {
     let (_root, request, model) = fixture();
     let device = Default::default();
-    let report = write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    let report = write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
 
@@ -122,8 +115,8 @@ fn existing_destination_is_rejected_without_clobbering_it() {
     fs::write(request.destination.join("sentinel"), b"keep").unwrap();
     let device = Default::default();
 
-    let error = write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    let error = write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap_err();
     assert!(matches!(error, PackageError::InvalidRequest(_)));
@@ -139,8 +132,8 @@ fn invalid_license_fails_before_publication() {
     fs::write(&request.licenses_path, b"{not-json}").unwrap();
     let device = Default::default();
 
-    let error = write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    let error = write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap_err();
     assert!(matches!(error, PackageError::InvalidLicense(_)));
@@ -152,17 +145,17 @@ fn invalid_license_fails_before_publication() {
 fn loader_rejects_tampered_model_before_burn_store_access() {
     let (_root, request, model) = fixture();
     let device = Default::default();
-    write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
     fs::write(request.destination.join("model.safetensors"), b"broken").unwrap();
 
-    let error = load_model_package::<CpuBackend, _, _>(
+    let error = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap_err();
     assert!(matches!(error, PackageError::HashMismatch { .. }));
@@ -172,8 +165,8 @@ fn loader_rejects_tampered_model_before_burn_store_access() {
 fn loader_rejects_corrupt_safetensors_even_when_declared_hash_matches() {
     let (_root, request, model) = fixture();
     let device = Default::default();
-    write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
 
@@ -186,11 +179,11 @@ fn loader_rejects_corrupt_safetensors_even_when_declared_hash_matches() {
     manifest.model.sha256 = hex::encode(Sha256::digest(corrupt));
     fs::write(&manifest_path, serde_json::to_vec(&manifest).unwrap()).unwrap();
 
-    let error = load_model_package::<CpuBackend, _, _>(
+    let error = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap_err();
     assert!(matches!(error, PackageError::Store(_)));
@@ -200,8 +193,8 @@ fn loader_rejects_corrupt_safetensors_even_when_declared_hash_matches() {
 fn loader_rejects_description_mismatch_before_corrupt_weight_decode() {
     let (_root, request, model) = fixture();
     let device = Default::default();
-    write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
     fs::write(request.destination.join("model.safetensors"), b"broken").unwrap();
@@ -210,12 +203,11 @@ fn loader_rejects_description_mismatch_before_corrupt_weight_decode() {
         expansion: 2,
         num_blocks: 2,
         output_dim: 64,
-        dropout: 0.0,
-    });
+        dropout: 0.0});
 
     let error =
-        load_model_package::<CpuBackend, _, _>(&request.destination, &wrong, &device, |device| {
-            LinearConfig::new(2, 2).init::<CpuBackend>(device)
+        load_model_package::<_, _>(&request.destination, &wrong, &device, |device| {
+            LinearConfig::new(2, 2).init(device)
         })
         .unwrap_err();
     assert!(matches!(error, PackageError::InvalidRequest(_)));
@@ -227,9 +219,9 @@ fn source_change_during_staged_validation_aborts_and_cleans_staging() {
     let device = Default::default();
     let source_path = request.source_path.clone();
 
-    let error = write_model_package::<CpuBackend, _, _>(&request, &model, &device, move |device| {
+    let error = write_model_package::<_, _>(&request, &model, &device, move |device| {
         fs::write(&source_path, b"changed-during-validation").unwrap();
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap_err();
 
@@ -248,17 +240,17 @@ fn source_change_during_staged_validation_aborts_and_cleans_staging() {
 fn loader_rejects_extra_directory_entry_and_unknown_manifest_field() {
     let (_root, request, model) = fixture();
     let device = Default::default();
-    write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
 
     fs::write(request.destination.join("notes.txt"), b"unexpected").unwrap();
-    let error = load_model_package::<CpuBackend, _, _>(
+    let error = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap_err();
     assert!(matches!(error, PackageError::InvalidRequest(_)));
@@ -273,11 +265,11 @@ fn loader_rejects_extra_directory_entry_and_unknown_manifest_field() {
         serde_json::to_vec(&manifest).unwrap(),
     )
     .unwrap();
-    let error = load_model_package::<CpuBackend, _, _>(
+    let error = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap_err();
     assert!(matches!(error, PackageError::InvalidManifest(_)));
@@ -287,8 +279,8 @@ fn loader_rejects_extra_directory_entry_and_unknown_manifest_field() {
 fn loader_rejects_symlinked_model_when_supported() {
     let (root, request, model) = fixture();
     let device = Default::default();
-    write_model_package::<CpuBackend, _, _>(&request, &model, &device, |device| {
-        LinearConfig::new(2, 2).init::<CpuBackend>(device)
+    write_model_package::<_, _>(&request, &model, &device, |device| {
+        LinearConfig::new(2, 2).init(device)
     })
     .unwrap();
     let original = fs::read(request.destination.join("model.safetensors")).unwrap();
@@ -301,26 +293,26 @@ fn loader_rejects_symlinked_model_when_supported() {
         return;
     }
 
-    let error = load_model_package::<CpuBackend, _, _>(
+    let error = load_model_package::<_, _>(
         &request.destination,
         &request.description,
         &device,
-        |device| LinearConfig::new(2, 2).init::<CpuBackend>(device),
+        |device| LinearConfig::new(2, 2).init(device),
     )
     .unwrap_err();
     assert!(matches!(error, PackageError::InvalidRequest(_)));
 }
 
-fn assert_module_data_equal<B: Backend, M: ModuleSnapshot<B>>(left: &M, right: &M) {
+fn assert_module_data_equal<M: ModuleSnapshot>(left: &M, right: &M) {
     let left = left
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot.to_data().unwrap()))
+        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
         .collect::<BTreeMap<_, _>>();
     let right = right
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot.to_data().unwrap()))
+        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
         .collect::<BTreeMap<_, _>>();
     assert_eq!(left, right);
 }

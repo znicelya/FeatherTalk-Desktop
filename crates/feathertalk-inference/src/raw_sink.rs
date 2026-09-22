@@ -2,8 +2,7 @@ use std::{
     fs,
     io::{Read, Write},
     process::{Child, ChildStdin, Command, Stdio},
-    thread::{self, JoinHandle},
-};
+    thread::{self, JoinHandle}};
 
 use crate::{BgrFrame, CommandSpec, InferenceError};
 
@@ -50,29 +49,25 @@ impl RawVideoSinkFactory for SystemRawVideoSinkFactory {
             process.creation_flags(0x08000000); // CREATE_NO_WINDOW: rendering uses pipes.
         }
         let mut child = process.spawn().map_err(|error| InferenceError::SinkStart {
-            message: bounded(error.to_string()),
-        })?;
+            message: bounded(error.to_string())})?;
         let Some(stdin) = child.stdin.take() else {
             let _ = child.kill();
             let _ = child.wait();
             return Err(InferenceError::SinkStart {
-                message: "child stdin was not piped".into(),
-            });
+                message: "child stdin was not piped".into()});
         };
         let Some(stderr) = child.stderr.take() else {
             let _ = child.kill();
             let _ = child.wait();
             return Err(InferenceError::SinkStart {
-                message: "child stderr was not piped".into(),
-            });
+                message: "child stderr was not piped".into()});
         };
         let stderr_thread = thread::spawn(move || read_limited(stderr));
         Ok(Box::new(SystemRawVideoSink {
             child: Some(child),
             stdin: Some(stdin),
             stderr_thread: Some(stderr_thread),
-            operation: command.operation(),
-        }))
+            operation: command.operation()}))
     }
 }
 
@@ -80,8 +75,7 @@ struct SystemRawVideoSink {
     child: Option<Child>,
     stdin: Option<ChildStdin>,
     stderr_thread: Option<JoinHandle<ReadResult>>,
-    operation: &'static str,
-}
+    operation: &'static str}
 
 impl RawVideoSink for SystemRawVideoSink {
     fn write_frame(&mut self, frame: &BgrFrame) -> Result<(), InferenceError> {
@@ -93,8 +87,7 @@ impl RawVideoSink for SystemRawVideoSink {
         if let Err(error) = result {
             self.abort();
             return Err(InferenceError::SinkWrite {
-                message: bounded(error.to_string()),
-            });
+                message: bounded(error.to_string())});
         }
         Ok(())
     }
@@ -107,14 +100,12 @@ impl RawVideoSink for SystemRawVideoSink {
                 Err(error) => {
                     self.abort();
                     return Err(InferenceError::SinkFinish {
-                        message: bounded(error.to_string()),
-                    });
+                        message: bounded(error.to_string())});
                 }
             },
             None => {
                 return Err(InferenceError::SinkFinish {
-                    message: "child process is unavailable".into(),
-                });
+                    message: "child process is unavailable".into()});
             }
         };
         self.child.take();
@@ -125,8 +116,7 @@ impl RawVideoSink for SystemRawVideoSink {
             Err(InferenceError::ToolFailed {
                 operation: self.operation,
                 exit_code: status.code(),
-                stderr: bounded(String::from_utf8_lossy(&stderr).into_owned()),
-            })
+                stderr: bounded(String::from_utf8_lossy(&stderr).into_owned())})
         }
     }
 }
@@ -137,23 +127,18 @@ impl SystemRawVideoSink {
             .stderr_thread
             .take()
             .ok_or_else(|| InferenceError::SinkFinish {
-                message: "stderr reader is unavailable".into(),
-            })?;
+                message: "stderr reader is unavailable".into()})?;
         match thread.join() {
             Ok(ReadResult::Bytes(bytes)) => Ok(bytes),
             Ok(ReadResult::TooLarge(actual)) => Err(InferenceError::SinkFinish {
                 message: format!(
                     "child stderr exceeds {} bytes: {actual}",
                     feathertalk_media::MAX_CAPTURE_BYTES
-                ),
-            }),
+                )}),
             Ok(ReadResult::Error(message)) => Err(InferenceError::SinkFinish {
-                message: bounded(message),
-            }),
+                message: bounded(message)}),
             Err(_) => Err(InferenceError::SinkFinish {
-                message: "stderr reader panicked".into(),
-            }),
-        }
+                message: "stderr reader panicked".into()})}
     }
 
     fn abort(&mut self) {
@@ -177,8 +162,7 @@ impl Drop for SystemRawVideoSink {
 enum ReadResult {
     Bytes(Vec<u8>),
     TooLarge(usize),
-    Error(String),
-}
+    Error(String)}
 
 fn read_limited(mut stderr: impl Read) -> ReadResult {
     let mut retained = Vec::new();
@@ -199,25 +183,21 @@ fn read_limited(mut stderr: impl Read) -> ReadResult {
                     exceeded = keep < read;
                 }
             }
-            Err(error) => return ReadResult::Error(error.to_string()),
-        }
+            Err(error) => return ReadResult::Error(error.to_string())}
     }
 }
 
 fn validate_executable(command: &CommandSpec) -> Result<(), InferenceError> {
     if !command.executable().is_absolute() {
         return Err(InferenceError::SinkStart {
-            message: "executable path must be absolute".into(),
-        });
+            message: "executable path must be absolute".into()});
     }
     let metadata =
         fs::symlink_metadata(command.executable()).map_err(|error| InferenceError::SinkStart {
-            message: bounded(error.to_string()),
-        })?;
+            message: bounded(error.to_string())})?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(InferenceError::SinkStart {
-            message: "executable must be a regular non-symlink file".into(),
-        });
+            message: "executable must be a regular non-symlink file".into()});
     }
     Ok(())
 }
@@ -238,8 +218,7 @@ fn bounded(mut message: String) -> String {
 mod tests {
     use std::{
         ffi::OsString,
-        io::{Read, Write},
-    };
+        io::{Read, Write}};
 
     use crate::{BgrFrame, CommandSpec, InferenceError};
 

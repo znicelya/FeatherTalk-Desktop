@@ -1,13 +1,11 @@
 use feathertalk_training::{
     DATA_LOADER_STATE_SCHEMA_VERSION, DataLoaderConfig, DataLoaderState, RandomAlgorithm,
     SamplingConfig, SamplingKind, TrainingDataLoader, TrainingDataset, TrainingError,
-    TrainingSample,
-};
+    TrainingSample};
 use std::{cell::Cell, rc::Rc};
 
 struct PlanDataset {
-    frames: u64,
-}
+    frames: u64}
 
 impl TrainingDataset for PlanDataset {
     type Item = TrainingSample;
@@ -49,8 +47,7 @@ fn state(
         config,
         frame_count,
         epoch,
-        next_position,
-    }
+        next_position}
 }
 
 #[test]
@@ -131,8 +128,7 @@ fn temporal_resume_matches_uninterrupted_tail_and_later_epochs() {
 
 struct CountingDataset {
     frames: u64,
-    loads: Rc<Cell<usize>>,
-}
+    loads: Rc<Cell<usize>>}
 
 impl TrainingDataset for CountingDataset {
     type Item = TrainingSample;
@@ -153,8 +149,7 @@ fn assert_restore_fails_without_loading(saved: DataLoaderState, dataset_frames: 
         TrainingDataLoader::restore(
             CountingDataset {
                 frames: dataset_frames,
-                loads: loads.clone(),
-            },
+                loads: loads.clone()},
             saved,
         )
         .is_err()
@@ -178,9 +173,7 @@ fn strict_restore_rejects_incompatible_state_before_loading() {
                 seed: 7,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride: 1,
-                },
-            },
+                    temporal_stride: 1}},
             5,
             0,
             0,
@@ -204,8 +197,7 @@ fn impossible_restore_lengths_fail_before_loading() {
     let result = TrainingDataLoader::restore(
         CountingDataset {
             frames: u64::MAX,
-            loads: loads.clone(),
-        },
+            loads: loads.clone()},
         state(DataLoaderConfig::single_frame(2, 7), u64::MAX, 0, 0),
     );
     assert!(matches!(
@@ -222,8 +214,7 @@ fn epoch_overflow_fails_before_loading_and_keeps_state() {
     let loader = TrainingDataLoader::restore(
         CountingDataset {
             frames: 5,
-            loads: loads.clone(),
-        },
+            loads: loads.clone()},
         state(DataLoaderConfig::single_frame(2, 7), 5, u64::MAX, 4),
     )
     .unwrap();

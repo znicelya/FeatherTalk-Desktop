@@ -2,22 +2,19 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::atomic::{AtomicU64, Ordering},
-};
+    sync::atomic::{AtomicU64, Ordering}};
 
 use sha2::{Digest, Sha256};
 
 use crate::{
     FileManifest, LICENSE_FILE_NAME, MANIFEST_FILE_NAME, MAX_LICENSE_BYTES, MAX_MANIFEST_BYTES,
-    MAX_MODEL_BYTES, MODEL_FILE_NAME, PackageError,
-};
+    MAX_MODEL_BYTES, MODEL_FILE_NAME, PackageError};
 
 static NEXT_STAGING_ID: AtomicU64 = AtomicU64::new(1);
 
 pub(crate) struct StagingDirectory {
     path: PathBuf,
-    armed: bool,
-}
+    armed: bool}
 
 impl StagingDirectory {
     pub(crate) fn path(&self) -> &Path {
@@ -75,8 +72,7 @@ pub(crate) fn reject_symlink_components(path: &Path) -> Result<(), PackageError>
             }
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
-            Err(error) => return Err(PackageError::Io(error)),
-        }
+            Err(error) => return Err(PackageError::Io(error))}
     }
     Ok(())
 }
@@ -88,8 +84,7 @@ pub(crate) fn ensure_destination_absent(path: &Path) -> Result<(), PackageError>
             path.display()
         ))),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(PackageError::Io(error)),
-    }
+        Err(error) => Err(PackageError::Io(error))}
 }
 
 pub(crate) fn create_staging_directory(parent: &Path) -> Result<StagingDirectory, PackageError> {
@@ -100,8 +95,7 @@ pub(crate) fn create_staging_directory(parent: &Path) -> Result<StagingDirectory
         match fs::create_dir(&path) {
             Ok(()) => return Ok(StagingDirectory { path, armed: true }),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(PackageError::Io(error)),
-        }
+            Err(error) => return Err(PackageError::Io(error))}
     }
     Err(PackageError::Publication(
         "unable to allocate a unique staging directory".to_owned(),
@@ -201,8 +195,7 @@ pub(crate) fn file_manifest(
     let manifest = FileManifest {
         file_name: expected_name.to_owned(),
         bytes,
-        sha256,
-    };
+        sha256};
     manifest.validate(expected_name)?;
     Ok(manifest)
 }
@@ -288,15 +281,13 @@ pub(crate) fn validate_declared_file(
         return Err(PackageError::HashMismatch {
             file: declared.file_name.clone(),
             expected: format!("{} bytes", declared.bytes),
-            actual: format!("{bytes} bytes"),
-        });
+            actual: format!("{bytes} bytes")});
     }
     if actual != declared.sha256 {
         return Err(PackageError::HashMismatch {
             file: declared.file_name.clone(),
             expected: declared.sha256.clone(),
-            actual,
-        });
+            actual});
     }
     Ok(())
 }
@@ -340,8 +331,7 @@ fn max_bytes_for(file_name: &str) -> u64 {
         MANIFEST_FILE_NAME => MAX_MANIFEST_BYTES,
         LICENSE_FILE_NAME => MAX_LICENSE_BYTES,
         MODEL_FILE_NAME => MAX_MODEL_BYTES,
-        _ => MAX_MODEL_BYTES,
-    }
+        _ => MAX_MODEL_BYTES}
 }
 
 fn rename_noreplace(source: &Path, destination: &Path) -> std::io::Result<()> {

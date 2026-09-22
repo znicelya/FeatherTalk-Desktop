@@ -32,8 +32,7 @@ pub fn lock_to_json(
         "sha256": artifact.sha256(),
         "token_adjustment": token_adjustment,
         "landmark_model_sha256": spec.landmark_model_sha256.as_str(),
-        "feature_model_sha256": spec.feature_model_sha256.as_str(),
-    })
+        "feature_model_sha256": spec.feature_model_sha256.as_str()})
 }
 
 fn path_text(path: &Path) -> String {

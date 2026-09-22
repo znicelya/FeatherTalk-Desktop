@@ -3,28 +3,22 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, BTreeSet},
-    sync::OnceLock,
-};
+    sync::OnceLock};
 
 use burn::tensor::{Tensor, TensorData};
 use burn::{
-    optim::{AdamConfig, GradientsParams, Optimizer},
-    tensor::ElementConversion,
-};
+    optim::{AdamConfig, GradientsParams},
+    tensor::ElementConversion};
 use feathertalk_models::{
-    backend::{CpuAutodiffBackend, CpuBackend, GpuAutodiffBackend, GpuBackend},
     feather_hubert::FeatherHubertConfig,
     train_step::{adam_train_step, l1_loss},
-    unet::OriginalUnetConfig,
-};
+    unet::OriginalUnetConfig};
 use feathertalk_weights::{
-    LegacyImportRequest, LegacyModelKind, import_into, load_feather_hubert_checkpoint,
-};
+    LegacyImportRequest, LegacyModelKind, import_into, load_feather_hubert_checkpoint};
 
 use crate::{
     archive::{FixtureError, GoldenArchive},
-    metrics::{ParityError, ParityMetrics, compare_f32},
-};
+    metrics::{ParityError, ParityMetrics, compare_f32}};
 
 #[derive(Debug)]
 pub struct GoldenFixture {
@@ -41,14 +35,12 @@ pub struct GoldenFixture {
     pub inputs: BTreeMap<String, ArrayD<f32>>,
     pub expected: BTreeMap<String, ArrayD<f32>>,
     pub metrics: BTreeMap<String, f64>,
-    pub scalars: BTreeMap<String, f64>,
-}
+    pub scalars: BTreeMap<String, f64>}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ForwardCase {
     FeatherMicro,
-    UnetProduction,
-}
+    UnetProduction}
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -57,28 +49,24 @@ struct FeatherForwardConfig {
     expansion: usize,
     num_blocks: usize,
     output_dim: usize,
-    dropout: f64,
-}
+    dropout: f64}
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 struct UnetForwardConfig {
     channels: [usize; 5],
     mode: UnetMode,
-    n_channels: usize,
-}
+    n_channels: usize}
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 enum UnetMode {
-    Hubert,
-}
+    Hubert}
 
 #[derive(Debug, Clone, Copy)]
 struct ArrayContract {
     name: &'static str,
-    shape: &'static [usize],
-}
+    shape: &'static [usize]}
 
 const FEATHER_WAVEFORM_SHAPE: &[usize] = &[1, 1360];
 const FEATHER_OUTPUT_SHAPE: &[usize] = &[1, 4, 64];
@@ -88,68 +76,57 @@ const UNET_OUTPUT_SHAPE: &[usize] = &[1, 3, 160, 160];
 
 const FEATHER_INPUTS: &[ArrayContract] = &[ArrayContract {
     name: "waveform",
-    shape: FEATHER_WAVEFORM_SHAPE,
-}];
+    shape: FEATHER_WAVEFORM_SHAPE}];
 const FEATHER_OUTPUTS: &[ArrayContract] = &[ArrayContract {
     name: "output",
-    shape: FEATHER_OUTPUT_SHAPE,
-}];
+    shape: FEATHER_OUTPUT_SHAPE}];
 const UNET_INPUTS: &[ArrayContract] = &[
     ArrayContract {
         name: "audio",
-        shape: UNET_AUDIO_SHAPE,
-    },
+        shape: UNET_AUDIO_SHAPE},
     ArrayContract {
         name: "image",
-        shape: UNET_IMAGE_SHAPE,
-    },
+        shape: UNET_IMAGE_SHAPE},
 ];
 const UNET_OUTPUTS: &[ArrayContract] = &[ArrayContract {
     name: "output",
-    shape: UNET_OUTPUT_SHAPE,
-}];
+    shape: UNET_OUTPUT_SHAPE}];
 
 impl ForwardCase {
     const fn name(self) -> &'static str {
         match self {
             Self::FeatherMicro => "FeatherMicro",
-            Self::UnetProduction => "UnetProduction",
-        }
+            Self::UnetProduction => "UnetProduction"}
     }
 
     const fn fixture_kind(self) -> &'static str {
         match self {
             Self::FeatherMicro => "feather_hubert",
-            Self::UnetProduction => "original_unet",
-        }
+            Self::UnetProduction => "original_unet"}
     }
 
     const fn fixture_id(self) -> &'static str {
         match self {
             Self::FeatherMicro => "feather_micro_eval",
-            Self::UnetProduction => "unet_production_eval",
-        }
+            Self::UnetProduction => "unet_production_eval"}
     }
 
     const fn weights_entry(self) -> &'static str {
         match self {
             Self::FeatherMicro => "weights/feather_micro.pth",
-            Self::UnetProduction => "weights/unet_production.pth",
-        }
+            Self::UnetProduction => "weights/unet_production.pth"}
     }
 
     const fn weight_kind(self) -> LegacyModelKind {
         match self {
             Self::FeatherMicro => LegacyModelKind::FeatherHubert,
-            Self::UnetProduction => LegacyModelKind::OriginalUnet,
-        }
+            Self::UnetProduction => LegacyModelKind::OriginalUnet}
     }
 
     const fn arrays(self) -> (&'static [ArrayContract], &'static [ArrayContract]) {
         match self {
             Self::FeatherMicro => (FEATHER_INPUTS, FEATHER_OUTPUTS),
-            Self::UnetProduction => (UNET_INPUTS, UNET_OUTPUTS),
-        }
+            Self::UnetProduction => (UNET_INPUTS, UNET_OUTPUTS)}
     }
 }
 
@@ -162,24 +139,21 @@ pub fn validate_forward_fixture(
             case: case.name(),
             field: "fixture_id",
             expected: case.fixture_id().to_owned(),
-            actual: fixture.id.clone(),
-        });
+            actual: fixture.id.clone()});
     }
     if fixture.kind != case.fixture_kind() {
         return Err(ParityError::FixtureContract {
             case: case.name(),
             field: "kind",
             expected: case.fixture_kind().to_owned(),
-            actual: fixture.kind.clone(),
-        });
+            actual: fixture.kind.clone()});
     }
     if fixture.weights_entry != case.weights_entry() {
         return Err(ParityError::FixtureContract {
             case: case.name(),
             field: "weights_entry",
             expected: case.weights_entry().to_owned(),
-            actual: fixture.weights_entry.clone(),
-        });
+            actual: fixture.weights_entry.clone()});
     }
     if case == ForwardCase::FeatherMicro {
         let expected = FeatherForwardConfig {
@@ -187,8 +161,7 @@ pub fn validate_forward_fixture(
             expansion: 2,
             num_blocks: 2,
             output_dim: 64,
-            dropout: 0.0,
-        };
+            dropout: 0.0};
         let actual = parse_config::<FeatherForwardConfig>(fixture, case, &expected)?;
         if actual != expected {
             return Err(config_mismatch(case, &expected, &actual));
@@ -197,8 +170,7 @@ pub fn validate_forward_fixture(
         let expected = UnetForwardConfig {
             channels: [32, 64, 128, 256, 512],
             mode: UnetMode::Hubert,
-            n_channels: 6,
-        };
+            n_channels: 6};
         let actual = parse_config::<UnetForwardConfig>(fixture, case, &expected)?;
         if actual != expected {
             return Err(config_mismatch(case, &expected, &actual));
@@ -226,8 +198,7 @@ fn validate_array_map(
             case: case.name(),
             role,
             expected: expected_names.into_iter().map(str::to_owned).collect(),
-            actual: actual_names.into_iter().map(str::to_owned).collect(),
-        });
+            actual: actual_names.into_iter().map(str::to_owned).collect()});
     }
 
     for contract in contracts {
@@ -238,8 +209,7 @@ fn validate_array_map(
                 role,
                 name: contract.name,
                 expected: contract.shape.to_vec(),
-                actual: actual.shape().to_vec(),
-            });
+                actual: actual.shape().to_vec()});
         }
     }
     Ok(())
@@ -258,8 +228,7 @@ where
         case: case.name(),
         field: "config",
         expected: format!("{expected:?}"),
-        actual: format!("invalid structured config: {error}"),
-    })
+        actual: format!("invalid structured config: {error}")})
 }
 
 fn config_mismatch(
@@ -271,8 +240,7 @@ fn config_mismatch(
         case: case.name(),
         field: "config",
         expected: format!("{expected:?}"),
-        actual: format!("{actual:?}"),
-    }
+        actual: format!("{actual:?}")}
 }
 
 pub fn run_cpu_forward(
@@ -298,7 +266,7 @@ pub fn run_cpu_forward(
     let actual = match case {
         ForwardCase::FeatherMicro => {
             let (model, checkpoint) =
-                load_feather_hubert_checkpoint::<CpuBackend>(&weights_path, &device)?;
+                load_feather_hubert_checkpoint(&weights_path, &device)?;
             if checkpoint.config().output_dim != FEATHER_OUTPUT_SHAPE[2] {
                 return Err(config_mismatch(
                     case,
@@ -319,8 +287,8 @@ pub fn run_cpu_forward(
                 kind: case.weight_kind(),
                 ..Default::default()
             };
-            let mut model = OriginalUnetConfig::production().init::<CpuBackend>(&device);
-            import_into::<CpuBackend, _>(&mut model, &request)?;
+            let mut model = OriginalUnetConfig::production().init(&device);
+            import_into::<_>(&mut model, &request)?;
             let image = fixture
                 .inputs
                 .get("image")
@@ -342,14 +310,13 @@ fn tensor_from_array<const D: usize>(
     name: &'static str,
     array: &ArrayD<f32>,
     expected_shape: &[usize],
-    device: &burn::tensor::Device<CpuBackend>,
-) -> Result<Tensor<CpuBackend, D>, ParityError> {
+    device: &burn::tensor::Device,
+) -> Result<Tensor<D>, ParityError> {
     if array.ndim() != D || array.shape() != expected_shape {
         return Err(ParityError::TensorShape {
             name,
             expected: expected_shape.to_vec(),
-            actual: array.shape().to_vec(),
-        });
+            actual: array.shape().to_vec()});
     }
     Ok(Tensor::from_data(
         TensorData::new(
@@ -361,12 +328,12 @@ fn tensor_from_array<const D: usize>(
 }
 
 fn array_from_tensor<const D: usize>(
-    tensor: Tensor<CpuBackend, D>,
+    tensor: Tensor<D>,
 ) -> Result<ArrayD<f32>, ParityError> {
     let shape = tensor.dims().to_vec();
     let values = tensor
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| ParityError::TensorData(error.to_string()))?;
     ArrayD::from_shape_vec(shape, values).map_err(|error| ParityError::Array(error.to_string()))
 }
@@ -375,14 +342,13 @@ fn tensor_from_gpu_array<const D: usize>(
     name: &'static str,
     array: &ArrayD<f32>,
     expected_shape: &[usize],
-    device: &burn::tensor::Device<GpuBackend>,
-) -> Result<Tensor<GpuBackend, D>, ParityError> {
+    device: &burn::tensor::Device,
+) -> Result<Tensor<D>, ParityError> {
     if array.ndim() != D || array.shape() != expected_shape {
         return Err(ParityError::TensorShape {
             name,
             expected: expected_shape.to_vec(),
-            actual: array.shape().to_vec(),
-        });
+            actual: array.shape().to_vec()});
     }
     Ok(Tensor::from_data(
         TensorData::new(
@@ -397,14 +363,13 @@ fn tensor_from_gpu_ad_array<const D: usize>(
     name: &'static str,
     array: &ArrayD<f32>,
     expected_shape: &[usize],
-    device: &burn::tensor::Device<GpuAutodiffBackend>,
-) -> Result<Tensor<GpuAutodiffBackend, D>, ParityError> {
+    device: &burn::tensor::Device,
+) -> Result<Tensor<D>, ParityError> {
     if array.ndim() != D || array.shape() != expected_shape {
         return Err(ParityError::TensorShape {
             name,
             expected: expected_shape.to_vec(),
-            actual: array.shape().to_vec(),
-        });
+            actual: array.shape().to_vec()});
     }
     Ok(Tensor::from_data(
         TensorData::new(
@@ -416,12 +381,12 @@ fn tensor_from_gpu_ad_array<const D: usize>(
 }
 
 fn array_from_gpu_tensor<const D: usize>(
-    tensor: Tensor<GpuBackend, D>,
+    tensor: Tensor<D>,
 ) -> Result<ArrayD<f32>, ParityError> {
     let shape = tensor.dims().to_vec();
     let values = tensor
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| ParityError::TensorData(error.to_string()))?;
     ArrayD::from_shape_vec(shape, values).map_err(|error| ParityError::Array(error.to_string()))
 }
@@ -435,36 +400,31 @@ struct AdamOptimizerConfig {
     beta1: f64,
     beta2: f64,
     epsilon: f64,
-    weight_decay: f64,
-}
+    weight_decay: f64}
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 enum OptimizerType {
-    Adam,
-}
+    Adam}
 
 #[derive(Debug)]
 pub struct TrainStepParity {
     pub initial_loss_relative: f32,
     pub post_step_loss_relative: f32,
     pub selected_parameter_relative: BTreeMap<String, f32>,
-    pub batch_norm_state_relative: BTreeMap<String, f32>,
-}
+    pub batch_norm_state_relative: BTreeMap<String, f32>}
 
 #[derive(Debug, serde::Serialize)]
 pub struct WgpuForwardResult {
     pub execution: crate::probe::ExecutionEvidence,
-    pub metrics: ParityMetrics,
-}
+    pub metrics: ParityMetrics}
 
 #[derive(Debug, serde::Serialize)]
 pub struct WgpuTrainStepResult {
     pub execution: crate::probe::ExecutionEvidence,
     pub initial_loss: f32,
     pub gradient_norm: f32,
-    pub output_weight_changed: bool,
-}
+    pub output_weight_changed: bool}
 
 pub fn run_wgpu_forward(
     archive: &GoldenArchive,
@@ -511,17 +471,16 @@ pub fn run_wgpu_train_step(
             burn::backend::wgpu::graphics::Vulkan,
         >(
             archive, "vulkan", full_production_model
-        ),
-    }
+        )}
 }
 
 pub(crate) fn probe_wgpu_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
     requested_graphics: &str,
 ) -> Result<crate::probe::ExecutionEvidence, ParityError> {
     let (device, execution) = init_wgpu::<G>(requested_graphics)?;
-    let value = Tensor::<GpuBackend, 1>::from_data(TensorData::from([1.0_f32, 2.0]), &device)
+    let value = Tensor::<1>::from_data(TensorData::from([1.0_f32, 2.0]), &device)
         .sum()
-        .into_scalar()
+        .into_scalar::<f32>()
         .elem::<f32>();
     if !value.is_finite() || (value - 3.0).abs() > f32::EPSILON {
         return Err(ParityError::Backend(format!(
@@ -535,7 +494,7 @@ fn init_wgpu<G: burn::backend::wgpu::graphics::GraphicsApi>(
     requested_graphics: &str,
 ) -> Result<
     (
-        burn::tensor::Device<GpuBackend>,
+        burn::tensor::Device,
         crate::probe::ExecutionEvidence,
     ),
     ParityError,
@@ -550,7 +509,7 @@ fn init_wgpu<G: burn::backend::wgpu::graphics::GraphicsApi>(
         >,
     > = OnceLock::new();
     let result = RUNTIME.get_or_init(|| {
-        let device: burn::tensor::Device<GpuBackend> = Default::default();
+        let device: burn::backend::wgpu::WgpuDevice = Default::default();
         let setup = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             burn::backend::wgpu::init_setup::<G>(&device, Default::default())
         }))
@@ -574,8 +533,7 @@ fn init_wgpu<G: burn::backend::wgpu::graphics::GraphicsApi>(
                     graphics
                 },
                 device: format!("{} ({:?})", info.name, info.device_type),
-                used_cpu_fallback,
-            },
+                used_cpu_fallback},
         ))
     });
     let (device, evidence) = result
@@ -587,7 +545,7 @@ fn init_wgpu<G: burn::backend::wgpu::graphics::GraphicsApi>(
             evidence.graphics, requested_graphics
         )));
     }
-    Ok((device.clone(), evidence.clone()))
+    Ok((burn::tensor::Device::new(burn::backend::DispatchDevice::Wgpu(device.clone())), evidence.clone()))
 }
 
 fn panic_message(panic: Box<dyn std::any::Any + Send>) -> String {
@@ -623,8 +581,8 @@ fn run_wgpu_forward_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
     let (device, execution) = init_wgpu::<G>(requested_graphics)?;
     let actual = match case {
         ForwardCase::FeatherMicro => {
-            let mut model = FeatherHubertConfig::parity_micro().init::<GpuBackend>(&device);
-            import_into::<GpuBackend, _>(&mut model, &request)?;
+            let mut model = FeatherHubertConfig::parity_micro().init(&device);
+            import_into::<_>(&mut model, &request)?;
             let input = tensor_from_gpu_array::<2>(
                 "waveform",
                 &fixture.inputs["waveform"],
@@ -634,8 +592,8 @@ fn run_wgpu_forward_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
             array_from_gpu_tensor(model.forward(input))?
         }
         ForwardCase::UnetProduction => {
-            let mut model = OriginalUnetConfig::production().init::<GpuBackend>(&device);
-            import_into::<GpuBackend, _>(&mut model, &request)?;
+            let mut model = OriginalUnetConfig::production().init(&device);
+            import_into::<_>(&mut model, &request)?;
             let image = tensor_from_gpu_array::<4>(
                 "image",
                 &fixture.inputs["image"],
@@ -675,8 +633,10 @@ fn run_wgpu_train_step_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
         ..Default::default()
     };
     let (device, execution) = init_wgpu::<G>(requested_graphics)?;
-    let mut model = OriginalUnetConfig::production().init::<GpuAutodiffBackend>(&device);
-    import_into::<GpuAutodiffBackend, _>(&mut model, &request)?;
+    // Burn 0.22 tracks autodiff on the device; the train step calls backward().
+    let device = device.autodiff();
+    let mut model = OriginalUnetConfig::production().init(&device);
+    import_into::<_>(&mut model, &request)?;
     let image = tensor_from_gpu_ad_array::<4>(
         "image",
         &fixture.inputs["image"],
@@ -689,10 +649,10 @@ fn run_wgpu_train_step_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
         UNET_AUDIO_SHAPE,
         &device,
     )?;
-    let target = Tensor::<GpuAutodiffBackend, 4>::zeros([1, 3, 160, 160], &device);
+    let target = Tensor::<4>::zeros([1, 3, 160, 160], &device);
     let prediction = model.forward(image, audio);
     let loss = l1_loss(prediction, target);
-    let initial_loss = loss.clone().into_scalar().elem::<f32>();
+    let initial_loss = loss.clone().into_scalar::<f32>().elem::<f32>();
     let raw_gradients = loss.backward();
     let gradient = model
         .outc
@@ -700,7 +660,7 @@ fn run_wgpu_train_step_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
         .weight
         .grad(&raw_gradients)
         .ok_or_else(|| ParityError::Backend("output weight gradient is missing".to_owned()))?;
-    let gradient_norm = gradient.abs().mean().into_scalar().elem::<f32>();
+    let gradient_norm = gradient.abs().mean().into_scalar::<f32>().elem::<f32>();
     let gradients = GradientsParams::from_grads(raw_gradients, &model);
     let before = model.outc.conv.weight.val().into_data();
     let mut optimizer = AdamConfig::new()
@@ -711,18 +671,17 @@ fn run_wgpu_train_step_with<G: burn::backend::wgpu::graphics::GraphicsApi>(
     let model = optimizer.step(1e-3, model, gradients);
     let after = model.outc.conv.weight.val().into_data();
     let before = before
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| ParityError::TensorData(error.to_string()))?;
     let after = after
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|error| ParityError::TensorData(error.to_string()))?;
     let output_weight_changed = before.iter().zip(after.iter()).any(|(a, b)| a != b);
     Ok(WgpuTrainStepResult {
         execution,
         initial_loss,
         gradient_norm,
-        output_weight_changed,
-    })
+        output_weight_changed})
 }
 
 const TRAIN_CASE: &str = "UnetMicroTrainStep";
@@ -733,48 +692,38 @@ const TRAIN_WEIGHTS_ENTRY: &str = "weights/unet_micro_train.pth";
 const TRAIN_INPUTS: &[ArrayContract] = &[
     ArrayContract {
         name: "audio",
-        shape: UNET_AUDIO_SHAPE,
-    },
+        shape: UNET_AUDIO_SHAPE},
     ArrayContract {
         name: "image",
-        shape: UNET_IMAGE_SHAPE,
-    },
+        shape: UNET_IMAGE_SHAPE},
     ArrayContract {
         name: "target",
-        shape: UNET_OUTPUT_SHAPE,
-    },
+        shape: UNET_OUTPUT_SHAPE},
 ];
 const TRAIN_PARAMETERS: &[ArrayContract] = &[
     ArrayContract {
         name: "inc.inconv.conv.0.weight",
-        shape: &[12, 6, 1, 1],
-    },
+        shape: &[12, 6, 1, 1]},
     ArrayContract {
         name: "audio_model.conv1.conv.0.weight",
-        shape: &[32, 16, 1, 1],
-    },
+        shape: &[32, 16, 1, 1]},
     ArrayContract {
         name: "outc.conv.weight",
-        shape: &[3, 2, 1, 1],
-    },
+        shape: &[3, 2, 1, 1]},
 ];
 const TRAIN_BATCH_NORM_STATE: &[ArrayContract] = &[
     ArrayContract {
         name: "inc.inconv.conv.1.running_mean",
-        shape: &[12],
-    },
+        shape: &[12]},
     ArrayContract {
         name: "inc.inconv.conv.1.running_var",
-        shape: &[12],
-    },
+        shape: &[12]},
     ArrayContract {
         name: "audio_model.conv1.conv.1.running_mean",
-        shape: &[32],
-    },
+        shape: &[32]},
     ArrayContract {
         name: "audio_model.conv1.conv.1.running_var",
-        shape: &[32],
-    },
+        shape: &[32]},
 ];
 const TRAIN_L1_RESIDUAL_MARGIN: f64 = 1e-3;
 const TRAIN_TARGET_ELEMENTS: f64 = (3 * 160 * 160) as f64;
@@ -804,8 +753,7 @@ pub fn validate_train_step_fixture(fixture: &GoldenFixture) -> Result<(), Parity
     let expected_config = UnetForwardConfig {
         channels: [2, 4, 8, 16, 32],
         mode: UnetMode::Hubert,
-        n_channels: 6,
-    };
+        n_channels: 6};
     let actual_config = parse_structured_map("config", &fixture.config, &expected_config)?;
     if actual_config != expected_config {
         return Err(train_contract_mismatch(
@@ -821,8 +769,7 @@ pub fn validate_train_step_fixture(fixture: &GoldenFixture) -> Result<(), Parity
         beta1: 0.9,
         beta2: 0.999,
         epsilon: 1e-8,
-        weight_decay: 0.0,
-    };
+        weight_decay: 0.0};
     let optimizer = fixture
         .optimizer
         .as_ref()
@@ -889,8 +836,7 @@ fn validate_contract_field(
             case: TRAIN_CASE,
             field,
             expected: expected.to_owned(),
-            actual: actual.to_owned(),
-        })
+            actual: actual.to_owned()})
     }
 }
 
@@ -903,8 +849,7 @@ fn train_contract_mismatch(
         case: TRAIN_CASE,
         field,
         expected: format!("{expected:?}"),
-        actual: format!("{actual:?}"),
-    }
+        actual: format!("{actual:?}")}
 }
 
 fn parse_structured_map<T>(
@@ -920,8 +865,7 @@ where
         case: TRAIN_CASE,
         field,
         expected: format!("{expected:?}"),
-        actual: format!("invalid structured metadata: {error}"),
-    })
+        actual: format!("invalid structured metadata: {error}")})
 }
 
 fn validate_train_inputs(fixture: &GoldenFixture) -> Result<(), ParityError> {
@@ -936,8 +880,7 @@ fn validate_train_inputs(fixture: &GoldenFixture) -> Result<(), ParityError> {
             case: TRAIN_CASE,
             role: "input",
             expected: expected_names.into_iter().map(str::to_owned).collect(),
-            actual: actual_names.into_iter().map(str::to_owned).collect(),
-        });
+            actual: actual_names.into_iter().map(str::to_owned).collect()});
     }
     for contract in TRAIN_INPUTS {
         let actual = &fixture.inputs[contract.name];
@@ -947,8 +890,7 @@ fn validate_train_inputs(fixture: &GoldenFixture) -> Result<(), ParityError> {
                 role: "input",
                 name: contract.name,
                 expected: contract.shape.to_vec(),
-                actual: actual.shape().to_vec(),
-            });
+                actual: actual.shape().to_vec()});
         }
     }
     Ok(())
@@ -971,8 +913,7 @@ fn validate_array_subset(
             case,
             role,
             expected: expected_names.into_iter().map(str::to_owned).collect(),
-            actual: actual_names.into_iter().map(str::to_owned).collect(),
-        });
+            actual: actual_names.into_iter().map(str::to_owned).collect()});
     }
     for contract in contracts {
         let actual = &arrays[contract.name];
@@ -982,8 +923,7 @@ fn validate_array_subset(
                 role,
                 name: contract.name,
                 expected: contract.shape.to_vec(),
-                actual: actual.shape().to_vec(),
-            });
+                actual: actual.shape().to_vec()});
         }
     }
     Ok(())
@@ -1007,8 +947,7 @@ fn validate_expected_array_set(fixture: &GoldenFixture) -> Result<(), ParityErro
             case: TRAIN_CASE,
             role: "expected",
             expected: expected.into_iter().map(str::to_owned).collect(),
-            actual: actual.into_iter().map(str::to_owned).collect(),
-        })
+            actual: actual.into_iter().map(str::to_owned).collect()})
     }
 }
 
@@ -1024,8 +963,7 @@ fn validate_training_scalars(fixture: &GoldenFixture) -> Result<(), ParityError>
             case: TRAIN_CASE,
             field: "scalars",
             expected: "finite initial_loss and post_step_loss".to_owned(),
-            actual: format!("{:?}", fixture.scalars),
-        });
+            actual: format!("{:?}", fixture.scalars)});
     }
     Ok(())
 }
@@ -1055,8 +993,7 @@ fn validate_training_metrics(fixture: &GoldenFixture) -> Result<(), ParityError>
             ),
             actual: format!(
                 "initial_l1_residual_min_abs={residual}, l1_cusp_adjusted_elements={adjusted}"
-            ),
-        });
+            )});
     }
     Ok(())
 }
@@ -1076,8 +1013,7 @@ fn validate_training_provenance(fixture: &GoldenFixture) -> Result<(), ParityErr
             expected: format!(
                 "train_input_seed={TRAIN_INPUT_SEED} and train_input_dtype={TRAIN_INPUT_DTYPE}"
             ),
-            actual: format!("train_input_seed={seed:?}, train_input_dtype={dtype:?}"),
-        });
+            actual: format!("train_input_seed={seed:?}, train_input_dtype={dtype:?}")});
     }
     Ok(())
 }
@@ -1099,9 +1035,9 @@ pub fn run_cpu_train_step(archive: &GoldenArchive) -> Result<TrainStepParity, Pa
         kind: LegacyModelKind::OriginalUnet,
         ..Default::default()
     };
-    let device = Default::default();
-    let mut model = OriginalUnetConfig::parity_micro().init::<CpuAutodiffBackend>(&device);
-    import_into::<CpuAutodiffBackend, _>(&mut model, &request)?;
+    let device = burn::tensor::Device::default().autodiff();
+    let mut model = OriginalUnetConfig::parity_micro().init(&device);
+    import_into::<_>(&mut model, &request)?;
 
     let image = train_tensor_from_fixture(&fixture, "image", UNET_IMAGE_SHAPE, &device)?;
     let audio = train_tensor_from_fixture(&fixture, "audio", UNET_AUDIO_SHAPE, &device)?;
@@ -1123,7 +1059,7 @@ pub fn run_cpu_train_step(archive: &GoldenArchive) -> Result<TrainStepParity, Pa
 
     let model = model.valid();
     let post_step_loss =
-        l1_loss(model.forward(image.inner(), audio.inner()), target.inner()).into_scalar();
+        l1_loss(model.forward(image.inner(), audio.inner()), target.inner()).into_scalar::<f32>();
 
     let mut parameters = BTreeMap::new();
     parameters.insert(
@@ -1175,16 +1111,15 @@ pub fn run_cpu_train_step(archive: &GoldenArchive) -> Result<TrainStepParity, Pa
             batch_norm_state,
             &fixture.expected,
             TRAIN_BATCH_NORM_STATE,
-        )?,
-    })
+        )?})
 }
 
 fn train_tensor_from_fixture(
     fixture: &GoldenFixture,
     name: &'static str,
     expected_shape: &[usize],
-    device: &burn::tensor::Device<CpuAutodiffBackend>,
-) -> Result<Tensor<CpuAutodiffBackend, 4>, ParityError> {
+    device: &burn::tensor::Device,
+) -> Result<Tensor<4>, ParityError> {
     let array = fixture
         .inputs
         .get(name)
@@ -1193,8 +1128,7 @@ fn train_tensor_from_fixture(
         return Err(ParityError::TensorShape {
             name,
             expected: expected_shape.to_vec(),
-            actual: array.shape().to_vec(),
-        });
+            actual: array.shape().to_vec()});
     }
     Ok(Tensor::from_data(
         TensorData::new(

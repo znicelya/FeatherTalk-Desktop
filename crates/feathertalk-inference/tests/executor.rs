@@ -1,14 +1,12 @@
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-};
+    sync::{Arc, Mutex}};
 
 use burn::tensor::{Tensor, TensorData};
 use feathertalk_audio::{FeatureMatrix, write_feature_file};
 use feathertalk_inference::{
     BgrFrame, FrameReader, InferenceError, OfflineRenderRequest, RawVideoSink, RawVideoSinkFactory,
-    execute_offline_render,
-};
+    execute_offline_render};
 use feathertalk_models::{backend::CpuBackend, unet::TalkingHeadModel};
 
 #[path = "support/mod.rs"]
@@ -142,15 +140,14 @@ fn request_reuses_output_and_task_id_validation() {
 }
 
 struct OutputModel {
-    value: f32,
-}
+    value: f32}
 
-impl TalkingHeadModel<CpuBackend> for OutputModel {
+impl TalkingHeadModel for OutputModel {
     fn forward_talking_head(
         &self,
-        image: Tensor<CpuBackend, 4>,
-        _audio: Tensor<CpuBackend, 4>,
-    ) -> Tensor<CpuBackend, 4> {
+        image: Tensor<4>,
+        _audio: Tensor<4>,
+    ) -> Tensor<4> {
         let device = image.device();
         Tensor::from_data(
             TensorData::new(vec![self.value; 3 * 160 * 160], [1, 3, 160, 160]),
@@ -163,8 +160,7 @@ impl TalkingHeadModel<CpuBackend> for OutputModel {
 struct RecordingReader {
     frames: Arc<Mutex<Vec<usize>>>,
     fail_at: Option<usize>,
-    alternate_dimensions_at: Option<usize>,
-}
+    alternate_dimensions_at: Option<usize>}
 
 impl FrameReader for RecordingReader {
     fn read(&self, index: usize, path: &Path) -> Result<BgrFrame, InferenceError> {
@@ -173,8 +169,7 @@ impl FrameReader for RecordingReader {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_owned(),
-                message: "injected reader failure".into(),
-            });
+                message: "injected reader failure".into()});
         }
         let (width, height) = if self.alternate_dimensions_at == Some(index) {
             (160, 168)
@@ -194,20 +189,17 @@ struct RecordingSinkState {
     frames: Vec<Vec<u8>>,
     staging: Option<PathBuf>,
     fail_write: bool,
-    fail_finish: bool,
-}
+    fail_finish: bool}
 
 struct RecordingSink {
-    state: Arc<Mutex<RecordingSinkState>>,
-}
+    state: Arc<Mutex<RecordingSinkState>>}
 
 impl RawVideoSink for RecordingSink {
     fn write_frame(&mut self, frame: &BgrFrame) -> Result<(), InferenceError> {
         let mut state = self.state.lock().unwrap();
         if state.fail_write {
             return Err(InferenceError::SinkWrite {
-                message: "injected sink write failure".into(),
-            });
+                message: "injected sink write failure".into()});
         }
         state.frames.push(frame.as_bytes().to_vec());
         Ok(())
@@ -217,8 +209,7 @@ impl RawVideoSink for RecordingSink {
         let state = self.state.lock().unwrap();
         if state.fail_finish {
             return Err(InferenceError::SinkFinish {
-                message: "injected sink finish failure".into(),
-            });
+                message: "injected sink finish failure".into()});
         }
         std::fs::write(state.staging.as_ref().unwrap(), b"rendered-video").unwrap();
         Ok(())
@@ -226,8 +217,7 @@ impl RawVideoSink for RecordingSink {
 }
 
 struct RecordingSinkFactory {
-    state: Arc<Mutex<RecordingSinkState>>,
-}
+    state: Arc<Mutex<RecordingSinkState>>}
 
 impl RawVideoSinkFactory for RecordingSinkFactory {
     fn start(
@@ -244,8 +234,7 @@ impl RawVideoSinkFactory for RecordingSinkFactory {
                 .into(),
         );
         Ok(Box::new(RecordingSink {
-            state: Arc::clone(&self.state),
-        }))
+            state: Arc::clone(&self.state)}))
     }
 }
 
@@ -299,11 +288,9 @@ fn executor_reads_artifacts_renders_plan_and_publishes_result() {
     let reader = RecordingReader {
         frames: Arc::clone(&reader_calls),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     let result = execute_offline_render::<CpuBackend, _, _, _>(
         &OutputModel { value: 1.0 },
@@ -332,12 +319,10 @@ fn executor_cleans_staging_and_preserves_existing_destination_on_failure() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     assert!(matches!(
         execute_offline_render::<CpuBackend, _, _, _>(
@@ -359,12 +344,10 @@ fn executor_propagates_reader_failure_without_publishing() {
     let reader = RecordingReader {
         frames: Arc::clone(&reader_calls),
         fail_at: Some(1),
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     assert!(matches!(
         execute_offline_render::<CpuBackend, _, _, _>(
@@ -386,12 +369,10 @@ fn executor_rejects_model_output_before_writing_the_failed_frame() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
 
     assert!(matches!(
@@ -417,16 +398,14 @@ fn executor_cleans_staging_after_sink_write_or_finish_failure() {
         let reader = RecordingReader {
             frames: Arc::new(Mutex::new(Vec::new())),
             fail_at: None,
-            alternate_dimensions_at: None,
-        };
+            alternate_dimensions_at: None};
         let sink_state = Arc::new(Mutex::new(RecordingSinkState {
             fail_write,
             fail_finish,
             ..RecordingSinkState::default()
         }));
         let sink_factory = RecordingSinkFactory {
-            state: Arc::clone(&sink_state),
-        };
+            state: Arc::clone(&sink_state)};
         let device = Default::default();
         let error = execute_offline_render::<CpuBackend, _, _, _>(
             &OutputModel { value: 1.0 },
@@ -453,12 +432,10 @@ fn executor_rejects_missing_input_artifacts_before_starting_sink() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     assert!(matches!(
         execute_offline_render::<CpuBackend, _, _, _>(
@@ -482,12 +459,10 @@ fn executor_rejects_frame_dimension_changes_without_publishing() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: Some(1),
-    };
+        alternate_dimensions_at: Some(1)};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     assert!(matches!(
         execute_offline_render::<CpuBackend, _, _, _>(
@@ -521,12 +496,10 @@ fn executor_rejects_landmark_symlinks_without_following_them() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
     assert!(matches!(
         execute_offline_render::<CpuBackend, _, _, _>(
@@ -571,12 +544,10 @@ fn executor_rejects_symlinked_input_path_components_before_starting_sink() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = RecordingSinkFactory {
-        state: Arc::clone(&sink_state),
-    };
+        state: Arc::clone(&sink_state)};
     let device = Default::default();
 
     assert!(matches!(
@@ -600,16 +571,14 @@ fn executor_rejects_symlinked_input_path_components_before_starting_sink() {
 /// which is what the worker's observing sink does once its token is set.
 struct CancellingSink {
     state: Arc<Mutex<RecordingSinkState>>,
-    cancel_at: usize,
-}
+    cancel_at: usize}
 
 impl RawVideoSink for CancellingSink {
     fn write_frame(&mut self, frame: &BgrFrame) -> Result<(), InferenceError> {
         let mut state = self.state.lock().unwrap();
         if state.frames.len() >= self.cancel_at {
             return Err(InferenceError::Cancelled {
-                operation: "render",
-            });
+                operation: "render"});
         }
         state.frames.push(frame.as_bytes().to_vec());
         Ok(())
@@ -622,8 +591,7 @@ impl RawVideoSink for CancellingSink {
 
 struct CancellingSinkFactory {
     state: Arc<Mutex<RecordingSinkState>>,
-    cancel_at: usize,
-}
+    cancel_at: usize}
 
 impl RawVideoSinkFactory for CancellingSinkFactory {
     fn start(
@@ -641,8 +609,7 @@ impl RawVideoSinkFactory for CancellingSinkFactory {
         );
         Ok(Box::new(CancellingSink {
             state: Arc::clone(&self.state),
-            cancel_at: self.cancel_at,
-        }))
+            cancel_at: self.cancel_at}))
     }
 }
 
@@ -652,13 +619,11 @@ fn a_cancelled_sink_stops_the_render_and_leaves_no_output() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_state = Arc::new(Mutex::new(RecordingSinkState::default()));
     let sink_factory = CancellingSinkFactory {
         state: Arc::clone(&sink_state),
-        cancel_at: 2,
-    };
+        cancel_at: 2};
     let device = Default::default();
 
     let error = execute_offline_render::<CpuBackend, _, _, _>(
@@ -690,13 +655,11 @@ fn a_cancelled_sink_stops_the_render_and_leaves_no_output() {
 /// for progress reporting, and it compiles only because `start` ties the boxed
 /// sink to the `&self` borrow.
 struct BorrowingSinkFactory {
-    written: Mutex<usize>,
-}
+    written: Mutex<usize>}
 
 struct BorrowingSink<'a> {
     factory: &'a BorrowingSinkFactory,
-    staging: PathBuf,
-}
+    staging: PathBuf}
 
 impl RawVideoSink for BorrowingSink<'_> {
     fn write_frame(&mut self, _frame: &BgrFrame) -> Result<(), InferenceError> {
@@ -725,8 +688,7 @@ impl RawVideoSinkFactory for BorrowingSinkFactory {
                     .unwrap()
                     .to_string_lossy()
                     .into_owned(),
-            ),
-        }))
+            )}))
     }
 }
 
@@ -736,11 +698,9 @@ fn a_sink_may_borrow_the_factory_that_started_it() {
     let reader = RecordingReader {
         frames: Arc::new(Mutex::new(Vec::new())),
         fail_at: None,
-        alternate_dimensions_at: None,
-    };
+        alternate_dimensions_at: None};
     let sink_factory = BorrowingSinkFactory {
-        written: Mutex::new(0),
-    };
+        written: Mutex::new(0)};
     let device = Default::default();
 
     let result = execute_offline_render::<CpuBackend, _, _, _>(

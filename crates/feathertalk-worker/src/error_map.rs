@@ -228,8 +228,7 @@ fn training_error_code(error: &TrainingError) -> ErrorCode {
         | TrainingError::PermutationAllocation { .. }
         | TrainingError::BatchAllocation { .. }
         | TrainingError::StalePreparedBatch
-        | TrainingError::Store(_) => ErrorCode::WorkerCrashed,
-    }
+        | TrainingError::Store(_) => ErrorCode::WorkerCrashed}
 }
 
 fn training_summary(error: &TrainingError) -> &'static str {
@@ -251,8 +250,7 @@ fn training_summary(error: &TrainingError) -> &'static str {
         TrainingError::InvalidCheckpoint(_) | TrainingError::CheckpointCompatibility(_) => {
             "检查点与当前训练不兼容"
         }
-        TrainingError::CheckpointDirectory(_) => "检查点目录无效",
-    }
+        TrainingError::CheckpointDirectory(_) => "检查点目录无效"}
 }
 
 fn training_data_error_code(error: &TrainingDataError) -> ErrorCode {
@@ -268,8 +266,7 @@ fn training_data_error_code(error: &TrainingDataError) -> ErrorCode {
         | TrainingDataError::Features { .. }
         | TrainingDataError::Frame { .. }
         | TrainingDataError::Landmarks { .. }
-        | TrainingDataError::Sample { .. } => ErrorCode::MediaInvalid,
-    }
+        | TrainingDataError::Sample { .. } => ErrorCode::MediaInvalid}
 }
 
 fn training_data_summary(error: &TrainingDataError) -> &'static str {
@@ -281,8 +278,7 @@ fn training_data_summary(error: &TrainingDataError) -> &'static str {
         TrainingDataError::Frame { .. } => "训练帧不可读",
         TrainingDataError::Landmarks { .. } => "关键点文件不可读",
         TrainingDataError::Sample { .. } => "训练样本构造失败",
-        TrainingDataError::Batch { .. } => "训练批次堆叠失败",
-    }
+        TrainingDataError::Batch { .. } => "训练批次堆叠失败"}
 }
 
 fn project_error_code(error: &ProjectError) -> ErrorCode {
@@ -298,8 +294,7 @@ fn project_error_code(error: &ProjectError) -> ErrorCode {
         | ProjectError::InvalidFilesystemEntry { .. }
         | ProjectError::EmptyArtifact { .. }
         | ProjectError::LockedAssetMutation { .. } => ErrorCode::MediaInvalid,
-        ProjectError::AtomicReplacementUnsupported { .. } => ErrorCode::WorkerCrashed,
-    }
+        ProjectError::AtomicReplacementUnsupported { .. } => ErrorCode::WorkerCrashed}
 }
 
 fn project_summary(error: &ProjectError) -> &'static str {
@@ -315,8 +310,7 @@ fn project_summary(error: &ProjectError) -> &'static str {
         ProjectError::InvalidFilesystemEntry { .. } => "项目目录结构不符合要求",
         ProjectError::EmptyArtifact { .. } => "项目素材文件为空",
         ProjectError::LockedAssetMutation { .. } => "素材包已锁定，无法修改",
-        ProjectError::AtomicReplacementUnsupported { .. } => "当前文件系统不支持原子替换",
-    }
+        ProjectError::AtomicReplacementUnsupported { .. } => "当前文件系统不支持原子替换"}
 }
 
 fn media_error_code(error: &MediaError) -> ErrorCode {
@@ -346,8 +340,7 @@ fn media_error_code(error: &MediaError) -> ErrorCode {
         | MediaError::ToolSpawn { .. }
         | MediaError::NormalizationVerificationFailed { .. }
         | MediaError::OutputCommitFailed { .. }
-        | MediaError::OutputRollbackFailed { .. } => ErrorCode::WorkerCrashed,
-    }
+        | MediaError::OutputRollbackFailed { .. } => ErrorCode::WorkerCrashed}
 }
 
 fn media_summary(error: &MediaError) -> &'static str {
@@ -374,8 +367,7 @@ fn media_summary(error: &MediaError) -> &'static str {
         MediaError::ToolSpawn { .. } => "无法启动媒体工具",
         MediaError::NormalizationVerificationFailed { .. } => "媒体规范化结果校验失败",
         MediaError::OutputCommitFailed { .. } => "写入输出文件失败",
-        MediaError::OutputRollbackFailed { .. } => "写入失败后回滚也失败",
-    }
+        MediaError::OutputRollbackFailed { .. } => "写入失败后回滚也失败"}
 }
 
 fn pipeline_error_code(error: &PipelineError) -> ErrorCode {
@@ -405,8 +397,7 @@ fn pipeline_error_code(error: &PipelineError) -> ErrorCode {
         | PipelineError::ReportTooLarge { .. }
         | PipelineError::PublishFailed { .. }
         | PipelineError::PublishRollbackFailed { .. }
-        | PipelineError::QualityRejected { .. } => ErrorCode::WorkerCrashed,
-    }
+        | PipelineError::QualityRejected { .. } => ErrorCode::WorkerCrashed}
 }
 
 fn pipeline_summary(error: &PipelineError) -> &'static str {
@@ -435,8 +426,7 @@ fn pipeline_summary(error: &PipelineError) -> &'static str {
         PipelineError::PublishFailed { .. } | PipelineError::PublishRollbackFailed { .. } => {
             "抽帧结果发布失败"
         }
-        PipelineError::QualityRejected { .. } => "抽帧质检未通过",
-    }
+        PipelineError::QualityRejected { .. } => "抽帧质检未通过"}
 }
 
 fn anomaly_error_code(code: AnomalyCode) -> ErrorCode {
@@ -448,8 +438,7 @@ fn anomaly_error_code(code: AnomalyCode) -> ErrorCode {
         AnomalyCode::BlurredFrame
         | AnomalyCode::FrameDecodeFailed
         | AnomalyCode::FrameWriteFailed => ErrorCode::MediaInvalid,
-        AnomalyCode::ModelFailed => ErrorCode::ModelIncompatible,
-    }
+        AnomalyCode::ModelFailed => ErrorCode::ModelIncompatible}
 }
 
 fn anomaly_summary(code: AnomalyCode) -> &'static str {
@@ -461,8 +450,7 @@ fn anomaly_summary(code: AnomalyCode) -> &'static str {
         AnomalyCode::BlurredFrame => "有帧过于模糊",
         AnomalyCode::FrameDecodeFailed => "有帧无法解码",
         AnomalyCode::FrameWriteFailed => "有帧写入失败",
-        AnomalyCode::ModelFailed => "模型推理失败",
-    }
+        AnomalyCode::ModelFailed => "模型推理失败"}
 }
 
 fn audio_error_code(error: &AudioError) -> ErrorCode {
@@ -512,8 +500,7 @@ fn audio_error_code(error: &AudioError) -> ErrorCode {
         | AudioError::FeatureSizeOverflow
         | AudioError::CommitFailed { .. }
         | AudioError::CommitRollbackFailed { .. }
-        | AudioError::StagingCollision { .. } => ErrorCode::WorkerCrashed,
-    }
+        | AudioError::StagingCollision { .. } => ErrorCode::WorkerCrashed}
 }
 
 fn audio_summary(error: &AudioError) -> &'static str {
@@ -557,8 +544,7 @@ fn audio_summary(error: &AudioError) -> &'static str {
         AudioError::CommitFailed { .. } => "特征文件写入失败",
         AudioError::CommitRollbackFailed { .. } => "写入失败后回滚也失败",
         AudioError::StagingCollision { .. } => "暂存文件已存在",
-        AudioError::Cancelled { .. } => "任务已取消",
-    }
+        AudioError::Cancelled { .. } => "任务已取消"}
 }
 
 /// The package loader's message plus the variable a user has to fix.
@@ -569,15 +555,13 @@ fn package_detail(error: &PackageError) -> String {
 fn io_error_code(source: &io::Error) -> ErrorCode {
     match source.kind() {
         io::ErrorKind::StorageFull | io::ErrorKind::QuotaExceeded => ErrorCode::DiskSpaceLow,
-        _ => ErrorCode::WorkerCrashed,
-    }
+        _ => ErrorCode::WorkerCrashed}
 }
 
 fn io_summary(source: &io::Error) -> &'static str {
     match source.kind() {
         io::ErrorKind::StorageFull | io::ErrorKind::QuotaExceeded => "磁盘空间不足",
-        _ => "文件读写失败",
-    }
+        _ => "文件读写失败"}
 }
 
 /// `TaskError::validate` counts characters, not bytes, so the detail is clamped
@@ -656,8 +640,7 @@ fn inference_error_code(error: &InferenceError) -> ErrorCode {
         | InferenceError::AtomicPublishFailed { .. }
         | InferenceError::FrameReader { .. }
         | InferenceError::AllocationFailure { .. } => ErrorCode::WorkerCrashed,
-        InferenceError::Cancelled { .. } => ErrorCode::TaskCancelled,
-    }
+        InferenceError::Cancelled { .. } => ErrorCode::TaskCancelled}
 }
 
 /// The user-facing half of the mapping. Grouped by what an operator can do about
@@ -707,6 +690,5 @@ fn inference_summary(error: &InferenceError) -> &'static str {
         | InferenceError::AtomicPublishFailed { .. } => "产物发布失败",
         InferenceError::FrameReader { .. } => "视频帧解码失败",
         InferenceError::AllocationFailure { .. } => "内存不足",
-        InferenceError::Cancelled { .. } => "任务已取消",
-    }
+        InferenceError::Cancelled { .. } => "任务已取消"}
 }

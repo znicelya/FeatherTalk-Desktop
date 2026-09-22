@@ -1,4 +1,5 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 use super::FeatherHubertEncoder;
 
@@ -12,8 +13,7 @@ pub struct FeatherHubertConfig {
     pub expansion: usize,
     pub num_blocks: usize,
     pub output_dim: usize,
-    pub dropout: f64,
-}
+    pub dropout: f64}
 
 impl Default for FeatherHubertConfig {
     fn default() -> Self {
@@ -22,8 +22,7 @@ impl Default for FeatherHubertConfig {
             expansion: 2,
             num_blocks: 12,
             output_dim: 1024,
-            dropout: 0.05,
-        }
+            dropout: 0.05}
     }
 }
 
@@ -34,11 +33,10 @@ impl FeatherHubertConfig {
             expansion: 2,
             num_blocks: 2,
             output_dim: 64,
-            dropout: 0.0,
-        }
+            dropout: 0.0}
     }
 
-    pub fn init<B: Backend>(&self, device: &B::Device) -> FeatherHubertEncoder<B> {
+    pub fn init(&self, device: &Device) -> FeatherHubertEncoder {
         FeatherHubertEncoder::new(self.clone(), device)
     }
 }
@@ -51,14 +49,14 @@ pub fn expected_hubert_frames(samples: usize) -> usize {
     }
 }
 
-pub fn normalize_waveform<B: Backend>(waveform: Tensor<B, 2>) -> Tensor<B, 2> {
+pub fn normalize_waveform(waveform: Tensor<2>) -> Tensor<2> {
     let mean = waveform.clone().mean_dim(1);
     let centered = waveform - mean;
     let variance = centered.clone().square().mean_dim(1);
     centered / (variance + 1e-7).sqrt()
 }
 
-pub fn make_even_tokens<B: Backend>(tokens: Tensor<B, 3>) -> Tensor<B, 3> {
+pub fn make_even_tokens(tokens: Tensor<3>) -> Tensor<3> {
     let [batch, token_count, features] = tokens.dims();
     if token_count % 2 == 0 {
         tokens

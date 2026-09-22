@@ -20,8 +20,7 @@ pub fn normalize_to_json(media: &NormalizedMedia) -> Value {
         "audio": media
             .audio()
             .map(|audio| audio_json(media.layout().audio_path(), audio, media.audio_artifact())),
-        "source": probe_to_json(media.source()),
-    })
+        "source": probe_to_json(media.source())})
 }
 
 fn video_json(path: &Path, video: &VideoMetadata, artifact: &MediaArtifact) -> Value {
@@ -35,11 +34,9 @@ fn video_json(path: &Path, video: &VideoMetadata, artifact: &MediaArtifact) -> V
         "height": video.height(),
         "frame_rate": {
             "numerator": video.frame_rate().numerator(),
-            "denominator": video.frame_rate().denominator(),
-        },
+            "denominator": video.frame_rate().denominator()},
         "frame_count": video.frame_count(),
-        "duration_seconds": video.duration_seconds(),
-    })
+        "duration_seconds": video.duration_seconds()})
 }
 
 fn audio_json(path: &Path, audio: &AudioMetadata, artifact: &MediaArtifact) -> Value {
@@ -52,8 +49,7 @@ fn audio_json(path: &Path, audio: &AudioMetadata, artifact: &MediaArtifact) -> V
         "sample_rate": audio.sample_rate(),
         "channels": audio.channels(),
         "sample_count": audio.sample_count(),
-        "duration_seconds": audio.duration_seconds(),
-    })
+        "duration_seconds": audio.duration_seconds()})
 }
 
 fn path_text(path: &Path) -> String {

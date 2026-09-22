@@ -10,8 +10,7 @@ use std::{
     fs::File,
     io::{self, BufReader, Cursor, Read, Seek, SeekFrom, Write},
     path::{Component, Path, PathBuf},
-    sync::{Mutex, MutexGuard},
-};
+    sync::{Mutex, MutexGuard}};
 use thiserror::Error;
 use zip::ZipArchive;
 
@@ -44,8 +43,7 @@ pub enum FixtureError {
     EntryTooLarge {
         name: String,
         actual: u64,
-        limit: u64,
-    },
+        limit: u64},
     #[error("archive expands beyond {limit} bytes")]
     ExpandedSizeExceeded { limit: u64 },
     #[error("unsafe archive entry path: {0}")]
@@ -82,38 +80,32 @@ pub enum FixtureError {
     ArrayHeaderTooLarge {
         name: String,
         actual: u64,
-        limit: u64,
-    },
+        limit: u64},
     #[error("array exceeds {limit} bytes: {name} ({actual})")]
     ArrayTooLarge {
         name: String,
         actual: u64,
-        limit: u64,
-    },
+        limit: u64},
     #[error("array payload size mismatch for {name}: expected {expected}, actual {actual}")]
     ArrayPayloadSizeMismatch {
         name: String,
         expected: u64,
-        actual: u64,
-    },
+        actual: u64},
     #[error("fixture arrays exceed aggregate allocation budget of {limit} bytes")]
     FixtureArrayBudgetExceeded { limit: u64 },
     #[error("declared shape does not match array {name}: expected {expected:?}, actual {actual:?}")]
     ArrayShapeMismatch {
         name: String,
         expected: Vec<usize>,
-        actual: Vec<usize>,
-    },
+        actual: Vec<usize>},
     #[error("duplicate expected array name: {0}")]
-    DuplicateExpectedArray(String),
-}
+    DuplicateExpectedArray(String)}
 
 #[derive(Debug)]
 pub struct GoldenArchive {
     sidecar_path: PathBuf,
     snapshot: Mutex<File>,
-    entries: BTreeSet<String>,
-}
+    entries: BTreeSet<String>}
 
 #[derive(Debug, Deserialize)]
 struct Manifest {
@@ -123,8 +115,7 @@ struct Manifest {
     _seed: Option<u64>,
     #[serde(default, rename = "generator")]
     generator: Option<BTreeMap<String, Value>>,
-    fixtures: BTreeMap<String, FixtureManifest>,
-}
+    fixtures: BTreeMap<String, FixtureManifest>}
 
 #[derive(Debug, Deserialize)]
 struct FixtureManifest {
@@ -142,8 +133,7 @@ struct FixtureManifest {
     #[serde(default)]
     expected_json: Option<String>,
     #[serde(default)]
-    metrics: BTreeMap<String, f64>,
-}
+    metrics: BTreeMap<String, f64>}
 
 #[derive(Debug, Deserialize)]
 struct TrainingExpected {
@@ -151,19 +141,16 @@ struct TrainingExpected {
     post_step_loss: f64,
     post_step_mode: String,
     parameters: BTreeMap<String, ArrayReference>,
-    batch_norm_state: BTreeMap<String, ArrayReference>,
-}
+    batch_norm_state: BTreeMap<String, ArrayReference>}
 
 #[derive(Debug, Deserialize)]
 struct ArrayReference {
     path: String,
-    shape: Vec<usize>,
-}
+    shape: Vec<usize>}
 
 #[derive(Debug, Default)]
 struct ArrayBudget {
-    used: u64,
-}
+    used: u64}
 
 impl ArrayBudget {
     fn charge(&mut self, name: &str, bytes: u64) -> Result<(), FixtureError> {
@@ -171,19 +158,16 @@ impl ArrayBudget {
             return Err(FixtureError::ArrayTooLarge {
                 name: name.to_owned(),
                 actual: bytes,
-                limit: MAX_ARRAY_BYTES,
-            });
+                limit: MAX_ARRAY_BYTES});
         }
         self.used =
             self.used
                 .checked_add(bytes)
                 .ok_or(FixtureError::FixtureArrayBudgetExceeded {
-                    limit: MAX_FIXTURE_ARRAY_BYTES,
-                })?;
+                    limit: MAX_FIXTURE_ARRAY_BYTES})?;
         if self.used > MAX_FIXTURE_ARRAY_BYTES {
             return Err(FixtureError::FixtureArrayBudgetExceeded {
-                limit: MAX_FIXTURE_ARRAY_BYTES,
-            });
+                limit: MAX_FIXTURE_ARRAY_BYTES});
         }
         Ok(())
     }
@@ -201,8 +185,7 @@ impl GoldenArchive {
         if copied > MAX_ARCHIVE_BYTES {
             return Err(FixtureError::ArchiveTooLarge {
                 actual: copied,
-                limit: MAX_ARCHIVE_BYTES,
-            });
+                limit: MAX_ARCHIVE_BYTES});
         }
         snapshot.flush()?;
         snapshot.seek(SeekFrom::Start(0))?;
@@ -210,8 +193,7 @@ impl GoldenArchive {
         if declared_entries > MAX_ARCHIVE_ENTRIES {
             return Err(FixtureError::TooManyEntries {
                 actual: declared_entries,
-                limit: MAX_ARCHIVE_ENTRIES,
-            });
+                limit: MAX_ARCHIVE_ENTRIES});
         }
         snapshot.seek(SeekFrom::Start(0))?;
 
@@ -236,8 +218,7 @@ impl GoldenArchive {
         Ok(Self {
             sidecar_path: path.with_extension("sha256"),
             snapshot: Mutex::new(snapshot),
-            entries,
-        })
+            entries})
     }
 
     pub fn contains(&self, entry: &str) -> bool {
@@ -272,8 +253,7 @@ impl GoldenArchive {
         if actual != expected {
             return Err(FixtureError::HashMismatch {
                 expected: expected.to_owned(),
-                actual,
-            });
+                actual});
         }
         Ok(())
     }
@@ -294,8 +274,7 @@ impl GoldenArchive {
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
                 return Err(FixtureError::DestinationExists(directory.to_path_buf()));
             }
-            Err(error) => return Err(error.into()),
-        }
+            Err(error) => return Err(error.into())}
         let root = parent.open_dir(directory_name)?;
 
         self.with_zip(|archive| {
@@ -323,19 +302,16 @@ impl GoldenArchive {
                     return Err(FixtureError::EntryTooLarge {
                         name: entry.name().to_owned(),
                         actual: written,
-                        limit: MAX_ENTRY_BYTES,
-                    });
+                        limit: MAX_ENTRY_BYTES});
                 }
                 expanded =
                     expanded
                         .checked_add(written)
                         .ok_or(FixtureError::ExpandedSizeExceeded {
-                            limit: MAX_EXPANDED_BYTES,
-                        })?;
+                            limit: MAX_EXPANDED_BYTES})?;
                 if expanded > MAX_EXPANDED_BYTES {
                     return Err(FixtureError::ExpandedSizeExceeded {
-                        limit: MAX_EXPANDED_BYTES,
-                    });
+                        limit: MAX_EXPANDED_BYTES});
                 }
             }
             Ok(())
@@ -393,8 +369,7 @@ impl GoldenArchive {
             inputs,
             expected,
             metrics: fixture.metrics.clone(),
-            scalars,
-        })
+            scalars})
     }
 
     fn load_arrays(
@@ -424,8 +399,7 @@ impl GoldenArchive {
                 return Err(FixtureError::ArrayShapeMismatch {
                     name: name.clone(),
                     expected: reference.shape.clone(),
-                    actual: array.shape().to_vec(),
-                });
+                    actual: array.shape().to_vec()});
             }
             arrays.insert(name.clone(), array);
         }
@@ -449,14 +423,12 @@ impl GoldenArchive {
         self.with_zip(|archive| {
             let mut entry = archive.by_name(name).map_err(|error| match error {
                 zip::result::ZipError::FileNotFound => FixtureError::MissingEntry(name.to_owned()),
-                other => FixtureError::Zip(other),
-            })?;
+                other => FixtureError::Zip(other)})?;
             if entry.size() > limit {
                 return Err(FixtureError::EntryTooLarge {
                     name: name.to_owned(),
                     actual: entry.size(),
-                    limit,
-                });
+                    limit});
             }
             let capacity = usize::try_from(entry.size()).unwrap_or(usize::MAX);
             let mut bytes = Vec::with_capacity(capacity.min(1024 * 1024));
@@ -465,8 +437,7 @@ impl GoldenArchive {
                 return Err(FixtureError::EntryTooLarge {
                     name: name.to_owned(),
                     actual: bytes.len() as u64,
-                    limit,
-                });
+                    limit});
             }
             Ok(bytes)
         })
@@ -489,18 +460,15 @@ impl GoldenArchive {
                     return Err(FixtureError::EntryTooLarge {
                         name: entry.name().to_owned(),
                         actual: entry.size(),
-                        limit: MAX_ENTRY_BYTES,
-                    });
+                        limit: MAX_ENTRY_BYTES});
                 }
                 expanded = expanded.checked_add(entry.size()).ok_or(
                     FixtureError::ExpandedSizeExceeded {
-                        limit: MAX_EXPANDED_BYTES,
-                    },
+                        limit: MAX_EXPANDED_BYTES},
                 )?;
                 if expanded > MAX_EXPANDED_BYTES {
                     return Err(FixtureError::ExpandedSizeExceeded {
-                        limit: MAX_EXPANDED_BYTES,
-                    });
+                        limit: MAX_EXPANDED_BYTES});
                 }
             }
             Ok(())
@@ -556,22 +524,19 @@ fn validate_npy_before_allocation(name: &str, bytes: &[u8]) -> Result<u64, Fixtu
         return Err(FixtureError::ArrayHeaderTooLarge {
             name: name.to_owned(),
             actual: header_bytes,
-            limit: MAX_NPY_HEADER_BYTES,
-        });
+            limit: MAX_NPY_HEADER_BYTES});
     }
 
     let mut cursor = Cursor::new(bytes);
     let header =
         Header::from_reader(&mut cursor).map_err(|error| FixtureError::InvalidArrayHeader {
             name: name.to_owned(),
-            message: error.to_string(),
-        })?;
+            message: error.to_string()})?;
     if cursor.position() > MAX_NPY_HEADER_BYTES {
         return Err(FixtureError::ArrayHeaderTooLarge {
             name: name.to_owned(),
             actual: cursor.position(),
-            limit: MAX_NPY_HEADER_BYTES,
-        });
+            limit: MAX_NPY_HEADER_BYTES});
     }
     let elements = header.shape.iter().try_fold(1_u64, |count, dimension| {
         count.checked_mul(*dimension as u64)
@@ -581,22 +546,19 @@ fn validate_npy_before_allocation(name: &str, bytes: &[u8]) -> Result<u64, Fixtu
         .ok_or_else(|| FixtureError::ArrayTooLarge {
             name: name.to_owned(),
             actual: u64::MAX,
-            limit: MAX_ARRAY_BYTES,
-        })?;
+            limit: MAX_ARRAY_BYTES})?;
     if payload_bytes > MAX_ARRAY_BYTES {
         return Err(FixtureError::ArrayTooLarge {
             name: name.to_owned(),
             actual: payload_bytes,
-            limit: MAX_ARRAY_BYTES,
-        });
+            limit: MAX_ARRAY_BYTES});
     }
     let actual = (bytes.len() as u64).saturating_sub(cursor.position());
     if actual != payload_bytes {
         return Err(FixtureError::ArrayPayloadSizeMismatch {
             name: name.to_owned(),
             expected: payload_bytes,
-            actual,
-        });
+            actual});
     }
     Ok(payload_bytes)
 }
@@ -614,8 +576,7 @@ fn declared_npy_header_bytes(bytes: &[u8]) -> Option<u64> {
             let length = u32::from_le_bytes(bytes.get(8..12)?.try_into().ok()?);
             Some(12 + u64::from(length))
         }
-        _ => None,
-    }
+        _ => None}
 }
 
 fn read_declared_entry_count(file: &mut File) -> Result<usize, FixtureError> {
@@ -688,8 +649,7 @@ fn read_declared_entry_count(file: &mut File) -> Result<usize, FixtureError> {
     }
     usize::try_from(total_entries).map_err(|_| FixtureError::TooManyEntries {
         actual: usize::MAX,
-        limit: MAX_ARCHIVE_ENTRIES,
-    })
+        limit: MAX_ARCHIVE_ENTRIES})
 }
 
 fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {

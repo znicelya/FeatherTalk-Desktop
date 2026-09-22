@@ -1,12 +1,10 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
 use feathertalk_training::{
     PREVIEW_MOUTH_ROI_FILE_NAME, PREVIEW_PREDICTION_FILE_NAME, PREVIEW_TARGET_FILE_NAME,
-    PreviewArtifact, TrainingError, read_preview_artifact, write_preview_artifact,
-};
+    PreviewArtifact, TrainingError, read_preview_artifact, write_preview_artifact};
 
 fn preview() -> PreviewArtifact {
     let prediction = (0..76_800).map(|index| index as f32 / 10_000.0).collect();

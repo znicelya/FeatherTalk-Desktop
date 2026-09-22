@@ -3,15 +3,13 @@ use std::{fs, path::PathBuf};
 use feathertalk_domain::{ImportLegacyModelParams, LegacyModelKind, TaskStage};
 use feathertalk_media::CancellationToken;
 use feathertalk_worker::{
-    CommandOutcome, NoReporter, WorkerConfig, execute, execute_import_legacy_model,
-};
+    CommandOutcome, NoReporter, WorkerConfig, execute, execute_import_legacy_model};
 
 fn params(source: PathBuf, kind: LegacyModelKind, destination: PathBuf) -> ImportLegacyModelParams {
     ImportLegacyModelParams {
         source,
         kind,
-        destination,
-    }
+        destination}
 }
 
 #[test]
@@ -106,8 +104,7 @@ fn command_maps_legacy_validation_failure_to_model_incompatible() {
         &NoReporter,
     ) {
         CommandOutcome::Failed(error) => error,
-        other => panic!("expected failure, got {other:?}"),
-    };
+        other => panic!("expected failure, got {other:?}")};
     assert_eq!(error.code, feathertalk_domain::ErrorCode::ModelIncompatible);
     assert_eq!(error.summary, "模型导入失败");
     assert_eq!(error.stage, TaskStage::Preparing);

@@ -9,8 +9,7 @@ pub fn probe_to_json(probe: &MediaProbe) -> Value {
     json!({
         "format": {
             "format_name": probe.format().format_name(),
-            "duration_seconds": probe.format().duration_seconds(),
-        },
+            "duration_seconds": probe.format().duration_seconds()},
         "video": probe.video().map(|video| {
             json!({
                 "codec_name": video.codec_name(),
@@ -19,11 +18,9 @@ pub fn probe_to_json(probe: &MediaProbe) -> Value {
                 "height": video.height(),
                 "frame_rate": {
                     "numerator": video.frame_rate().numerator(),
-                    "denominator": video.frame_rate().denominator(),
-                },
+                    "denominator": video.frame_rate().denominator()},
                 "frame_count": video.frame_count(),
-                "duration_seconds": video.duration_seconds(),
-            })
+                "duration_seconds": video.duration_seconds()})
         }),
         "audio": probe.audio().map(|audio| {
             json!({
@@ -32,8 +29,6 @@ pub fn probe_to_json(probe: &MediaProbe) -> Value {
                 "sample_rate": audio.sample_rate(),
                 "channels": audio.channels(),
                 "sample_count": audio.sample_count(),
-                "duration_seconds": audio.duration_seconds(),
-            })
-        }),
-    })
+                "duration_seconds": audio.duration_seconds()})
+        })})
 }

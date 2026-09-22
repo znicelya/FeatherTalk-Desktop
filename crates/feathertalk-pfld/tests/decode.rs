@@ -1,14 +1,12 @@
 use feathertalk_pfld::{
-    CropGeometry, PFLD_LANDMARK_COUNT, PFLD_OUTPUT_VALUE_COUNT, PfldError, decode_landmarks,
-};
+    CropGeometry, PFLD_LANDMARK_COUNT, PFLD_OUTPUT_VALUE_COUNT, PfldError, decode_landmarks};
 
 fn crop() -> CropGeometry {
     CropGeometry {
         width: 100,
         height: 80,
         offset_x: 10,
-        offset_y: -5,
-    }
+        offset_y: -5}
 }
 
 fn vectors() -> (Vec<f32>, Vec<f32>) {
@@ -42,8 +40,7 @@ fn truncates_negative_values_toward_zero() {
             width: 100,
             height: 100,
             offset_x: 0,
-            offset_y: 0,
-        },
+            offset_y: 0},
     )
     .unwrap();
     assert_eq!(landmarks.points()[0].x, -1);
@@ -71,8 +68,7 @@ fn rejects_lengths_non_finite_values_and_zero_crop_dimensions() {
                 width: 0,
                 height: 80,
                 offset_x: 0,
-                offset_y: 0,
-            }
+                offset_y: 0}
         ),
         Err(PfldError::InvalidCropGeometry)
     ));

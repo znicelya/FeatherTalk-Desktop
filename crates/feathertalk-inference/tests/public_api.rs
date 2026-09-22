@@ -5,8 +5,7 @@ use feathertalk_inference::{
     BgrFrame, CommandSpec, FrameReader, InferenceError, InferenceFramePlan, JpegFrameReader,
     OfflineRenderRequest, OfflineRenderResult, PingPongFrames, RawFrameRenderSpec, RawVideoSink,
     RawVideoSinkFactory, RenderGeometry, RenderPlan, SystemRawVideoSinkFactory,
-    execute_offline_render, raw_video_command, staging_output_path, validate_output_destination,
-};
+    execute_offline_render, raw_video_command, staging_output_path, validate_output_destination};
 
 #[test]
 fn crate_root_exposes_read_only_inference_contract() {
@@ -77,14 +76,13 @@ struct DummySink;
 
 struct DummyModel;
 
-impl feathertalk_models::unet::TalkingHeadModel<feathertalk_models::backend::CpuBackend>
-    for DummyModel
+impl feathertalk_models::unet::TalkingHeadModel for DummyModel
 {
     fn forward_talking_head(
         &self,
-        image: Tensor<feathertalk_models::backend::CpuBackend, 4>,
-        _audio: Tensor<feathertalk_models::backend::CpuBackend, 4>,
-    ) -> Tensor<feathertalk_models::backend::CpuBackend, 4> {
+        image: Tensor<4>,
+        _audio: Tensor<4>,
+    ) -> Tensor<4> {
         let device = image.device();
         Tensor::from_data(
             TensorData::new(vec![0.0; 3 * 160 * 160], [1, 3, 160, 160]),

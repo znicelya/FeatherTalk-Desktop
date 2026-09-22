@@ -10,85 +10,81 @@ use burn::nn::pool::MaxPool2dConfig;
 
 
 #[derive(Module, Debug)]
-pub struct Model<B: Backend> {
-    constant39: burn::module::Param<Tensor<B, 1>>,
-    constant40: burn::module::Param<Tensor<B, 1>>,
-    constant41: burn::module::Param<Tensor<B, 1>>,
-    conv2d1: Conv2d<B>,
-    conv2d2: Conv2d<B>,
-    conv2d3: Conv2d<B>,
+pub struct Model {
+    constant39: burn::module::Param<Tensor<1>>,
+    constant40: burn::module::Param<Tensor<1>>,
+    constant41: burn::module::Param<Tensor<1>>,
+    conv2d1: Conv2d,
+    conv2d2: Conv2d,
+    conv2d3: Conv2d,
     maxpool2d1: MaxPool2d,
-    conv2d4: Conv2d<B>,
-    conv2d5: Conv2d<B>,
-    conv2d6: Conv2d<B>,
-    conv2d7: Conv2d<B>,
-    conv2d8: Conv2d<B>,
-    conv2d9: Conv2d<B>,
-    conv2d10: Conv2d<B>,
-    conv2d11: Conv2d<B>,
+    conv2d4: Conv2d,
+    conv2d5: Conv2d,
+    conv2d6: Conv2d,
+    conv2d7: Conv2d,
+    conv2d8: Conv2d,
+    conv2d9: Conv2d,
+    conv2d10: Conv2d,
+    conv2d11: Conv2d,
     averagepool2d1: AvgPool2d,
-    conv2d12: Conv2d<B>,
-    conv2d13: Conv2d<B>,
-    conv2d14: Conv2d<B>,
-    conv2d15: Conv2d<B>,
-    conv2d16: Conv2d<B>,
-    conv2d17: Conv2d<B>,
-    conv2d18: Conv2d<B>,
-    conv2d19: Conv2d<B>,
-    conv2d20: Conv2d<B>,
-    conv2d21: Conv2d<B>,
-    conv2d22: Conv2d<B>,
+    conv2d12: Conv2d,
+    conv2d13: Conv2d,
+    conv2d14: Conv2d,
+    conv2d15: Conv2d,
+    conv2d16: Conv2d,
+    conv2d17: Conv2d,
+    conv2d18: Conv2d,
+    conv2d19: Conv2d,
+    conv2d20: Conv2d,
+    conv2d21: Conv2d,
+    conv2d22: Conv2d,
     averagepool2d2: AvgPool2d,
-    conv2d23: Conv2d<B>,
-    conv2d24: Conv2d<B>,
-    conv2d25: Conv2d<B>,
-    conv2d26: Conv2d<B>,
-    conv2d27: Conv2d<B>,
-    conv2d28: Conv2d<B>,
-    conv2d29: Conv2d<B>,
+    conv2d23: Conv2d,
+    conv2d24: Conv2d,
+    conv2d25: Conv2d,
+    conv2d26: Conv2d,
+    conv2d27: Conv2d,
+    conv2d28: Conv2d,
+    conv2d29: Conv2d,
     averagepool2d3: AvgPool2d,
-    conv2d30: Conv2d<B>,
-    conv2d31: Conv2d<B>,
-    conv2d32: Conv2d<B>,
-    conv2d33: Conv2d<B>,
-    conv2d34: Conv2d<B>,
-    conv2d35: Conv2d<B>,
-    conv2d36: Conv2d<B>,
-    conv2d37: Conv2d<B>,
-    conv2d38: Conv2d<B>,
-    conv2d39: Conv2d<B>,
-    conv2d40: Conv2d<B>,
-    conv2d41: Conv2d<B>,
-    conv2d42: Conv2d<B>,
-    conv2d43: Conv2d<B>,
-    conv2d44: Conv2d<B>,
-    conv2d45: Conv2d<B>,
-    conv2d46: Conv2d<B>,
-    conv2d47: Conv2d<B>,
-    conv2d48: Conv2d<B>,
-    conv2d49: Conv2d<B>,
-    conv2d50: Conv2d<B>,
-    conv2d51: Conv2d<B>,
-    conv2d52: Conv2d<B>,
-    conv2d53: Conv2d<B>,
-    conv2d54: Conv2d<B>,
-    conv2d55: Conv2d<B>,
-    conv2d56: Conv2d<B>,
-    conv2d57: Conv2d<B>,
-    phantom: core::marker::PhantomData<B>,
+    conv2d30: Conv2d,
+    conv2d31: Conv2d,
+    conv2d32: Conv2d,
+    conv2d33: Conv2d,
+    conv2d34: Conv2d,
+    conv2d35: Conv2d,
+    conv2d36: Conv2d,
+    conv2d37: Conv2d,
+    conv2d38: Conv2d,
+    conv2d39: Conv2d,
+    conv2d40: Conv2d,
+    conv2d41: Conv2d,
+    conv2d42: Conv2d,
+    conv2d43: Conv2d,
+    conv2d44: Conv2d,
+    conv2d45: Conv2d,
+    conv2d46: Conv2d,
+    conv2d47: Conv2d,
+    conv2d48: Conv2d,
+    conv2d49: Conv2d,
+    conv2d50: Conv2d,
+    conv2d51: Conv2d,
+    conv2d52: Conv2d,
+    conv2d53: Conv2d,
+    conv2d54: Conv2d,
+    conv2d55: Conv2d,
+    conv2d56: Conv2d,
+    conv2d57: Conv2d,
     #[module(skip)]
-    device: B::Device,
+    device: burn::tensor::Device,
 }
 
-impl<B: Backend> Model<B> {
+impl Model {
     #[allow(unused_variables)]
-    pub fn new(device: &B::Device) -> Self {
-        let constant39: burn::module::Param<Tensor<B, 1>> = burn::module::Param::uninitialized(
+    pub fn new(device: &burn::tensor::Device) -> Self {
+        let constant39: burn::module::Param<Tensor<1>> = burn::module::Param::uninitialized(
             burn::module::ParamId::new(),
-            move |device, _require_grad| Tensor::<
-                B,
-                1,
-            >::from_data(
+            move |device, _require_grad| Tensor::<1>::from_data(
                 burn::tensor::TensorData::from([0.880725085735321f64]),
                 (device, burn::tensor::DType::F32),
             ),
@@ -96,12 +92,9 @@ impl<B: Backend> Model<B> {
             false,
             [1].into(),
         );
-        let constant40: burn::module::Param<Tensor<B, 1>> = burn::module::Param::uninitialized(
+        let constant40: burn::module::Param<Tensor<1>> = burn::module::Param::uninitialized(
             burn::module::ParamId::new(),
-            move |device, _require_grad| Tensor::<
-                B,
-                1,
-            >::from_data(
+            move |device, _require_grad| Tensor::<1>::from_data(
                 burn::tensor::TensorData::from([0.9315465092658997f64]),
                 (device, burn::tensor::DType::F32),
             ),
@@ -109,12 +102,9 @@ impl<B: Backend> Model<B> {
             false,
             [1].into(),
         );
-        let constant41: burn::module::Param<Tensor<B, 1>> = burn::module::Param::uninitialized(
+        let constant41: burn::module::Param<Tensor<1>> = burn::module::Param::uninitialized(
             burn::module::ParamId::new(),
-            move |device, _require_grad| Tensor::<
-                B,
-                1,
-            >::from_data(
+            move |device, _require_grad| Tensor::<1>::from_data(
                 burn::tensor::TensorData::from([1.1423660516738892f64]),
                 (device, burn::tensor::DType::F32),
             ),
@@ -610,7 +600,6 @@ impl<B: Backend> Model<B> {
             conv2d55,
             conv2d56,
             conv2d57,
-            phantom: core::marker::PhantomData,
             device: device.clone(),
         }
     }
@@ -618,17 +607,17 @@ impl<B: Backend> Model<B> {
     #[allow(clippy::let_and_return, clippy::approx_constant)]
     pub fn forward(
         &self,
-        images: Tensor<B, 4>,
+        images: Tensor<4>,
     ) -> (
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
-        Tensor<B, 3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
+        Tensor<3>,
     ) {
         let constant39_out1 = self.constant39.val();
         let constant40_out1 = self.constant40.val();

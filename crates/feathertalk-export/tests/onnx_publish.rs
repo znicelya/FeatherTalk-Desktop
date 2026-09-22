@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 fn micro_original_unet() -> Vec<u8> {
     let config = OriginalUnetConfig::parity_micro();
     let device = Default::default();
-    let model = config.init::<CpuBackend>(&device);
+    let model = config.init(&device);
     export_original_unet_onnx(&model, &config).expect("the micro graph exports")
 }
 

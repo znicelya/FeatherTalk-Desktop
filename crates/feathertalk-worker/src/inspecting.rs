@@ -8,15 +8,13 @@ use feathertalk_training::{CHECKPOINT_MODEL_FILE_NAME, TrainingCheckpointManifes
 
 use crate::{
     admission::check_model_source, error_map::clamp, rendering::render_variant,
-    training::checkpoint_descriptor,
-};
+    training::checkpoint_descriptor};
 
 /// The two directory layouts `inspect_model` accepts (design section 2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelSourceKind {
     ModelPackage,
-    TrainingCheckpoint,
-}
+    TrainingCheckpoint}
 
 impl ModelSourceKind {
     /// The wire spelling. It goes into the payload's `source_kind`, so it is
@@ -24,13 +22,12 @@ impl ModelSourceKind {
     pub fn as_slug(self) -> &'static str {
         match self {
             Self::ModelPackage => "model_package",
-            Self::TrainingCheckpoint => "training_checkpoint",
-        }
+            Self::TrainingCheckpoint => "training_checkpoint"}
     }
 }
 
 /// Decide the layout from the one file only that layout has. An exported package
-/// carries `model.safetensors`; a checkpoint carries `model.bin`. Neither file is
+/// carries `model.safetensors`; a checkpoint carries `model.bpk`. Neither file is
 /// opened -- the digests in the manifests are the source of truth for content,
 /// and reading weights is out of scope (design section 3).
 pub fn model_source_kind(source: &Path) -> Result<ModelSourceKind, TaskError> {
@@ -42,8 +39,7 @@ pub fn model_source_kind(source: &Path) -> Result<ModelSourceKind, TaskError> {
         (false, true) => Ok(ModelSourceKind::TrainingCheckpoint),
         // Both means the directory is two things at once and neither reader
         // would be right; neither means it is not a model directory at all.
-        _ => Err(unrecognized(source)),
-    }
+        _ => Err(unrecognized(source))}
 }
 
 fn is_regular_file(path: &Path) -> bool {
@@ -81,8 +77,7 @@ pub struct InspectedFile {
     pub file_name: String,
     pub bytes: u64,
     pub sha256: String,
-    pub bytes_on_disk: Option<u64>,
-}
+    pub bytes_on_disk: Option<u64>}
 
 impl InspectedFile {
     /// Whether the disk agrees with the manifest about the size. The digest is
@@ -100,8 +95,7 @@ impl InspectedFile {
             bytes_on_disk: fs::symlink_metadata(directory.join(file_name))
                 .ok()
                 .filter(|metadata| metadata.is_file())
-                .map(|metadata| metadata.len()),
-        }
+                .map(|metadata| metadata.len())}
     }
 }
 
@@ -164,8 +158,7 @@ pub fn checkpoint_incompatibilities(
                     reasons.push(REASON_MODEL_CONFIG_SHA256);
                 }
             }
-        },
-    }
+        }}
     push_file_size(&mut reasons, files);
     reasons
 }
@@ -183,8 +176,7 @@ fn push_file_size(reasons: &mut Vec<&'static str>, files: &[InspectedFile]) {
 fn version_at_least(have: &str, want: &str) -> bool {
     match (parse_version(have), parse_version(want)) {
         (Some(have), Some(want)) => have >= want,
-        _ => false,
-    }
+        _ => false}
 }
 
 fn parse_version(text: &str) -> Option<(u64, u64, u64)> {

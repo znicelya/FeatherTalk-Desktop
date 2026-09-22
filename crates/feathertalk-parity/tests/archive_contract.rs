@@ -24,7 +24,7 @@ fn write_archive(path: &Path, entries: &[(&str, &[u8])]) {
 
 fn npy_with_shape_and_no_payload(elements: usize) -> Vec<u8> {
     let mut header =
-        format!("{{'descr': '<f4', 'fortran_order': False, 'shape': ({elements},), }}")
+        format!("{{'descr': '<f4', 'fortran_order': False, 'shape': ({elements},)}}")
             .into_bytes();
     let preamble_len = 10;
     let padding = (16 - ((preamble_len + header.len() + 1) % 16)) % 16;

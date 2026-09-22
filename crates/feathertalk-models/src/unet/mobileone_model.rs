@@ -1,4 +1,5 @@
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 use super::{
     blocks::OutConv,
@@ -6,29 +7,27 @@ use super::{
         MobileOneAudioConvHubert, MobileOneDoubleConv, MobileOneDown, MobileOneSeparableBlock,
         MobileOneUp, ReparameterizedMobileOneAudioConvHubert, ReparameterizedMobileOneDoubleConv,
         ReparameterizedMobileOneDown, ReparameterizedMobileOneSeparableBlock,
-        ReparameterizedMobileOneUp, detached_conv2d,
-    },
+        ReparameterizedMobileOneUp, detached_conv2d},
 };
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneUnet<B: Backend> {
-    pub audio_model: MobileOneAudioConvHubert<B>,
-    pub fuse_first: MobileOneDoubleConv<B>,
-    pub fuse_second: MobileOneDoubleConv<B>,
-    pub inc: MobileOneSeparableBlock<B>,
-    pub down1: MobileOneDown<B>,
-    pub down2: MobileOneDown<B>,
-    pub down3: MobileOneDown<B>,
-    pub down4: MobileOneDown<B>,
-    pub up1: MobileOneUp<B>,
-    pub up2: MobileOneUp<B>,
-    pub up3: MobileOneUp<B>,
-    pub up4: MobileOneUp<B>,
-    pub outc: OutConv<B>,
-}
+pub struct MobileOneUnet {
+    pub audio_model: MobileOneAudioConvHubert,
+    pub fuse_first: MobileOneDoubleConv,
+    pub fuse_second: MobileOneDoubleConv,
+    pub inc: MobileOneSeparableBlock,
+    pub down1: MobileOneDown,
+    pub down2: MobileOneDown,
+    pub down3: MobileOneDown,
+    pub down4: MobileOneDown,
+    pub up1: MobileOneUp,
+    pub up2: MobileOneUp,
+    pub up3: MobileOneUp,
+    pub up4: MobileOneUp,
+    pub outc: OutConv}
 
-impl<B: Backend> MobileOneUnet<B> {
-    pub(crate) fn new(channels: [usize; 5], num_conv_branches: usize, device: &B::Device) -> Self {
+impl MobileOneUnet {
+    pub(crate) fn new(channels: [usize; 5], num_conv_branches: usize, device: &Device) -> Self {
         assert!(num_conv_branches > 0);
         assert!(channels.into_iter().all(|channel| channel > 0));
         assert!(channels[1].is_multiple_of(2));
@@ -59,11 +58,10 @@ impl<B: Backend> MobileOneUnet<B> {
             up2: MobileOneUp::new(channels[3], channels[2] / 2, num_conv_branches, device),
             up3: MobileOneUp::new(channels[2], channels[1] / 2, num_conv_branches, device),
             up4: MobileOneUp::new(channels[1], channels[0], num_conv_branches, device),
-            outc: OutConv::new(channels[0], device),
-        }
+            outc: OutConv::new(channels[0], device)}
     }
 
-    pub fn forward(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         validate_inputs(&image, &audio);
         let x1 = self.inc.forward(image);
         let x2 = self.down1.forward(x1.clone());
@@ -82,7 +80,7 @@ impl<B: Backend> MobileOneUnet<B> {
         burn::tensor::activation::sigmoid(self.outc.forward(output))
     }
 
-    pub fn reparameterize(&self) -> MobileOneUnetInference<B> {
+    pub fn reparameterize(&self) -> MobileOneUnetInference {
         MobileOneUnetInference {
             audio_model: self.audio_model.reparameterize(),
             fuse_first: self.fuse_first.reparameterize(),
@@ -97,31 +95,29 @@ impl<B: Backend> MobileOneUnet<B> {
             up3: self.up3.reparameterize(),
             up4: self.up4.reparameterize(),
             outc: OutConv {
-                conv: detached_conv2d(&self.outc.conv),
-            },
+                conv: detached_conv2d(&self.outc.conv)},
         }
     }
 }
 
 #[derive(burn::module::Module, Debug)]
-pub struct MobileOneUnetInference<B: Backend> {
-    pub audio_model: ReparameterizedMobileOneAudioConvHubert<B>,
-    pub fuse_first: ReparameterizedMobileOneDoubleConv<B>,
-    pub fuse_second: ReparameterizedMobileOneDoubleConv<B>,
-    pub inc: ReparameterizedMobileOneSeparableBlock<B>,
-    pub down1: ReparameterizedMobileOneDown<B>,
-    pub down2: ReparameterizedMobileOneDown<B>,
-    pub down3: ReparameterizedMobileOneDown<B>,
-    pub down4: ReparameterizedMobileOneDown<B>,
-    pub up1: ReparameterizedMobileOneUp<B>,
-    pub up2: ReparameterizedMobileOneUp<B>,
-    pub up3: ReparameterizedMobileOneUp<B>,
-    pub up4: ReparameterizedMobileOneUp<B>,
-    pub outc: OutConv<B>,
-}
+pub struct MobileOneUnetInference {
+    pub audio_model: ReparameterizedMobileOneAudioConvHubert,
+    pub fuse_first: ReparameterizedMobileOneDoubleConv,
+    pub fuse_second: ReparameterizedMobileOneDoubleConv,
+    pub inc: ReparameterizedMobileOneSeparableBlock,
+    pub down1: ReparameterizedMobileOneDown,
+    pub down2: ReparameterizedMobileOneDown,
+    pub down3: ReparameterizedMobileOneDown,
+    pub down4: ReparameterizedMobileOneDown,
+    pub up1: ReparameterizedMobileOneUp,
+    pub up2: ReparameterizedMobileOneUp,
+    pub up3: ReparameterizedMobileOneUp,
+    pub up4: ReparameterizedMobileOneUp,
+    pub outc: OutConv}
 
-impl<B: Backend> MobileOneUnetInference<B> {
-    pub fn forward(&self, image: Tensor<B, 4>, audio: Tensor<B, 4>) -> Tensor<B, 4> {
+impl MobileOneUnetInference {
+    pub fn forward(&self, image: Tensor<4>, audio: Tensor<4>) -> Tensor<4> {
         validate_inputs(&image, &audio);
         let x1 = self.inc.forward(image);
         let x2 = self.down1.forward(x1.clone());
@@ -141,7 +137,7 @@ impl<B: Backend> MobileOneUnetInference<B> {
     }
 }
 
-fn validate_inputs<B: Backend>(image: &Tensor<B, 4>, audio: &Tensor<B, 4>) {
+fn validate_inputs(image: &Tensor<4>, audio: &Tensor<4>) {
     let [image_batch, image_channels, image_height, image_width] = image.dims();
     let [audio_batch, audio_channels, audio_height, audio_width] = audio.dims();
     assert_eq!(

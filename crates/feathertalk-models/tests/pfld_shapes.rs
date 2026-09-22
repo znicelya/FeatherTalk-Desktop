@@ -1,11 +1,8 @@
-use burn::tensor::Tensor;
-use burn::{module::Module, tensor::backend::Backend};
-use feathertalk_models::backend::CpuBackend;
+use burn::{module::Module, tensor::Tensor};
 use feathertalk_models::{
-    GhostOneBottleneck, MobileOneBlock, PFLD_GhostOne, PFLD_OUTPUT_VALUES, PfldConfig,
-};
+    GhostOneBottleneck, MobileOneBlock, PFLD_GhostOne, PFLD_OUTPUT_VALUES, PfldConfig};
 
-fn assert_module<B: Backend, M: Module<B>>() {}
+fn assert_module<M: Module>() {}
 
 #[test]
 fn production_config_is_fixed() {
@@ -19,35 +16,35 @@ fn production_config_is_fixed() {
 
 #[test]
 fn pfld_graph_is_a_burn_module() {
-    assert_module::<CpuBackend, MobileOneBlock<CpuBackend>>();
-    assert_module::<CpuBackend, GhostOneBottleneck<CpuBackend>>();
-    assert_module::<CpuBackend, PFLD_GhostOne<CpuBackend>>();
+    assert_module::<MobileOneBlock>();
+    assert_module::<GhostOneBottleneck>();
+    assert_module::<PFLD_GhostOne>();
 }
 
 #[test]
 fn production_model_shape_is_declared() {
     let device = Default::default();
-    let model = PFLD_GhostOne::<CpuBackend>::new(PfldConfig::production(), &device);
-    let input = Tensor::<CpuBackend, 4>::zeros([1, 3, 192, 192], &device);
+    let model = PFLD_GhostOne::new(PfldConfig::production(), &device);
+    let input = Tensor::<4>::zeros([1, 3, 192, 192], &device);
     assert_eq!(model.forward(input).dims(), [1, PFLD_OUTPUT_VALUES]);
 }
 
 #[test]
 fn ghost_one_bottleneck_preserves_expected_stride_shapes() {
     let device = Default::default();
-    let down = GhostOneBottleneck::<CpuBackend>::new(32, 48, 40, 2, 6, &device);
-    let same = GhostOneBottleneck::<CpuBackend>::new(40, 60, 40, 1, 6, &device);
-    let input = Tensor::<CpuBackend, 4>::zeros([1, 32, 96, 96], &device);
+    let down = GhostOneBottleneck::new(32, 48, 40, 2, 6, &device);
+    let same = GhostOneBottleneck::new(40, 60, 40, 1, 6, &device);
+    let input = Tensor::<4>::zeros([1, 32, 96, 96], &device);
     assert_eq!(down.forward(input).dims(), [1, 40, 48, 48]);
-    let input = Tensor::<CpuBackend, 4>::zeros([1, 40, 48, 48], &device);
+    let input = Tensor::<4>::zeros([1, 40, 48, 48], &device);
     assert_eq!(same.forward(input).dims(), [1, 40, 48, 48]);
 }
 
 #[test]
 fn production_model_supports_multiple_batch_items() {
     let device = Default::default();
-    let model = PFLD_GhostOne::<CpuBackend>::new(PfldConfig::production(), &device);
-    let input = Tensor::<CpuBackend, 4>::zeros([2, 3, 192, 192], &device);
+    let model = PFLD_GhostOne::new(PfldConfig::production(), &device);
+    let input = Tensor::<4>::zeros([2, 3, 192, 192], &device);
     assert_eq!(model.forward(input).dims(), [2, 220]);
 }
 

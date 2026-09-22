@@ -1,24 +1,24 @@
 use super::{InvertedResidual, InvertedResidualConfig};
 use crate::unet::config::{batch_norm, conv2d};
 use burn::nn::{BatchNorm, Relu, conv::Conv2d};
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::Tensor;
+use burn::tensor::Device;
 
 #[derive(burn::module::Module, Debug)]
-pub struct AudioConvHubert<B: Backend> {
-    pub conv1: InvertedResidual<B>,
-    pub conv2: InvertedResidual<B>,
-    pub conv3: Conv2d<B>,
-    pub bn3: BatchNorm<B>,
-    pub conv4: InvertedResidual<B>,
-    pub conv5: Conv2d<B>,
-    pub bn5: BatchNorm<B>,
+pub struct AudioConvHubert {
+    pub conv1: InvertedResidual,
+    pub conv2: InvertedResidual,
+    pub conv3: Conv2d,
+    pub bn3: BatchNorm,
+    pub conv4: InvertedResidual,
+    pub conv5: Conv2d,
+    pub bn5: BatchNorm,
     pub relu: Relu,
-    pub conv6: InvertedResidual<B>,
-    pub conv7: InvertedResidual<B>,
-}
+    pub conv6: InvertedResidual,
+    pub conv7: InvertedResidual}
 
-impl<B: Backend> AudioConvHubert<B> {
-    pub(crate) fn new(channels: [usize; 5], device: &B::Device) -> Self {
+impl AudioConvHubert {
+    pub(crate) fn new(channels: [usize; 5], device: &Device) -> Self {
         Self {
             conv1: InvertedResidualConfig::new(16, channels[1])
                 .with_expansion(2)
@@ -53,11 +53,10 @@ impl<B: Backend> AudioConvHubert<B> {
                 .init(device),
             conv7: InvertedResidualConfig::new(channels[4], channels[4])
                 .with_expansion(2)
-                .init(device),
-        }
+                .init(device)}
     }
 
-    pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
+    pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
         let output = self.conv1.forward(input);
         let output = self.conv2.forward(output);
         let output = self

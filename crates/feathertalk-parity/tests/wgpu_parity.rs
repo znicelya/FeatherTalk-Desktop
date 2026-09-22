@@ -1,8 +1,7 @@
 use feathertalk_parity::{
     archive::GoldenArchive,
     fixture::{ForwardCase, run_wgpu_forward, run_wgpu_train_step},
-    probe::GraphicsSelection,
-};
+    probe::GraphicsSelection};
 
 fn golden_archive() -> GoldenArchive {
     let root = env!("CARGO_MANIFEST_DIR");

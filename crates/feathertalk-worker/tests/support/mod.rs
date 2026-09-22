@@ -11,39 +11,31 @@ use std::sync::Mutex;
 use burn::{
     module::Module,
     optim::AdamConfig,
-    tensor::{Tensor, backend::Backend},
-};
+    tensor::{Tensor}};
 use feathertalk_audio::{FeatureMatrix, write_feature_file};
 use feathertalk_domain::{
-    Progress, TaskStage, TrainParams, TrainingMode as DomainTrainingMode, UnetVariant,
-};
+    Progress, TaskStage, TrainParams, TrainingMode as DomainTrainingMode, UnetVariant};
 use feathertalk_export::{
     LicenseBundle, LicenseEntry, ModelConfiguration, ModelDescription, PackageBuildRequest,
-    SourceManifest, TrainingManifest, write_model_package,
-};
+    SourceManifest, TrainingManifest, write_model_package};
 use feathertalk_inference::{
-    BgrFrame, CommandSpec, FrameReader, InferenceError, RawVideoSink, RawVideoSinkFactory,
-};
+    BgrFrame, CommandSpec, FrameReader, InferenceError, RawVideoSink, RawVideoSinkFactory};
 use feathertalk_media::CancellationToken;
 use feathertalk_models::{
     feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder},
-    unet::{MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet, OriginalUnetConfig},
-};
+    unet::{MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet, OriginalUnetConfig}};
 use feathertalk_project::{
     AssetManifest, AssetPackageState, FeatureType, ModelSelection, ProjectManifest,
-    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic,
-};
+    TaskHistoryEntry, TaskHistoryStatus, lock_asset_package, write_project_manifest_atomic};
 use feathertalk_training::{
     CheckpointDescriptor, DATA_LOADER_STATE_SCHEMA_VERSION, DataLoaderConfig, DataLoaderState,
     PerceptualFeatureExtractor, Provenance, RandomAlgorithm, SamplingConfig, SamplingKind,
     TRAINING_STATE_SCHEMA_VERSION, TrainingCheckpointState, TrainingDataset, TrainingError,
-    TrainingSample, save_training_checkpoint,
-};
+    TrainingSample, save_training_checkpoint};
 use feathertalk_training_data::{FrameSample, TrainingItem};
 use feathertalk_worker::{
     RenderBackend, RenderDevice, TRAINING_SEED, TaskReporter, TrainBackend, TrainDevice,
-    TrainingPaths, TrainingPlan, checkpoint_descriptor, project_assets, training_config,
-};
+    TrainingPaths, TrainingPlan, checkpoint_descriptor, project_assets, training_config};
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
 
@@ -71,8 +63,8 @@ pub fn on_step_stack(name: &str, body: impl FnOnce() + Send + 'static) {
 #[derive(Debug, Clone, Copy)]
 pub struct IdentityExtractor;
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for IdentityExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         image
     }
 }
@@ -84,20 +76,18 @@ impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
 #[derive(Debug)]
 pub struct PoisonedExtractor {
     calls: Cell<usize>,
-    poison_from: usize,
-}
+    poison_from: usize}
 
 impl PoisonedExtractor {
     pub fn after(calls: usize) -> Self {
         Self {
             calls: Cell::new(0),
-            poison_from: calls,
-        }
+            poison_from: calls}
     }
 }
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for PoisonedExtractor {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for PoisonedExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         let seen = self.calls.get().saturating_add(1);
         self.calls.set(seen);
         if seen > self.poison_from {
@@ -112,17 +102,16 @@ impl<B: Backend> PerceptualFeatureExtractor<B> for PoisonedExtractor {
 /// `fork` pushes each `Param` through `val()`; without it a clone would copy the
 /// lazy initialiser instead of the weights, and two clones would draw different
 /// numbers (burn-core 0.21 `module/param/base.rs`).
-pub fn model(device: &TrainDevice) -> OriginalUnet<TrainBackend> {
+pub fn model(device: &TrainDevice) -> OriginalUnet{
     OriginalUnetConfig::parity_micro()
-        .init::<TrainBackend>(device)
+        .init(device)
         .fork(device)
 }
 
 /// A dataset that synthesises every sample, so the loop can be driven without a
 /// locked project on disk. This is what Task 1 opened `FrameSample::new` for.
 pub struct StubDataset {
-    frame_count: u64,
-}
+    frame_count: u64}
 
 impl StubDataset {
     pub fn new(frame_count: u64) -> Self {
@@ -148,9 +137,7 @@ impl TrainingDataset for StubDataset {
                 ..
             } => TrainingItem::TemporalPair {
                 first: frame(*first_target_index)?,
-                second: frame(*second_target_index)?,
-            },
-        })
+                second: frame(*second_target_index)?}})
     }
 }
 
@@ -169,15 +156,13 @@ fn frame(index: u64) -> Result<FrameSample, TrainingError> {
 /// Records every event, and can cancel a token once enough have arrived.
 pub struct Recorder {
     events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
-    cancel_after: Option<(usize, CancellationToken)>,
-}
+    cancel_after: Option<(usize, CancellationToken)>}
 
 impl Recorder {
     pub fn new() -> Self {
         Self {
             events: Mutex::new(Vec::new()),
-            cancel_after: None,
-        }
+            cancel_after: None}
     }
 
     /// Cancels `token` once `events` events have been reported, which is how a
@@ -185,8 +170,7 @@ impl Recorder {
     pub fn cancelling_after(events: usize, token: CancellationToken) -> Self {
         Self {
             events: Mutex::new(Vec::new()),
-            cancel_after: Some((events, token)),
-        }
+            cancel_after: Some((events, token))}
     }
 
     pub fn events(&self) -> Vec<(TaskStage, Option<Progress>)> {
@@ -221,8 +205,7 @@ pub fn micro_plan(
         variant: UnetVariant::OriginalUnet,
         epochs,
         batch_size: 1,
-        resume: resume_from.is_some(),
-    };
+        resume: resume_from.is_some()};
     let configuration = ModelConfiguration::original_unet(&OriginalUnetConfig::parity_micro());
     TrainingPlan {
         mode,
@@ -232,8 +215,7 @@ pub fn micro_plan(
         config: training_config(&params),
         descriptor: checkpoint_descriptor(&configuration).expect("the configuration serialises"),
         paths: TrainingPaths::new(project_dir),
-        resume_from,
-    }
+        resume_from}
 }
 
 /// The three inference inputs a locked project holds, plus a placeholder for the
@@ -307,9 +289,7 @@ pub fn lock_render_tree(project_dir: &Path, frame_count: u64) {
             task_id: "task-1".into(),
             kind: "preprocess".into(),
             status: TaskHistoryStatus::Completed,
-            updated_at: "2026-09-04T10:00:00Z".into(),
-        }],
-    };
+            updated_at: "2026-09-04T10:00:00Z".into()}]};
     write_project_manifest_atomic(&project_dir.join("project.json"), &manifest)
         .expect("the project manifest is written");
     lock_asset_package(
@@ -326,8 +306,7 @@ pub fn lock_render_tree(project_dir: &Path, frame_count: u64) {
             feature_type: FeatureType::FeatherHubert,
             feature_shape: [frame_count, 2, 1024],
             landmark_model_sha256: "a".repeat(64),
-            feature_model_sha256: "b".repeat(64),
-        },
+            feature_model_sha256: "b".repeat(64)},
     )
     .expect("the asset package locks");
 }
@@ -342,15 +321,13 @@ pub struct StubFrameReader {
     pub frames: Mutex<Vec<usize>>,
     /// The index whose read fails, for the tests that need a failure in the
     /// middle of the loop rather than before it starts.
-    pub fail_at: Option<usize>,
-}
+    pub fail_at: Option<usize>}
 
 impl StubFrameReader {
     pub fn failing_at(index: usize) -> Self {
         Self {
             frames: Mutex::new(Vec::new()),
-            fail_at: Some(index),
-        }
+            fail_at: Some(index)}
     }
 }
 
@@ -365,8 +342,7 @@ impl FrameReader for StubFrameReader {
             return Err(InferenceError::FrameReader {
                 index,
                 path: path.to_owned(),
-                message: "injected reader failure".into(),
-            });
+                message: "injected reader failure".into()});
         }
         // A value that follows the index, so an all-zero frame would be visible.
         let value = (index as u8).wrapping_add(1);
@@ -382,12 +358,10 @@ impl FrameReader for StubFrameReader {
 #[derive(Debug, Default)]
 pub struct MemorySinkFactory {
     pub frames: Mutex<Vec<usize>>,
-    pub staging: Mutex<Option<PathBuf>>,
-}
+    pub staging: Mutex<Option<PathBuf>>}
 
 struct MemorySink<'a> {
-    factory: &'a MemorySinkFactory,
-}
+    factory: &'a MemorySinkFactory}
 
 impl RawVideoSink for MemorySink<'_> {
     fn write_frame(&mut self, frame: &BgrFrame) -> Result<(), InferenceError> {
@@ -425,9 +399,9 @@ impl RawVideoSinkFactory for MemorySinkFactory {
 ///
 /// `parity_micro` rather than `production`: the shapes are the ones inference
 /// requires, and the parameter count is small enough for a unit test.
-pub fn render_model(device: &RenderDevice) -> OriginalUnet<RenderBackend> {
+pub fn render_model(device: &RenderDevice) -> OriginalUnet {
     OriginalUnetConfig::parity_micro()
-        .init::<RenderBackend>(device)
+        .init(device)
         .fork(device)
 }
 
@@ -461,8 +435,7 @@ pub fn published_onnx_hubert_package(root: &Path, name: &str) -> PathBuf {
             expansion: 2,
             num_blocks: 1,
             output_dim: 1024,
-            dropout: 0.0,
-        },
+            dropout: 0.0},
     )
 }
 
@@ -483,16 +456,14 @@ fn write_hubert_package(
             component: "synthetic FeatherHuBERT fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/feather-hubert".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(
         &licenses_path,
         serde_json::to_vec(&licenses).expect("the bundle serialises"),
     )
     .expect("the licenses fixture is written");
     let device = RenderDevice::default();
-    let model = config.init::<RenderBackend>(&device);
+    let model = config.init(&device);
     let request = PackageBuildRequest {
         destination: root.join(name),
         description: ModelDescription::feather_hubert(config.clone()),
@@ -503,18 +474,16 @@ fn write_hubert_package(
             version: "1".to_owned(),
             file_name: source_name,
             sha256: source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path,
         created_at: "2026-08-27T00:00:00Z".to_owned(),
         minimum_app_version: minimum_app_version.to_owned(),
-        training: TrainingManifest::default(),
-    };
-    write_model_package::<RenderBackend, FeatherHubertEncoder<RenderBackend>, _>(
+        training: TrainingManifest::default()};
+    write_model_package::<FeatherHubertEncoder, _>(
         &request,
         &model,
         &device,
-        |device| config.init::<RenderBackend>(device),
+        |device| config.init(device),
     )
     .expect("the package is written");
     request.destination
@@ -538,9 +507,7 @@ pub fn published_unet_package(root: &Path, name: &str) -> PathBuf {
             component: "synthetic UNet fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/original-unet".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(
         &licenses_path,
         serde_json::to_vec(&licenses).expect("the bundle serialises"),
@@ -548,7 +515,7 @@ pub fn published_unet_package(root: &Path, name: &str) -> PathBuf {
     .expect("the licenses fixture is written");
     let config = OriginalUnetConfig::parity_micro();
     let device = RenderDevice::default();
-    let model = config.init::<RenderBackend>(&device);
+    let model = config.init(&device);
     let request = PackageBuildRequest {
         destination: root.join(name),
         description: ModelDescription::original_unet(config.clone()),
@@ -559,18 +526,16 @@ pub fn published_unet_package(root: &Path, name: &str) -> PathBuf {
             version: "1".to_owned(),
             file_name: source_name,
             sha256: source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path,
         created_at: "2026-09-05T00:00:00Z".to_owned(),
         minimum_app_version: "0.1.0".to_owned(),
-        training: TrainingManifest::default(),
-    };
-    write_model_package::<RenderBackend, OriginalUnet<RenderBackend>, _>(
+        training: TrainingManifest::default()};
+    write_model_package::<OriginalUnet, _>(
         &request,
         &model,
         &device,
-        |device| config.init::<RenderBackend>(device),
+        |device| config.init(device),
     )
     .expect("the package is written");
     request.destination
@@ -593,9 +558,7 @@ pub fn published_mobileone_package(root: &Path, name: &str) -> PathBuf {
             component: "synthetic MobileOne UNet fixture".to_owned(),
             license_id: "LicenseRef-Test".to_owned(),
             source_url: "https://example.invalid/mobileone-unet".to_owned(),
-            notice: "test-only local record".to_owned(),
-        }],
-    };
+            notice: "test-only local record".to_owned()}]};
     fs::write(
         &licenses_path,
         serde_json::to_vec(&licenses).expect("the bundle serialises"),
@@ -613,19 +576,17 @@ pub fn published_mobileone_package(root: &Path, name: &str) -> PathBuf {
             version: "1".to_owned(),
             file_name: source_name,
             sha256: source_sha256,
-            url: None,
-        },
+            url: None},
         licenses_path,
         created_at: "2026-09-05T00:00:00Z".to_owned(),
         minimum_app_version: "0.1.0".to_owned(),
-        training: TrainingManifest::default(),
-    };
-    let model = config.init::<RenderBackend>(&device).reparameterize();
-    write_model_package::<RenderBackend, MobileOneUnetInference<RenderBackend>, _>(
+        training: TrainingManifest::default()};
+    let model = config.init(&device).reparameterize();
+    write_model_package::<MobileOneUnetInference, _>(
         &request,
         &model,
         &device,
-        |device| config.init::<RenderBackend>(device).reparameterize(),
+        |device| config.init(device).reparameterize(),
     )
     .expect("the package is written");
     request.destination
@@ -645,8 +606,7 @@ pub fn checkpoint_state(project_dir: &Path, frame_count: u64) -> TrainingCheckpo
         variant: UnetVariant::OriginalUnet,
         epochs: 1,
         batch_size: 1,
-        resume: false,
-    };
+        resume: false};
     let config = training_config(&params);
     let batch_size = config.batch_size;
     let temporal_stride = config.temporal_stride;
@@ -663,28 +623,22 @@ pub fn checkpoint_state(project_dir: &Path, frame_count: u64) -> TrainingCheckpo
                 seed: TRAINING_SEED,
                 sampling: SamplingConfig {
                     kind: SamplingKind::SingleFrame,
-                    temporal_stride,
-                },
-            },
+                    temporal_stride}},
             frame_count,
             epoch: 1,
-            next_position: 0,
-        },
+            next_position: 0},
         training_config: config,
         asset_provenance: Provenance {
-            entries: BTreeMap::new(),
-        },
+            entries: BTreeMap::new()},
         model_provenance: Provenance {
-            entries: BTreeMap::new(),
-        },
-    }
+            entries: BTreeMap::new()}}
 }
 
 /// Writes a real checkpoint whose manifest carries `descriptor`. `directory` must
 /// not exist: `save_training_checkpoint` creates it.
 pub fn write_checkpoint(directory: &Path, descriptor: CheckpointDescriptor) {
     let device = TrainDevice::default();
-    save_training_checkpoint::<TrainBackend, _, _>(
+    save_training_checkpoint::<_, _>(
         directory,
         &model(&device),
         &AdamConfig::new().init(),

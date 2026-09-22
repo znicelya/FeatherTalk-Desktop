@@ -23,8 +23,7 @@ fn garbage_bytes_name_the_frame_that_is_broken() {
     let error = probe_jpeg_geometry(path, b"not a jpeg at all").unwrap_err();
     let PipelineError::FrameUndecodable {
         path: reported,
-        message,
-    } = error
+        message} = error
     else {
         panic!("garbage must be an undecodable frame: {error:?}");
     };

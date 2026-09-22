@@ -1,17 +1,14 @@
 use std::{
     collections::BTreeMap,
     fs,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
-use burn::tensor::backend::Backend;
-use burn_store::{ApplyError, ModuleSnapshot, ModuleStore, SafetensorsStore, TensorSnapshot};
+use burn_store::{ApplyError, ModuleSnapshot, ModuleStore, SafetensorsStore};
 use sha2::Digest;
 
 use crate::{
     FileManifest, LicenseBundle, ModelDescription, ModelPackageManifest, PackageError,
-    SourceManifest, TensorContract, TensorSpec, TrainingManifest, io,
-};
+    SourceManifest, TensorContract, TensorSpec, TrainingManifest, io};
 
 #[derive(Debug, Clone)]
 pub struct PackageBuildRequest {
@@ -22,39 +19,35 @@ pub struct PackageBuildRequest {
     pub licenses_path: PathBuf,
     pub created_at: String,
     pub minimum_app_version: String,
-    pub training: TrainingManifest,
-}
+    pub training: TrainingManifest}
 
 #[derive(Debug, Clone)]
 pub struct PackageBuildReport {
-    pub manifest: ModelPackageManifest,
-}
+    pub manifest: ModelPackageManifest}
 
-pub fn write_model_package<B, M, F>(
+pub fn write_model_package<M, F>(
     request: &PackageBuildRequest,
     model: &M,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     factory: F,
 ) -> Result<PackageBuildReport, PackageError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
-    F: Fn(&B::Device) -> M,
+    M: ModuleSnapshot,
+    F: Fn(&burn::tensor::Device) -> M,
 {
     write_model_package_with_validation_hook(request, model, device, factory, || Ok(()))
 }
 
-pub(crate) fn write_model_package_with_validation_hook<B, M, F, H>(
+pub(crate) fn write_model_package_with_validation_hook<M, F, H>(
     request: &PackageBuildRequest,
     model: &M,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     factory: F,
     validation_hook: H,
 ) -> Result<PackageBuildReport, PackageError>
 where
-    B: Backend,
-    M: ModuleSnapshot<B>,
-    F: Fn(&B::Device) -> M,
+    M: ModuleSnapshot,
+    F: Fn(&burn::tensor::Device) -> M,
     H: FnOnce() -> Result<(), PackageError>,
 {
     request.description.validate()?;
@@ -96,8 +89,7 @@ where
         model: model_manifest,
         licenses: license_manifest,
         optimizer: None,
-        training_state: None,
-    };
+        training_state: None};
     manifest.validate()?;
     let manifest_bytes = serde_json::to_vec_pretty(&manifest)
         .map_err(|error| PackageError::Publication(format!("serialize manifest: {error}")))?;
@@ -108,10 +100,9 @@ where
         &FileManifest {
             file_name: crate::MANIFEST_FILE_NAME.to_owned(),
             bytes: u64::try_from(manifest_bytes.len()).expect("manifest length fits u64"),
-            sha256: hex::encode(sha2::Sha256::digest(&manifest_bytes)),
-        },
+            sha256: hex::encode(sha2::Sha256::digest(&manifest_bytes))},
     )?;
-    validate_staged_round_trip::<B, M, F>(&staging_path, &manifest, model, device, factory)?;
+    validate_staged_round_trip::<M, F>(&staging_path, &manifest, model, device, factory)?;
     validate_source_snapshot(&request.source_path, &request.source)?;
     validation_hook()?;
     io::sync_directory(&staging_path)?;
@@ -142,16 +133,15 @@ pub fn read_package_manifest(
     Ok(manifest)
 }
 
-pub fn load_model_package<B, M, F>(
+pub fn load_model_package<M, F>(
     directory: impl AsRef<Path>,
     expected: &ModelDescription,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     factory: F,
 ) -> Result<(M, ModelPackageManifest), PackageError>
-where
-    B: Backend,
-    M: ModuleSnapshot<B>,
-    F: Fn(&B::Device) -> M,
+    where
+    M: ModuleSnapshot,
+    F: Fn(&burn::tensor::Device) -> M,
 {
     let directory = directory.as_ref();
     expected.validate()?;
@@ -174,7 +164,7 @@ where
         .allow_partial(true)
         .validate(false);
     let snapshots = store
-        .get_all_snapshots()
+        .get_all_tensors()
         .map_err(|error| PackageError::Store(error.to_string()))?;
     validate_snapshot_contract(snapshots, &manifest.tensors)?;
     let mut model = factory(device);
@@ -221,26 +211,24 @@ fn validate_source_snapshot(path: &Path, source: &SourceManifest) -> Result<(), 
         return Err(PackageError::HashMismatch {
             file: source.file_name.clone(),
             expected: source.sha256.clone(),
-            actual: hash,
-        });
+            actual: hash});
     }
     Ok(())
 }
 
-fn validate_staged_round_trip<B, M, F>(
+fn validate_staged_round_trip<M, F>(
     staging: &Path,
     manifest: &ModelPackageManifest,
     original: &M,
-    device: &B::Device,
+    device: &burn::tensor::Device,
     factory: F,
 ) -> Result<(), PackageError>
-where
-    B: Backend,
-    M: ModuleSnapshot<B>,
-    F: Fn(&B::Device) -> M,
+    where
+    M: ModuleSnapshot,
+    F: Fn(&burn::tensor::Device) -> M,
 {
     let (loaded, parsed) =
-        load_model_package::<B, M, _>(staging, &manifest.description(), device, factory)?;
+        load_model_package::<M, _>(staging, &manifest.description(), device, factory)?;
     if parsed != *manifest {
         return Err(PackageError::Publication(
             "staged manifest changed after writing".to_owned(),
@@ -249,7 +237,7 @@ where
     compare_module_snapshots(original, &loaded)
 }
 
-pub(crate) fn module_tensor_contract<B: Backend, M: ModuleSnapshot<B>>(
+pub(crate) fn module_tensor_contract<M: ModuleSnapshot>(
     module: &M,
 ) -> Result<TensorContract, PackageError> {
     let mut entries = module
@@ -259,7 +247,7 @@ pub(crate) fn module_tensor_contract<B: Backend, M: ModuleSnapshot<B>>(
             if snapshot.dtype != burn::tensor::DType::F32 {
                 return Err(PackageError::InvalidManifest(format!(
                     "tensor {} must be f32, got {:?}",
-                    snapshot.full_path(),
+                    snapshot.name.clone(),
                     snapshot.dtype
                 )));
             }
@@ -273,10 +261,9 @@ pub(crate) fn module_tensor_contract<B: Backend, M: ModuleSnapshot<B>>(
                 })
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(TensorSpec {
-                name: snapshot.full_path(),
+                name: snapshot.name.clone(),
                 shape,
-                dtype: snapshot.dtype.name().to_owned(),
-            })
+                dtype: snapshot.dtype.name().to_owned()})
         })
         .collect::<Result<Vec<_>, PackageError>>()?;
     entries.sort_by(|left, right| left.name.cmp(&right.name));
@@ -297,12 +284,11 @@ pub(crate) fn module_tensor_contract<B: Backend, M: ModuleSnapshot<B>>(
     Ok(TensorContract {
         tensor_count: entries.len(),
         total_elements: total,
-        entries,
-    })
+        entries})
 }
 
 fn validate_snapshot_contract(
-    snapshots: &BTreeMap<String, TensorSnapshot>,
+    snapshots: &BTreeMap<String, burn_store::burn_pack::Tensor>,
     expected: &TensorContract,
 ) -> Result<(), PackageError> {
     let actual = snapshots
@@ -314,8 +300,7 @@ fn validate_snapshot_contract(
                 .iter()
                 .map(|dimension| i64::try_from(*dimension).unwrap_or(i64::MAX))
                 .collect(),
-            dtype: snapshot.dtype.name().to_owned(),
-        })
+            dtype: snapshot.dtype.name().to_owned()})
         .collect::<Vec<_>>();
     if actual != expected.entries {
         return Err(PackageError::InvalidManifest(
@@ -351,19 +336,19 @@ fn validate_apply_result(result: &burn_store::ApplyResult) -> Result<(), Package
     Ok(())
 }
 
-fn compare_module_snapshots<B: Backend, M: ModuleSnapshot<B>>(
+fn compare_module_snapshots<M: ModuleSnapshot>(
     left: &M,
     right: &M,
 ) -> Result<(), PackageError> {
     let left = left
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), snapshot))
         .collect::<BTreeMap<_, _>>();
     let right = right
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot))
+        .map(|snapshot| (snapshot.name.clone(), snapshot))
         .collect::<BTreeMap<_, _>>();
     if left.len() != right.len() {
         return Err(PackageError::Publication(
@@ -379,11 +364,9 @@ fn compare_module_snapshots<B: Backend, M: ModuleSnapshot<B>>(
                 "round-trip tensor metadata mismatch: {path}"
             )));
         }
-        if expected
-            .to_data()
+        if burn_store::bridge::to_data(&expected)
             .map_err(|error| PackageError::Publication(error.to_string()))?
-            != actual
-                .to_data()
+            != burn_store::bridge::to_data(&actual)
                 .map_err(|error| PackageError::Publication(error.to_string()))?
         {
             return Err(PackageError::Publication(format!(

@@ -1,8 +1,7 @@
 use burn_store::ModuleSnapshot;
 use feathertalk_export::onnx::{
     ONNX_FLOAT_DATA_TYPE, OnnxModelContract, OnnxModelKind, OnnxModelProto, OnnxTensorContract,
-    export_feather_hubert_onnx, validate_model_contract,
-};
+    export_feather_hubert_onnx, validate_model_contract};
 use feathertalk_models::feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder};
 use prost::Message;
 
@@ -23,10 +22,9 @@ fn feather_hubert_export_contains_inference_graph_and_all_weights() {
         expansion: 2,
         num_blocks: 1,
         output_dim: 1024,
-        dropout: 0.0,
-    };
+        dropout: 0.0};
     let device = Default::default();
-    let model: FeatherHubertEncoder<CpuBackend> = config.init(&device);
+    let model: FeatherHubertEncoder = config.init(&device);
 
     let bytes = export_feather_hubert_onnx(&model, &config).unwrap();
     validate_model_contract(&bytes, &contract()).unwrap();
@@ -65,7 +63,7 @@ fn feather_hubert_export_contains_inference_graph_and_all_weights() {
         .map(|tensor| tensor.name.as_str())
         .collect::<std::collections::BTreeSet<_>>();
     for snapshot in model.collect(None, None, false) {
-        assert!(initializer_names.contains(snapshot.full_path().as_str()));
+        assert!(initializer_names.contains(snapshot.name.clone().as_str()));
     }
 }
 
@@ -76,10 +74,9 @@ fn tcn_depthwise_convolutions_preserve_residual_length_with_symmetric_padding() 
         expansion: 2,
         num_blocks: 4,
         output_dim: 1024,
-        dropout: 0.0,
-    };
+        dropout: 0.0};
     let device = Default::default();
-    let model: FeatherHubertEncoder<CpuBackend> = config.init(&device);
+    let model: FeatherHubertEncoder = config.init(&device);
 
     let bytes = export_feather_hubert_onnx(&model, &config).unwrap();
     let proto = OnnxModelProto::decode(bytes.as_slice()).unwrap();
@@ -108,10 +105,9 @@ fn group_norm_reshapes_by_group_before_instance_normalization() {
         expansion: 2,
         num_blocks: 1,
         output_dim: 1024,
-        dropout: 0.0,
-    };
+        dropout: 0.0};
     let device = Default::default();
-    let model: FeatherHubertEncoder<CpuBackend> = config.init(&device);
+    let model: FeatherHubertEncoder = config.init(&device);
 
     let bytes = export_feather_hubert_onnx(&model, &config).unwrap();
     let proto = OnnxModelProto::decode(bytes.as_slice()).unwrap();

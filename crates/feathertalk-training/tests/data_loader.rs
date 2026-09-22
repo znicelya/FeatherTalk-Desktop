@@ -1,14 +1,12 @@
 use feathertalk_training::{
     DATA_LOADER_STATE_SCHEMA_VERSION, DataLoaderConfig, DataLoaderState, PreparedBatch,
     RandomAlgorithm, SamplingConfig, SamplingKind, TrainingDataLoader, TrainingDataset,
-    TrainingError, TrainingSample,
-};
+    TrainingError, TrainingSample};
 use std::{cell::Cell, rc::Rc};
 
 #[derive(Debug)]
 struct PlanDataset {
-    frames: u64,
-}
+    frames: u64}
 
 impl TrainingDataset for PlanDataset {
     type Item = TrainingSample;
@@ -49,9 +47,7 @@ fn single_and_temporal_configs_expose_the_fixed_contract() {
             seed: 7,
             sampling: SamplingConfig {
                 kind: SamplingKind::SingleFrame,
-                temporal_stride: 0,
-            },
-        }
+                temporal_stride: 0}}
     );
     assert_eq!(
         DataLoaderConfig::temporal_pair(3, 42, 2),
@@ -60,9 +56,7 @@ fn single_and_temporal_configs_expose_the_fixed_contract() {
             seed: 42,
             sampling: SamplingConfig {
                 kind: SamplingKind::TemporalPair,
-                temporal_stride: 2,
-            },
-        }
+                temporal_stride: 2}}
     );
 }
 
@@ -75,9 +69,7 @@ fn invalid_config_and_state_are_rejected_before_loading() {
             seed: 7,
             sampling: SamplingConfig {
                 kind: SamplingKind::SingleFrame,
-                temporal_stride: 1,
-            },
-        },
+                temporal_stride: 1}},
         DataLoaderConfig::temporal_pair(2, 7, 0),
     ];
     for config in invalid {
@@ -102,8 +94,7 @@ fn invalid_config_and_state_are_rejected_before_loading() {
         config: DataLoaderConfig::single_frame(2, 7),
         frame_count: 5,
         epoch: 0,
-        next_position: 0,
-    };
+        next_position: 0};
     assert!(matches!(
         unsupported_schema.validate(5),
         Err(TrainingError::InvalidDataLoaderState(_))
@@ -115,8 +106,7 @@ fn invalid_config_and_state_are_rejected_before_loading() {
         config: DataLoaderConfig::single_frame(2, 7),
         frame_count: 5,
         epoch: 0,
-        next_position: 5,
-    };
+        next_position: 5};
     assert!(matches!(
         cursor_at_end.validate(5),
         Err(TrainingError::InvalidDataLoaderState(_))
@@ -128,8 +118,7 @@ fn invalid_config_and_state_are_rejected_before_loading() {
         config: DataLoaderConfig::temporal_pair(2, 7, 5),
         frame_count: 5,
         epoch: 0,
-        next_position: 0,
-    };
+        next_position: 0};
     assert!(matches!(
         invalid_temporal_state.validate(5),
         Err(TrainingError::InvalidDataLoaderConfig(_))
@@ -148,24 +137,19 @@ fn fixed_single_frame_and_temporal_sample_plans_match_version_one() {
         vec![
             TrainingSample::SingleFrame {
                 target_index: 0,
-                reference_index: 1,
-            },
+                reference_index: 1},
             TrainingSample::SingleFrame {
                 target_index: 4,
-                reference_index: 2,
-            },
+                reference_index: 2},
             TrainingSample::SingleFrame {
                 target_index: 2,
-                reference_index: 4,
-            },
+                reference_index: 4},
             TrainingSample::SingleFrame {
                 target_index: 1,
-                reference_index: 2,
-            },
+                reference_index: 2},
             TrainingSample::SingleFrame {
                 target_index: 3,
-                reference_index: 2,
-            },
+                reference_index: 2},
         ]
     );
     assert_eq!(
@@ -173,24 +157,19 @@ fn fixed_single_frame_and_temporal_sample_plans_match_version_one() {
         vec![
             TrainingSample::SingleFrame {
                 target_index: 0,
-                reference_index: 0,
-            },
+                reference_index: 0},
             TrainingSample::SingleFrame {
                 target_index: 3,
-                reference_index: 4,
-            },
+                reference_index: 4},
             TrainingSample::SingleFrame {
                 target_index: 1,
-                reference_index: 1,
-            },
+                reference_index: 1},
             TrainingSample::SingleFrame {
                 target_index: 4,
-                reference_index: 0,
-            },
+                reference_index: 0},
             TrainingSample::SingleFrame {
                 target_index: 2,
-                reference_index: 0,
-            },
+                reference_index: 0},
         ]
     );
 
@@ -205,33 +184,27 @@ fn fixed_single_frame_and_temporal_sample_plans_match_version_one() {
             TrainingSample::TemporalPair {
                 first_target_index: 2,
                 second_target_index: 4,
-                reference_index: 4,
-            },
+                reference_index: 4},
             TrainingSample::TemporalPair {
                 first_target_index: 0,
                 second_target_index: 2,
-                reference_index: 1,
-            },
+                reference_index: 1},
             TrainingSample::TemporalPair {
                 first_target_index: 4,
                 second_target_index: 6,
-                reference_index: 6,
-            },
+                reference_index: 6},
             TrainingSample::TemporalPair {
                 first_target_index: 1,
                 second_target_index: 3,
-                reference_index: 6,
-            },
+                reference_index: 6},
             TrainingSample::TemporalPair {
                 first_target_index: 3,
                 second_target_index: 5,
-                reference_index: 4,
-            },
+                reference_index: 4},
             TrainingSample::TemporalPair {
                 first_target_index: 5,
                 second_target_index: 7,
-                reference_index: 5,
-            },
+                reference_index: 5},
         ]
     );
 
@@ -246,8 +219,7 @@ fn fixed_single_frame_and_temporal_sample_plans_match_version_one() {
         self_reference.samples()[1],
         TrainingSample::SingleFrame {
             target_index: 0,
-            reference_index: 0,
-        }
+            reference_index: 0}
     );
 }
 
@@ -333,8 +305,7 @@ fn repeated_prepare_stale_and_foreign_commits_do_not_change_state() {
 struct FailingDataset {
     frames: u64,
     calls: Rc<Cell<usize>>,
-    fail_at: usize,
-}
+    fail_at: usize}
 
 impl TrainingDataset for FailingDataset {
     type Item = TrainingSample;
@@ -362,8 +333,7 @@ fn dataset_failure_during_prepare_leaves_state_unchanged() {
         FailingDataset {
             frames: 5,
             calls: calls.clone(),
-            fail_at: 2,
-        },
+            fail_at: 2},
         DataLoaderConfig::single_frame(3, 7),
     )
     .unwrap();
@@ -401,4 +371,26 @@ fn the_loader_lends_out_its_dataset() {
     )
     .unwrap();
     assert_eq!(loader.dataset().frame_count(), 6);
+}
+
+#[test]
+fn parallel_prepare_and_prefetch_preserve_batch_order() {
+    let loader = TrainingDataLoader::new(
+        PlanDataset { frames: 6 },
+        DataLoaderConfig::single_frame(4, 7),
+    )
+    .unwrap();
+    let expected = loader.prepare_next_batch().unwrap();
+    let parallel = loader.prepare_next_batch_parallel().unwrap();
+    assert_eq!(parallel.batch.samples(), expected.samples());
+    assert_eq!(parallel.batch.items(), expected.items());
+
+    let prefetched = loader
+        .spawn_prefetch_batch()
+        .unwrap()
+        .join()
+        .unwrap()
+        .unwrap();
+    assert_eq!(prefetched.batch.samples(), expected.samples());
+    assert_eq!(prefetched.batch.items(), expected.items());
 }

@@ -2,10 +2,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 use feathertalk_parity::{
     archive::GoldenArchive,
     fixture::{
-        ForwardCase, run_cpu_forward, run_cpu_train_step, run_wgpu_forward, run_wgpu_train_step,
-    },
-    probe::{ExecutionEvidence, GraphicsSelection, run_wgpu_probe},
-};
+        ForwardCase, run_cpu_forward, run_cpu_train_step, run_wgpu_forward, run_wgpu_train_step},
+    probe::{ExecutionEvidence, GraphicsSelection, run_wgpu_probe}};
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -16,58 +14,49 @@ use std::path::PathBuf;
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
-}
+    command: Command}
 
 #[derive(Debug, Subcommand)]
 enum Command {
     Probe {
         #[arg(long, value_enum, default_value_t = GraphicsSelection::Auto)]
-        graphics: GraphicsSelection,
-    },
+        graphics: GraphicsSelection},
     Forward {
         #[arg(long, value_enum)]
         model: ModelSelection,
         #[arg(long, value_enum)]
         backend: BackendSelection,
         #[arg(long)]
-        fixture: PathBuf,
-    },
+        fixture: PathBuf},
     TrainStep {
         #[arg(long, value_enum)]
         backend: BackendSelection,
         #[arg(long)]
         fixture: PathBuf,
         #[arg(long)]
-        full: bool,
-    },
-}
+        full: bool}}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum ModelSelection {
     Feather,
-    Unet,
-}
+    Unet}
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum BackendSelection {
     Cpu,
-    Wgpu,
-}
+    Wgpu}
 
 #[derive(Debug, Serialize)]
 struct Success<T: Serialize> {
     status: &'static str,
     #[serde(flatten)]
-    value: T,
-}
+    value: T}
 
 #[derive(Debug, Serialize)]
 struct CpuForwardOutput {
     backend: &'static str,
     graphics: Option<&'static str>,
-    metrics: feathertalk_parity::metrics::ParityMetrics,
-}
+    metrics: feathertalk_parity::metrics::ParityMetrics}
 
 #[derive(Debug, Serialize)]
 struct CpuTrainOutput {
@@ -75,8 +64,7 @@ struct CpuTrainOutput {
     initial_loss_relative: f32,
     post_step_loss_relative: f32,
     selected_parameter_relative: std::collections::BTreeMap<String, f32>,
-    batch_norm_state_relative: std::collections::BTreeMap<String, f32>,
-}
+    batch_norm_state_relative: std::collections::BTreeMap<String, f32>}
 
 fn main() {
     let result = std::thread::Builder::new()
@@ -101,19 +89,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let evidence = run_wgpu_probe(graphics)?;
             print_json(&Success {
                 status: "passed",
-                value: evidence,
-            })?;
+                value: evidence})?;
         }
         Command::Forward {
             model,
             backend,
-            fixture,
-        } => {
+            fixture} => {
             let archive = GoldenArchive::open(fixture)?;
             let case = match model {
                 ModelSelection::Feather => ForwardCase::FeatherMicro,
-                ModelSelection::Unet => ForwardCase::UnetProduction,
-            };
+                ModelSelection::Unet => ForwardCase::UnetProduction};
             match backend {
                 BackendSelection::Cpu => {
                     let metrics = run_cpu_forward(&archive, case)?;
@@ -123,25 +108,21 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         value: CpuForwardOutput {
                             backend: "cpu",
                             graphics: None,
-                            metrics,
-                        },
-                    })?;
+                            metrics}})?;
                 }
                 BackendSelection::Wgpu => {
                     let result = run_wgpu_forward(&archive, case, GraphicsSelection::Auto)?;
                     ensure_forward_tolerance(result.metrics.max_abs)?;
                     print_json(&Success {
                         status: "passed",
-                        value: result,
-                    })?;
+                        value: result})?;
                 }
             }
         }
         Command::TrainStep {
             backend,
             fixture,
-            full,
-        } => {
+            full} => {
             let archive = GoldenArchive::open(fixture)?;
             match backend {
                 BackendSelection::Cpu => {
@@ -153,9 +134,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                             initial_loss_relative: result.initial_loss_relative,
                             post_step_loss_relative: result.post_step_loss_relative,
                             selected_parameter_relative: result.selected_parameter_relative,
-                            batch_norm_state_relative: result.batch_norm_state_relative,
-                        },
-                    })?;
+                            batch_norm_state_relative: result.batch_norm_state_relative}})?;
                 }
                 BackendSelection::Wgpu => {
                     let result = run_wgpu_train_step(&archive, GraphicsSelection::Auto, full)?;
@@ -169,8 +148,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     print_json(&Success {
                         status: "passed",
-                        value: result,
-                    })?;
+                        value: result})?;
                 }
             }
         }

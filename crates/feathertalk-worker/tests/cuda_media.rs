@@ -112,15 +112,13 @@ fn cuda_decoding_and_software_retry_preserve_normalized_media_and_extracted_fram
         let runner = RecordingRunner::default();
         let normalized = media::normalize_media_with_runner(
             &media::validate_input(&media::MediaInput {
-                source: video.clone(),
-            })
+                source: video.clone()})
             .unwrap(),
             &media::NormalizationSpec {
                 target_video_fps: 25,
                 target_audio_sample_rate: 16_000,
                 target_audio_channels: 1,
-                output_dir: directory.join("normalized"),
-            },
+                output_dir: directory.join("normalized")},
             &tools,
             &runner,
         )

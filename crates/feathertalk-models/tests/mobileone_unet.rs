@@ -1,18 +1,16 @@
 use burn::{module::Module, tensor::Tensor};
 use feathertalk_models::{
-    backend::{CpuAutodiffBackend, CpuBackend},
-    train_step::l1_loss,
+        train_step::l1_loss,
     unet::{
         MobileOneAudioConvHubertConfig, MobileOneDownConfig, MobileOneUnetConfig,
-        MobileOneUnetInference, MobileOneUpConfig,
-    },
+        MobileOneUnetInference, MobileOneUpConfig},
 };
 
-fn assert_module<M: Module<CpuBackend>>() {}
+fn assert_module<M: Module>() {}
 
-fn assert_max_abs(left: Tensor<CpuBackend, 4>, right: Tensor<CpuBackend, 4>, tolerance: f32) {
-    let left = left.into_data().to_vec::<f32>().unwrap();
-    let right = right.into_data().to_vec::<f32>().unwrap();
+fn assert_max_abs(left: Tensor<4>, right: Tensor<4>, tolerance: f32) {
+    let left = left.into_data().try_to_vec::<f32>().unwrap();
+    let right = right.into_data().try_to_vec::<f32>().unwrap();
     let max_abs = left
         .iter()
         .zip(right.iter())
@@ -31,7 +29,7 @@ fn production_mobileone_config_is_fixed() {
 #[test]
 fn mobileone_down_halves_the_spatial_size() {
     let device = Default::default();
-    let down = MobileOneDownConfig::new(2, 4, 2).init::<CpuBackend>(&device);
+    let down = MobileOneDownConfig::new(2, 4, 2).init(&device);
     let input = Tensor::zeros([1, 2, 160, 160], &device);
     assert_eq!(down.forward(input).dims(), [1, 4, 80, 80]);
 }
@@ -39,7 +37,7 @@ fn mobileone_down_halves_the_spatial_size() {
 #[test]
 fn mobileone_up_restores_the_skip_spatial_size() {
     let device = Default::default();
-    let up = MobileOneUpConfig::new(16, 4, 2).init::<CpuBackend>(&device);
+    let up = MobileOneUpConfig::new(16, 4, 2).init(&device);
     let input = Tensor::zeros([1, 8, 20, 20], &device);
     let skip = Tensor::zeros([1, 8, 40, 40], &device);
     assert_eq!(up.forward(input, skip).dims(), [1, 4, 40, 40]);
@@ -49,26 +47,26 @@ fn mobileone_up_restores_the_skip_spatial_size() {
 fn mobileone_hubert_audio_branch_matches_the_micro_bottleneck() {
     let device = Default::default();
     let branch =
-        MobileOneAudioConvHubertConfig::new([2, 4, 8, 16, 32], 2).init::<CpuBackend>(&device);
+        MobileOneAudioConvHubertConfig::new([2, 4, 8, 16, 32], 2).init(&device);
     let audio = Tensor::zeros([1, 16, 32, 32], &device);
     assert_eq!(branch.forward(audio).dims(), [1, 32, 10, 10]);
 }
 
 #[test]
 fn mobileone_training_and_inference_graphs_are_burn_modules() {
-    assert_module::<feathertalk_models::unet::MobileOneUnet<CpuBackend>>();
-    assert_module::<MobileOneUnetInference<CpuBackend>>();
+    assert_module::<feathertalk_models::unet::MobileOneUnet>();
+    assert_module::<MobileOneUnetInference>();
 }
 
 #[test]
 fn micro_mobileone_unet_returns_fixed_bounded_output() {
     let device = Default::default();
-    let model = MobileOneUnetConfig::parity_micro().init::<CpuBackend>(&device);
+    let model = MobileOneUnetConfig::parity_micro().init(&device);
     let image = Tensor::ones([1, 6, 160, 160], &device);
     let audio = Tensor::ones([1, 16, 32, 32], &device);
     let output = model.forward(image, audio);
     assert_eq!(output.dims(), [1, 3, 160, 160]);
-    let values = output.into_data().to_vec::<f32>().unwrap();
+    let values = output.into_data().try_to_vec::<f32>().unwrap();
     assert!(values.iter().all(|value| value.is_finite()));
     assert!(values.iter().all(|value| (0.0..=1.0).contains(value)));
 }
@@ -76,7 +74,7 @@ fn micro_mobileone_unet_returns_fixed_bounded_output() {
 #[test]
 fn production_mobileone_unet_returns_fixed_shape() {
     let device = Default::default();
-    let model = MobileOneUnetConfig::production().init::<CpuBackend>(&device);
+    let model = MobileOneUnetConfig::production().init(&device);
     let image = Tensor::zeros([1, 6, 160, 160], &device);
     let audio = Tensor::zeros([1, 16, 32, 32], &device);
     assert_eq!(model.forward(image, audio).dims(), [1, 3, 160, 160]);
@@ -85,7 +83,7 @@ fn production_mobileone_unet_returns_fixed_shape() {
 #[test]
 fn micro_training_and_inference_graphs_are_equivalent() {
     let device = Default::default();
-    let model = MobileOneUnetConfig::parity_micro().init::<CpuBackend>(&device);
+    let model = MobileOneUnetConfig::parity_micro().init(&device);
     let image = Tensor::ones([1, 6, 160, 160], &device);
     let audio = Tensor::ones([1, 16, 32, 32], &device);
     let expected = model.forward(image.clone(), audio.clone());
@@ -97,7 +95,7 @@ fn micro_training_and_inference_graphs_are_equivalent() {
 #[test]
 fn reparameterization_does_not_mutate_the_training_graph() {
     let device = Default::default();
-    let model = MobileOneUnetConfig::parity_micro().init::<CpuBackend>(&device);
+    let model = MobileOneUnetConfig::parity_micro().init(&device);
     let image = Tensor::ones([1, 6, 160, 160], &device);
     let audio = Tensor::ones([1, 16, 32, 32], &device);
     let before = model.forward(image.clone(), audio.clone());
@@ -110,7 +108,7 @@ fn reparameterization_does_not_mutate_the_training_graph() {
 #[should_panic(expected = "MobileOne UNet image input must be [B,6,160,160]")]
 fn mobileone_unet_rejects_wrong_image_shape_before_forward() {
     let device = Default::default();
-    let model = MobileOneUnetConfig::parity_micro().init::<CpuBackend>(&device);
+    let model = MobileOneUnetConfig::parity_micro().init(&device);
     let image = Tensor::zeros([1, 3, 160, 160], &device);
     let audio = Tensor::zeros([1, 16, 32, 32], &device);
     let _ = model.forward(image, audio);
@@ -118,8 +116,8 @@ fn mobileone_unet_rejects_wrong_image_shape_before_forward() {
 
 #[test]
 fn mobileone_output_weight_receives_gradient() {
-    let device = Default::default();
-    let model = MobileOneUnetConfig::parity_micro().init::<CpuAutodiffBackend>(&device);
+    let device = burn::tensor::Device::default().autodiff();
+    let model = MobileOneUnetConfig::parity_micro().init(&device);
     let image = Tensor::ones([1, 6, 160, 160], &device);
     let audio = Tensor::ones([1, 16, 32, 32], &device);
     let target = Tensor::zeros([1, 3, 160, 160], &device);

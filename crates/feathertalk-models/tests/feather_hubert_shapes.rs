@@ -1,9 +1,7 @@
 use burn::tensor::{Tensor, TensorData};
 use feathertalk_models::{
-    backend::CpuBackend,
-    feather_hubert::{
-        FeatherHubertConfig, expected_hubert_frames, make_even_tokens, normalize_waveform,
-    },
+        feather_hubert::{
+        FeatherHubertConfig, expected_hubert_frames, make_even_tokens, normalize_waveform},
 };
 
 #[test]
@@ -18,10 +16,10 @@ fn hubert_frame_count_matches_python_contract() {
 fn waveform_normalization_has_zero_mean_and_unit_variance() {
     let device = Default::default();
     let waveform =
-        Tensor::<CpuBackend, 2>::from_data(TensorData::from([[1.0_f32, 2.0, 3.0, 4.0]]), &device);
+        Tensor::<2>::from_data(TensorData::from([[1.0_f32, 2.0, 3.0, 4.0]]), &device);
     let values = normalize_waveform(waveform)
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .unwrap();
     let mean = values.iter().sum::<f32>() / values.len() as f32;
     let variance = values
@@ -37,13 +35,13 @@ fn waveform_normalization_has_zero_mean_and_unit_variance() {
 #[test]
 fn waveform_normalization_is_independent_per_batch_item() {
     let device = Default::default();
-    let waveform = Tensor::<CpuBackend, 2>::from_data(
+    let waveform = Tensor::<2>::from_data(
         TensorData::from([[1.0_f32, 3.0], [100.0, 102.0]]),
         &device,
     );
     let values = normalize_waveform(waveform)
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .unwrap();
 
     for batch in values.chunks_exact(2) {
@@ -61,22 +59,22 @@ fn waveform_normalization_is_independent_per_batch_item() {
 #[test]
 fn micro_encoder_returns_four_tokens() {
     let device = Default::default();
-    let model = FeatherHubertConfig::parity_micro().init::<CpuBackend>(&device);
-    let waveform = Tensor::<CpuBackend, 2>::zeros([1, 1360], &device);
+    let model = FeatherHubertConfig::parity_micro().init(&device);
+    let waveform = Tensor::<2>::zeros([1, 1360], &device);
     assert_eq!(model.forward(waveform).dims(), [1, 4, 64]);
 }
 
 #[test]
 fn production_encoder_returns_1024_features() {
     let device = Default::default();
-    let model = FeatherHubertConfig::default().init::<CpuBackend>(&device);
-    let waveform = Tensor::<CpuBackend, 2>::zeros([1, 1360], &device);
+    let model = FeatherHubertConfig::default().init(&device);
+    let waveform = Tensor::<2>::zeros([1, 1360], &device);
     assert_eq!(model.forward(waveform).dims(), [1, 4, 1024]);
 }
 
 #[test]
 fn odd_token_count_drops_the_last_token() {
     let device = Default::default();
-    let tokens = Tensor::<CpuBackend, 3>::zeros([1, 5, 64], &device);
+    let tokens = Tensor::<3>::zeros([1, 5, 64], &device);
     assert_eq!(make_even_tokens(tokens).dims(), [1, 4, 64]);
 }

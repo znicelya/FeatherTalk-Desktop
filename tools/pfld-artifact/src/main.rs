@@ -1,18 +1,14 @@
 use std::{
     fs::{self, OpenOptions},
     io::Write,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
-use burn::backend::NdArray;
+use burn::backend::Flex;
 use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 use feathertalk_pfld::{
-    PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS, PfldRuntimeManifest,
-};
+    PFLD_EXPECTED_TENSOR_COUNT, PFLD_EXPECTED_TOTAL_ELEMENTS, PfldRuntimeManifest};
 use feathertalk_weights::{PfldImportRequest, import_pfld_checkpoint};
 use sha2::{Digest, Sha256};
-
-type CpuBackend = NdArray<f32>;
 
 const SOURCE_SHA256: &str = "bada866661ad5fa1080a085f51fe9c016c69958c406951afa4afc7840f856de0";
 
@@ -59,8 +55,8 @@ fn generate(
     let staging_parent = tempfile::tempdir_in(parent)?;
     let imported_dir = staging_parent.path().join("imported");
     let device = Default::default();
-    let mut model = PFLD_GhostOne::<CpuBackend>::new(PfldConfig::production(), &device);
-    let report = import_pfld_checkpoint::<CpuBackend, _>(
+    let mut model = PFLD_GhostOne::new(PfldConfig::production(), &device);
+    let report = import_pfld_checkpoint::<_>(
         &mut model,
         &PfldImportRequest {
             checkpoint: checkpoint.to_owned(),

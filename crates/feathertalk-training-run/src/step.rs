@@ -1,17 +1,23 @@
 use burn::{
     module::AutodiffModule,
-    optim::{GradientsParams, Optimizer},
-    tensor::backend::AutodiffBackend,
+    optim::GradientsParams,
 };
 use feathertalk_models::unet::TrainableTalkingHead;
+use feathertalk_training::CheckpointableOptimizer;
 use feathertalk_training::{
     BaselineLossConfig, DataLoaderConfig, LossBreakdown, MouthRoiLossConfig,
     PerceptualFeatureExtractor, TemporalLossConfig, TrainingConfig, TrainingError, TrainingMode,
-    baseline_loss, mouth_roi_loss, temporal_loss,
-};
+    baseline_loss, mouth_roi_loss, temporal_loss};
 use feathertalk_training_data::{SingleFrameBatch, TemporalBatch};
+use std::time::Instant;
 
 use crate::LossValues;
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct StepComputeTimings {
+    pub forward_secs: f64,
+    pub backward_secs: f64,
+    pub optim_secs: f64}
 
 /// Derives the data-loader config a training mode needs.
 pub fn data_loader_config_for(
@@ -29,50 +35,86 @@ pub fn data_loader_config_for(
     })
 }
 
-fn commit_gradients<B, M, O>(
+fn commit_gradients<M, O>(
     model: M,
     optimizer: &mut O,
-    breakdown: LossBreakdown<B>,
+    breakdown: LossBreakdown,
     learning_rate: f64,
-) -> Result<(M, LossValues), TrainingError>
+    forward_started: Instant,
+) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
 where
-    B: AutodiffBackend,
-    M: AutodiffModule<B>,
-    O: Optimizer<M, B>,
+    M: AutodiffModule,
+    O: CheckpointableOptimizer,
 {
     let values = LossValues::from_breakdown(&breakdown);
     values.require_finite()?;
+    let forward_secs = forward_started.elapsed().as_secs_f64();
+    let device = breakdown.total.device();
+    let backward_started = Instant::now();
     let gradients = GradientsParams::from_grads(breakdown.total.backward(), &model);
-    Ok((optimizer.step(learning_rate, model, gradients), values))
+    sync_backend(&device)?;
+    let backward_secs = backward_started.elapsed().as_secs_f64();
+    let optim_started = Instant::now();
+    let model = optimizer.optimizer_step(learning_rate, model, gradients);
+    sync_backend(&device)?;
+    Ok((
+        model,
+        values,
+        StepComputeTimings {
+            forward_secs,
+            backward_secs,
+            optim_secs: optim_started.elapsed().as_secs_f64()},
+    ))
+}
+
+fn sync_backend(device: &burn::tensor::Device) -> Result<(), TrainingError> {
+    device.sync().map_err(|error| {
+        TrainingError::InvalidInput(format!("training backend sync failed: {error}"))
+    })
 }
 
 /// Runs one optimizer step over a single-frame batch.
-pub fn train_single_frame_step<B, M, O, E>(
+pub fn train_single_frame_step<M, O, E>(
     model: M,
     optimizer: &mut O,
     extractor: &E,
-    batch: SingleFrameBatch<B>,
+    batch: SingleFrameBatch,
     config: &TrainingConfig,
 ) -> Result<(M, LossValues), TrainingError>
 where
-    B: AutodiffBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B>,
-    O: Optimizer<M, B>,
-    E: PerceptualFeatureExtractor<B>,
+    M: TrainableTalkingHead + AutodiffModule,
+    O: CheckpointableOptimizer,
+    E: PerceptualFeatureExtractor,
 {
+    let (model, values, _) =
+        train_single_frame_step_profiled(model, optimizer, extractor, batch, config)?;
+    Ok((model, values))
+}
+
+pub(crate) fn train_single_frame_step_profiled<M, O, E>(
+    model: M,
+    optimizer: &mut O,
+    extractor: &E,
+    batch: SingleFrameBatch,
+    config: &TrainingConfig,
+) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
+where
+    M: TrainableTalkingHead + AutodiffModule,
+    O: CheckpointableOptimizer,
+    E: PerceptualFeatureExtractor,
+{
+    let forward_started = Instant::now();
     let prediction = model.forward_training(batch.image, batch.audio);
     let breakdown = match config.mode {
         TrainingMode::Baseline => {
             let loss_config = BaselineLossConfig {
-                perceptual_weight: config.perceptual_weight,
-            };
+                perceptual_weight: config.perceptual_weight};
             baseline_loss(extractor, prediction, batch.target, &loss_config)?
         }
         TrainingMode::MouthRoi => {
             let loss_config = MouthRoiLossConfig {
                 mouth_weight: config.mouth_weight,
-                perceptual_weight: config.perceptual_weight,
-            };
+                perceptual_weight: config.perceptual_weight};
             mouth_roi_loss(
                 extractor,
                 prediction,
@@ -87,22 +129,44 @@ where
             ));
         }
     };
-    commit_gradients(model, optimizer, breakdown, config.learning_rate)
+    commit_gradients(
+        model,
+        optimizer,
+        breakdown,
+        config.learning_rate,
+        forward_started,
+    )
 }
 
 /// Runs one optimizer step over a temporal pair batch.
-pub fn train_temporal_step<B, M, O, E>(
+pub fn train_temporal_step<M, O, E>(
     model: M,
     optimizer: &mut O,
     extractor: &E,
-    batch: TemporalBatch<B>,
+    batch: TemporalBatch,
     config: &TrainingConfig,
 ) -> Result<(M, LossValues), TrainingError>
 where
-    B: AutodiffBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B>,
-    O: Optimizer<M, B>,
-    E: PerceptualFeatureExtractor<B>,
+    M: TrainableTalkingHead + AutodiffModule,
+    O: CheckpointableOptimizer,
+    E: PerceptualFeatureExtractor,
+{
+    let (model, values, _) =
+        train_temporal_step_profiled(model, optimizer, extractor, batch, config)?;
+    Ok((model, values))
+}
+
+pub(crate) fn train_temporal_step_profiled<M, O, E>(
+    model: M,
+    optimizer: &mut O,
+    extractor: &E,
+    batch: TemporalBatch,
+    config: &TrainingConfig,
+) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
+where
+    M: TrainableTalkingHead + AutodiffModule,
+    O: CheckpointableOptimizer,
+    E: PerceptualFeatureExtractor,
 {
     if config.mode != TrainingMode::MouthRoiTemporal {
         return Err(TrainingError::InvalidConfig(
@@ -110,6 +174,7 @@ where
         ));
     }
     let [pairs, pair_len, ..] = batch.target.dims();
+    let forward_started = Instant::now();
     let flat = model.forward_training(batch.image, batch.audio);
     let [rows, channels, height, width] = flat.dims();
     if rows != pairs.saturating_mul(pair_len) {
@@ -122,8 +187,7 @@ where
         mouth_weight: config.mouth_weight,
         temporal_weight: config.temporal_weight,
         temporal_mouth_weight: config.temporal_mouth_weight,
-        perceptual_weight: config.perceptual_weight,
-    };
+        perceptual_weight: config.perceptual_weight};
     let breakdown = temporal_loss(
         extractor,
         prediction,
@@ -131,5 +195,11 @@ where
         batch.mouth_mask,
         &loss_config,
     )?;
-    commit_gradients(model, optimizer, breakdown, config.learning_rate)
+    commit_gradients(
+        model,
+        optimizer,
+        breakdown,
+        config.learning_rate,
+        forward_started,
+    )
 }

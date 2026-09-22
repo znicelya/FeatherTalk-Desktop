@@ -1147,7 +1147,7 @@ fn a_real_project_is_trained_end_to_end() {
     assert_eq!(result["mode"], "baseline");
     assert_eq!(result["variant"], "original_unet");
     assert_eq!(result["model_kind"], "original_unet");
-    assert_eq!(result["backend"], "ndarray-cpu");
+    assert_eq!(result["backend"], "flex-cpu");
     assert_eq!(result["model_config_sha256"].as_str().unwrap().len(), 64);
     assert_eq!(result["frame_count"], TRAINED_FRAME_COUNT);
     assert_eq!(result["epochs_requested"], 1);
@@ -1308,7 +1308,7 @@ fn a_real_project_is_rendered_end_to_end() {
     assert_eq!(rendered["width"], 1280);
     assert_eq!(rendered["height"], 720);
     assert_eq!(rendered["fps"], 25);
-    assert_eq!(rendered["backend"], "ndarray-cpu");
+    assert_eq!(rendered["backend"], "flex-cpu");
     assert_eq!(rendered["checkpoint_dir"], checkpoint.display().to_string());
     assert_eq!(rendered["model_kind"], "original_unet");
     assert_eq!(rendered["model_config_sha256"].as_str().unwrap().len(), 64);

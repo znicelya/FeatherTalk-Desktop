@@ -4,8 +4,7 @@ use feathertalk_export::read_package_manifest;
 use feathertalk_training::{CheckpointDescriptor, read_training_checkpoint};
 use feathertalk_worker::{
     InspectSummary, InspectedModel, ModelSourceKind, checkpoint_descriptor, checkpoint_files,
-    inspect_to_json, package_files, render_variant,
-};
+    inspect_to_json, package_files, render_variant};
 use serde_json::Value;
 
 #[path = "support/mod.rs"]
@@ -57,8 +56,7 @@ fn a_package_payload_answers_every_key() {
         source_path: &dir,
         model: InspectedModel::Package(&manifest),
         files: &files,
-        incompatibilities: &[],
-    });
+        incompatibilities: &[]});
 
     assert_eq!(keys(&payload), KEYS);
     assert_eq!(payload["source_kind"], "model_package");
@@ -118,8 +116,7 @@ fn a_checkpoint_payload_answers_the_same_keys() {
         source_path: &dir,
         model: InspectedModel::Checkpoint(&checkpoint),
         files: &files,
-        incompatibilities: &[],
-    });
+        incompatibilities: &[]});
 
     assert_eq!(keys(&payload), KEYS);
     assert_eq!(payload["source_kind"], "training_checkpoint");
@@ -171,8 +168,7 @@ fn any_reason_makes_the_model_incompatible() {
         source_path: Path::new("/models/legacy"),
         model: InspectedModel::Checkpoint(&checkpoint),
         files: &files,
-        incompatibilities: &["model_kind"],
-    });
+        incompatibilities: &["model_kind"]});
 
     assert_eq!(payload["compatible"], false);
     assert_eq!(

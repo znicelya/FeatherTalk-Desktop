@@ -4,7 +4,7 @@ mod generated {
 }
 
 #[cfg(scrfd_generated)]
-pub fn convert_burnpack<B: burn::tensor::backend::Backend>(
+pub fn convert_burnpack<B: burn::tensor::>(
     burnpack: &std::path::Path,
     safetensors: &std::path::Path,
 ) -> Result<(), crate::ToolError> {
@@ -12,7 +12,7 @@ pub fn convert_burnpack<B: burn::tensor::backend::Backend>(
     use std::io::Write;
 
     let device = Default::default();
-    let mut model = generated::Model::<B>::new(&device);
+    let mut model = generated::Model::new(&device);
     let mut burnpack_store = BurnpackStore::from_file(burnpack);
     let result = model
         .load_from(&mut burnpack_store)
@@ -27,8 +27,7 @@ pub fn convert_burnpack<B: burn::tensor::backend::Backend>(
     let bytes = std::fs::read(safetensors).map_err(|source| crate::ToolError::Io {
         operation: "read generated safetensors",
         path: safetensors.to_owned(),
-        source,
-    })?;
+        source})?;
     let bytes = crate::artifact::canonicalize_safetensors_bytes(bytes)?;
     let mut file = std::fs::OpenOptions::new()
         .write(true)
@@ -37,20 +36,17 @@ pub fn convert_burnpack<B: burn::tensor::backend::Backend>(
         .map_err(|source| crate::ToolError::Io {
             operation: "open generated safetensors for canonicalization",
             path: safetensors.to_owned(),
-            source,
-        })?;
+            source})?;
     file.write_all(&bytes)
         .map_err(|source| crate::ToolError::Io {
             operation: "write canonical safetensors",
             path: safetensors.to_owned(),
-            source,
-        })?;
+            source})?;
     file.sync_all().map_err(|source| crate::ToolError::Io {
         operation: "sync canonical safetensors",
         path: safetensors.to_owned(),
-        source,
-    })?;
-    let mut reloaded = generated::Model::<B>::new(&device);
+        source})?;
+    let mut reloaded = generated::Model::new(&device);
     let mut memory_store = SafetensorsStore::from_bytes(Some(bytes))
         .allow_partial(true)
         .validate(false);
@@ -58,5 +54,5 @@ pub fn convert_burnpack<B: burn::tensor::backend::Backend>(
         .load_from(&mut memory_store)
         .map_err(|error| crate::ToolError::Store(error.to_string()))?;
     crate::validate_apply_result(&reload_result)?;
-    crate::compare_snapshots::<B, _>(&model, &reloaded)
+    crate::compare_snapshots::<_>(&model, &reloaded)
 }

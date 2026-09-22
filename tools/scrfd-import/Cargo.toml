@@ -10,9 +10,9 @@ license = "Apache-2.0"
 exclude = ["target"]
 
 [dependencies]
-burn-onnx = { version = "=0.21.0", default-features = false, features = ["mmap"] }
-burn = { version = "=0.21.0", default-features = false, features = ["std", "ndarray", "store"] }
-burn-store = { version = "=0.21.0", default-features = false, features = ["std", "burnpack", "safetensors"] }
+burn-onnx = { version = "=0.22.0-pre.3", default-features = false, features = ["mmap"] }
+burn = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "ndarray", "store"] }
+burn-store = { version = "=0.22.0-pre.3", default-features = false, features = ["std", "safetensors"] }
 clap = { version = "=4.6.6", features = ["derive"] }
 feathertalk-scrfd = { path = "../../crates/feathertalk-scrfd", default-features = false }
 hex = "=0.4.3"

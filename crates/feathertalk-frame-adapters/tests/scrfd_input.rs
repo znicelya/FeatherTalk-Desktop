@@ -15,8 +15,7 @@ fn the_square_pattern_reproduces_the_committed_scrfd_blob() {
         input.transform.input,
         ImageSize {
             width: 640,
-            height: 640,
-        }
+            height: 640}
     );
     assert_eq!(input.transform.new_width, 640);
     assert_eq!(input.transform.new_height, 640);

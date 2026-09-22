@@ -18,9 +18,14 @@ serde.workspace = true
 thiserror.workspace = true
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+# The CUDA feature registers `DispatchDevice::Cuda`, so the unified `Device`
+# (and the dispatch tensor API it drives) can execute on the CUDA runtime.
+burn = { workspace = true, features = ["cuda"] }
 burn-cuda.workspace = true
 # Also fixes the CUDA binding feature when this crate is built without worker.
 cudarc.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
+# The ROCm feature registers `DispatchDevice::Rocm` for the unified `Device`.
+burn = { workspace = true, features = ["rocm"] }
 burn-rocm.workspace = true

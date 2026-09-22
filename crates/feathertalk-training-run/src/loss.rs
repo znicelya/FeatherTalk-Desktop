@@ -1,4 +1,4 @@
-use burn::tensor::{TensorData, Transaction, backend::Backend};
+use burn::tensor::{TensorData, Transaction};
 use feathertalk_training::{LossBreakdown, TrainingError};
 
 /// Scalar view of a `LossBreakdown`, detached from the autodiff graph.
@@ -9,14 +9,13 @@ pub struct LossValues {
     pub perceptual: f64,
     pub mouth: Option<f64>,
     pub temporal: Option<f64>,
-    pub temporal_mouth: Option<f64>,
-}
+    pub temporal_mouth: Option<f64>}
 
 impl LossValues {
-    pub fn from_breakdown<B: Backend>(breakdown: &LossBreakdown<B>) -> Self {
+    pub fn from_breakdown(breakdown: &LossBreakdown) -> Self {
         // Read all metrics at the same boundary. Separate into_scalar calls
         // force a GPU submission and host wait for every individual loss.
-        let mut transaction = Transaction::<B>::default()
+        let mut transaction = Transaction::default()
             .register(breakdown.total.clone())
             .register(breakdown.full.clone())
             .register(breakdown.perceptual.clone());
@@ -38,8 +37,7 @@ impl LossValues {
             perceptual: next(),
             mouth: breakdown.mouth.as_ref().map(|_| next()),
             temporal: breakdown.temporal.as_ref().map(|_| next()),
-            temporal_mouth: breakdown.temporal_mouth.as_ref().map(|_| next()),
-        }
+            temporal_mouth: breakdown.temporal_mouth.as_ref().map(|_| next())}
     }
 
     pub fn require_finite(&self) -> Result<(), TrainingError> {
@@ -65,6 +63,5 @@ fn check(field: &str, value: Option<f64>) -> Result<(), TrainingError> {
             let message = format!("training loss {field} is not finite: {value}");
             Err(TrainingError::InvalidInput(message))
         }
-        _ => Ok(()),
-    }
+        _ => Ok(())}
 }

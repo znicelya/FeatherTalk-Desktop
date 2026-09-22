@@ -1,9 +1,8 @@
 use std::{
     collections::BTreeMap,
-    path::{Path, PathBuf},
-};
+    path::{Path, PathBuf}};
 
-use burn::{nn::LinearConfig, tensor::backend::Backend};
+use burn::nn::LinearConfig;
 use burn_store::ModuleSnapshot;
 use feathertalk_models::{PFLD_GhostOne, PfldConfig, backend::CpuBackend};
 use feathertalk_weights::{PfldImportRequest, WeightImportError, import_pfld_checkpoint};
@@ -20,17 +19,17 @@ fn request(destination_dir: PathBuf) -> PfldImportRequest {
     }
 }
 
-fn capture_module_data<B: Backend, M: ModuleSnapshot<B>>(
+fn capture_module_data<M: ModuleSnapshot>(
     module: &M,
 ) -> BTreeMap<String, burn::tensor::TensorData> {
     module
         .collect(None, None, false)
         .into_iter()
-        .map(|snapshot| (snapshot.full_path(), snapshot.to_data().unwrap()))
+        .map(|snapshot| (snapshot.name.clone(), burn_store::bridge::to_data(&snapshot).unwrap()))
         .collect()
 }
 
-fn assert_module_data_unchanged<B: Backend, M: ModuleSnapshot<B>>(
+fn assert_module_data_unchanged<M: ModuleSnapshot>(
     before: &BTreeMap<String, burn::tensor::TensorData>,
     module: &M,
 ) {
@@ -44,10 +43,10 @@ fn existing_destination_is_rejected_without_overwrite_or_model_mutation() {
     std::fs::create_dir(&destination).unwrap();
     std::fs::write(destination.join("sentinel.txt"), b"keep").unwrap();
     let device = Default::default();
-    let mut model = PFLD_GhostOne::<CpuBackend>::new(PfldConfig::production(), &device);
+    let mut model = PFLD_GhostOne::new(PfldConfig::production(), &device);
     let before = capture_module_data(&model);
 
-    let error = import_pfld_checkpoint::<CpuBackend, _>(&mut model, &request(destination.clone()))
+    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone()))
         .unwrap_err();
 
     assert!(matches!(
@@ -58,7 +57,7 @@ fn existing_destination_is_rejected_without_overwrite_or_model_mutation() {
         std::fs::read(destination.join("sentinel.txt")).unwrap(),
         b"keep"
     );
-    assert_module_data_unchanged::<CpuBackend, _>(&before, &model);
+    assert_module_data_unchanged::<_>(&before, &model);
 }
 
 #[test]
@@ -66,10 +65,10 @@ fn incompatible_module_leaves_destination_absent_and_module_unchanged() {
     let temp = tempfile::tempdir().unwrap();
     let destination = temp.path().join("published");
     let device = Default::default();
-    let mut model = LinearConfig::new(2, 2).init::<CpuBackend>(&device);
+    let mut model = LinearConfig::new(2, 2).init(&device);
     let before = capture_module_data(&model);
 
-    let error = import_pfld_checkpoint::<CpuBackend, _>(&mut model, &request(destination.clone()))
+    let error = import_pfld_checkpoint::<_>(&mut model, &request(destination.clone()))
         .unwrap_err();
 
     assert!(matches!(
@@ -77,5 +76,5 @@ fn incompatible_module_leaves_destination_absent_and_module_unchanged() {
         WeightImportError::MissingTensor(_) | WeightImportError::UnexpectedTensor(_)
     ));
     assert!(!destination.exists());
-    assert_module_data_unchanged::<CpuBackend, _>(&before, &model);
+    assert_module_data_unchanged::<_>(&before, &model);
 }

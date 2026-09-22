@@ -1,11 +1,9 @@
 use std::{
     io::{BufRead, BufReader, Write},
-    process::{Command, Stdio},
-};
+    process::{Command, Stdio}};
 
 use feathertalk_domain::{
-    ClientFrame, PROTOCOL_VERSION, ServerFrame, ShutdownFrame, TaskKind, decode_line, encode_line,
-};
+    ClientFrame, PROTOCOL_VERSION, ServerFrame, ShutdownFrame, TaskKind, decode_line, encode_line};
 use feathertalk_worker::{ENV_FFMPEG, ENV_FFPROBE, ENV_MEDIA_TIMEOUT_MS};
 
 /// The real binary with a cleared media environment, so the handshake it
@@ -50,8 +48,7 @@ fn the_binary_announces_itself_and_exits_zero_on_shutdown() {
     );
 
     let shutdown = ClientFrame::Shutdown(ShutdownFrame {
-        protocol_version: PROTOCOL_VERSION,
-    });
+        protocol_version: PROTOCOL_VERSION});
     writeln!(stdin, "{}", encode_line(&shutdown).unwrap()).unwrap();
     stdin.flush().unwrap();
 

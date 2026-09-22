@@ -11,8 +11,7 @@ use serde_json::Value;
 fn identity_transform() -> ResizeTransform {
     resize_with_padding(ImageSize {
         width: 640,
-        height: 640,
-    })
+        height: 640})
     .unwrap()
 }
 
@@ -20,8 +19,7 @@ fn identity_transform() -> ResizeTransform {
 fn reference_config() -> DetectionConfig {
     DetectionConfig {
         confidence_threshold: 0.02,
-        nms_iou_threshold: 0.40,
-    }
+        nms_iou_threshold: 0.40}
 }
 
 fn reference_document(fixture: &support::VerifiedFixture) -> Value {
@@ -57,8 +55,7 @@ fn reference_levels() -> [LevelHostData; 3] {
             keypoint_distances: keypoints
                 .chunks_exact(10)
                 .map(|chunk| chunk.try_into().unwrap())
-                .collect(),
-        });
+                .collect()});
     }
     levels.try_into().expect("three levels")
 }
@@ -74,8 +71,7 @@ fn zero_levels() -> [LevelHostData; 3] {
             stride: SCRFD_STRIDES[level],
             scores: vec![0.0; anchors],
             bbox_distances: vec![[0.0; 4]; anchors],
-            keypoint_distances: vec![[0.0; 10]; anchors],
-        });
+            keypoint_distances: vec![[0.0; 10]; anchors]});
     }
     levels.try_into().expect("three levels")
 }
@@ -134,8 +130,7 @@ fn the_production_threshold_finds_nothing_in_the_synthetic_pattern() {
     let levels = reference_levels();
     let config = DetectionConfig {
         confidence_threshold: 0.50,
-        nms_iou_threshold: 0.40,
-    };
+        nms_iou_threshold: 0.40};
     let detections = scrfd_detections(&levels, &identity_transform(), &config).unwrap();
     assert!(
         detections.is_empty(),
@@ -156,8 +151,7 @@ fn a_short_score_vector_is_reported_with_its_level() {
                 "level 0 scores holds 12799 entries, expected 12800"
             );
         }
-        other => panic!("expected an adapter error, got {other}"),
-    }
+        other => panic!("expected an adapter error, got {other}")}
 }
 
 #[test]
@@ -193,6 +187,5 @@ fn a_non_finite_distance_names_the_real_anchor() {
                 "level 1 anchor 7: non-finite value at level 1 for bbox_distances, index 0"
             );
         }
-        other => panic!("expected an adapter error, got {other}"),
-    }
+        other => panic!("expected an adapter error, got {other}")}
 }

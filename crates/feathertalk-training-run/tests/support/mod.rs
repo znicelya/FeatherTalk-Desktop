@@ -2,14 +2,13 @@
 
 use burn::{
     module::Module,
-    tensor::{Tensor, backend::Backend},
-};
+    tensor::{Tensor}};
 use feathertalk_models::unet::{OriginalUnet, OriginalUnetConfig};
 use feathertalk_training::{PerceptualFeatureExtractor, TrainingConfig, TrainingMode};
 
-pub type CpuBackend = burn::backend::NdArray<f32>;
+pub type CpuBackend = burn::backend::Flex;
 pub type CpuAutodiffBackend = burn::backend::Autodiff<CpuBackend>;
-pub type CpuDevice = burn::backend::ndarray::NdArrayDevice;
+pub type CpuDevice = burn::tensor::Device;
 
 /// A 160x160 forward plus backward through burn's autodiff graph overruns the
 /// default 2 MiB libtest thread stack in a debug build and aborts the whole test
@@ -33,8 +32,8 @@ pub fn on_step_stack(name: &str, body: impl FnOnce() + Send + 'static) {
 #[derive(Debug, Clone, Copy)]
 pub struct IdentityExtractor;
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for IdentityExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         image
     }
 }
@@ -42,8 +41,8 @@ impl<B: Backend> PerceptualFeatureExtractor<B> for IdentityExtractor {
 #[derive(Debug, Clone, Copy)]
 pub struct NanExtractor;
 
-impl<B: Backend> PerceptualFeatureExtractor<B> for NanExtractor {
-    fn forward(&self, image: Tensor<B, 4>) -> Tensor<B, 4> {
+impl PerceptualFeatureExtractor for NanExtractor {
+    fn forward(&self, image: Tensor<4>) -> Tensor<4> {
         image.mul_scalar(f32::NAN)
     }
 }
@@ -56,9 +55,9 @@ impl<B: Backend> PerceptualFeatureExtractor<B> for NanExtractor {
 /// draw independent random weights. `fork` pushes every parameter through
 /// `val()`, which makes later clones share one starting point - the tests that
 /// compare two runs from the same weights depend on that.
-pub fn model(device: &CpuDevice) -> OriginalUnet<CpuAutodiffBackend> {
+pub fn model(device: &CpuDevice) -> OriginalUnet{
     OriginalUnetConfig::parity_micro()
-        .init::<CpuAutodiffBackend>(device)
+        .init(device)
         .fork(device)
 }
 
@@ -77,8 +76,7 @@ pub fn training_config(
         mouth_weight: 4.0,
         temporal_weight: 0.5,
         temporal_mouth_weight: 4.0,
-        perceptual_weight: 0.01,
-    }
+        perceptual_weight: 0.01}
 }
 
 pub fn assert_close(actual: f64, expected: f64) {

@@ -216,6 +216,24 @@ Windows 安装器脚本位于 [`installer/windows/`](installer/windows/)，会�
 & 'C:\Program Files\FeatherTalk\feathertalk.exe' capabilities
 ```
 
+训练性能实验可以在启动桌面应用前设置以下环境变量。worker 会继承这些变量，逐 step 的 profile 会写入当前项目的 `outputs/metrics/step-profile.jsonl`，不会改变现有 `TrainingMetrics` JSON schema：
+
+```powershell
+$env:FEATHERTALK_STEP_PROFILE = '1'
+$env:FEATHERTALK_TRAIN_PREFETCH = '0'  # A：关闭预取
+& 'C:\Program Files\FeatherTalk\feathertalk-app.exe'
+```
+
+将 `FEATHERTALK_TRAIN_PREFETCH` 改为 `'1'` 后重新运行就是 B 组。profile 中的 `total_secs` 是 step 墙钟时间；`load_secs` 是数据准备实际耗时，预取开启时它可能与 GPU 计算重叠，不能直接和前向、反向、优化器耗时相加。`prefetch_wait_secs` 越接近零，说明前瞻加载基本被计算隐藏。
+
+要测试冻结音频分支对反向传播的影响，可额外设置：
+
+```powershell
+$env:FEATHERTALK_TRAIN_FREEZE = 'audio'
+```
+
+不设置或设置为其他值时为全量训练。profile 的第一行是 `meta` 记录，包含实际后端、模式、模型变体、batch size、freeze 和预取状态；后续行才是逐 step 计时。建议每次实验从全新运行开始，并确认 `samples_in_batch` 与预期 batch size 一致。
+
 从源码构建 MSI 需要 Windows x64、Rust 1.94、MSVC、.NET 8 运行时和 FFmpeg Windows 发布目录（含 `LICENSE`、`README.txt`）：
 
 ```powershell

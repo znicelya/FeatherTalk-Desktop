@@ -43,8 +43,7 @@ fn a_locked_adapter_refuses_a_second_task_and_names_the_holder() {
             assert_eq!(adapter_id, CPU_ADAPTER_ID);
             assert_eq!(holder, first);
         }
-        other => panic!("expected an occupied adapter, got {other:?}"),
-    }
+        other => panic!("expected an occupied adapter, got {other:?}")}
 }
 
 #[test]

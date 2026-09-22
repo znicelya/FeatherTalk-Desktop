@@ -8,5 +8,4 @@ pub mod unet;
 pub use mobileone::{MobileOneBlock, ReparameterizedMobileOneBlock};
 pub use pfld::{
     GhostOneBottleneck, GhostOneModule, PFLD_GhostOne, PFLD_INPUT_CHANNELS, PFLD_OUTPUT_VALUES,
-    PfldConfig, PfldGhostOne,
-};
+    PfldConfig, PfldGhostOne};

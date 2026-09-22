@@ -7,8 +7,7 @@ use feathertalk_training_run::TrainingRunner;
 use fixture::{dataset, locked_project};
 use support::{
     CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, model, on_step_stack,
-    training_config,
-};
+    training_config};
 
 fn message(error: TrainingError) -> String {
     let TrainingError::InvalidInput(message) = error else {
@@ -22,7 +21,7 @@ fn a_non_finite_loss_poisons_the_runner() {
     on_step_stack("poisoned", || {
         let device = CpuDevice::default();
         let (_temp, project_dir) = locked_project(4);
-        let mut runner = TrainingRunner::<CpuAutodiffBackend, _, _, _>::new(
+        let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
             model(&device),
             AdamConfig::new().init(),

@@ -1,14 +1,12 @@
 use std::{
     fs,
     path::Path,
-    sync::{Mutex, OnceLock},
-};
+    sync::{Mutex, OnceLock}};
 
 use crate::support::{
     IdentityExtractor, MemorySinkFactory, Recorder, StubDataset, StubFrameReader, micro_plan,
-    model, on_step_stack, published_package, render_audio, render_tree,
-};
-use crate::{GPU_BACKEND, GPU_NAME, GpuAutodiffBackend, GpuBackend, open_gpu};
+    model, on_step_stack, published_package, render_audio, render_tree};
+use crate::{GPU_BACKEND, GPU_NAME, open_gpu};
 use burn::{module::Module, optim::AdamConfig, tensor::Device};
 use feathertalk_audio::read_feature_file;
 use feathertalk_domain::{ExtractFeaturesParams, RenderParams, Request, TrainingMode, UnetVariant};
@@ -17,8 +15,7 @@ use feathertalk_media::CancellationToken;
 use feathertalk_models::unet::{MobileOneUnetConfig, OriginalUnetConfig};
 use feathertalk_worker::{
     CommandOutcome, ComputeRegistry, FrameModels, GpuContext, NoReporter, TrainDevice,
-    WorkerConfig, checkpoint_descriptor, execute, render_job, run_render, run_training,
-};
+    WorkerConfig, checkpoint_descriptor, execute, render_job, run_render, run_training};
 use serde_json::Value;
 
 static GPU_LOCK: Mutex<()> = Mutex::new(());
@@ -29,9 +26,8 @@ fn registry() -> &'static ComputeRegistry {
 }
 
 struct TestGpu {
-    device: Device<GpuBackend>,
-    context: GpuContext,
-}
+    device: Device,
+    context: GpuContext}
 
 impl TestGpu {
     fn check(&self) -> Result<(), feathertalk_worker::GpuFailure> {
@@ -57,8 +53,7 @@ fn gpu() -> TestGpu {
 fn completed(outcome: CommandOutcome) -> Value {
     match outcome {
         CommandOutcome::Completed(Some(result)) => result,
-        other => panic!("expected completion: {other:?}"),
-    }
+        other => panic!("expected completion: {other:?}")}
 }
 
 #[test]
@@ -95,7 +90,7 @@ fn a_training_checkpoint_resumes_cpu_to_gpu_and_back_to_cpu() {
         let second = run_training(
             &plan,
             StubDataset::new(1),
-            OriginalUnetConfig::parity_micro().init::<GpuAutodiffBackend>(&ctx.device),
+            OriginalUnetConfig::parity_micro().init(&ctx.device),
             AdamConfig::new().init(),
             &IdentityExtractor,
             &ctx.device,
@@ -131,7 +126,7 @@ fn a_training_checkpoint_resumes_cpu_to_gpu_and_back_to_cpu() {
         ));
         assert_eq!(result["global_step"], 3);
         assert_eq!(result["samples_seen"], 1);
-        assert_eq!(result["backend"], "ndarray-cpu");
+        assert_eq!(result["backend"], "flex-cpu");
         assert!(result["total_loss"].as_f64().unwrap().is_finite());
         ctx.check().unwrap();
     });
@@ -156,7 +151,7 @@ fn both_unets_train_all_three_modes_on_gpu() {
                     UnetVariant::OriginalUnet => completed(run_training(
                         &plan,
                         StubDataset::new(2),
-                        OriginalUnetConfig::parity_micro().init::<GpuAutodiffBackend>(&ctx.device),
+                        OriginalUnetConfig::parity_micro().init(&ctx.device),
                         AdamConfig::new().init(),
                         &IdentityExtractor,
                         &ctx.device,
@@ -172,7 +167,7 @@ fn both_unets_train_all_three_modes_on_gpu() {
                         completed(run_training(
                             &plan,
                             StubDataset::new(2),
-                            configuration.init::<GpuAutodiffBackend>(&ctx.device),
+                            configuration.init(&ctx.device),
                             AdamConfig::new().init(),
                             &IdentityExtractor,
                             &ctx.device,
@@ -204,8 +199,7 @@ fn a_gpu_render_publishes_frames_and_reports_its_backend() {
             checkpoint: project.join("models/unet/checkpoint-00000002"),
             audio: render_audio(&project),
             output: root.path().join("gpu-render.mp4"),
-            max_output_frames: Some(1),
-        };
+            max_output_frames: Some(1)};
         let configuration = OriginalUnetConfig::parity_micro();
         let descriptor =
             checkpoint_descriptor(&ModelConfiguration::original_unet(&configuration)).unwrap();
@@ -219,7 +213,7 @@ fn a_gpu_render_publishes_frames_and_reports_its_backend() {
         )
         .unwrap();
         let model = configuration
-            .init::<GpuBackend>(&ctx.device)
+            .init(&ctx.device)
             .fork(&ctx.device);
         let sinks = MemorySinkFactory::default();
         let result = completed(run_render(
@@ -255,7 +249,7 @@ fn a_gpu_render_publishes_frames_and_reports_its_backend() {
         )
         .unwrap();
         let model = configuration
-            .init::<GpuBackend>(&ctx.device)
+            .init(&ctx.device)
             .reparameterize();
         let result = completed(run_render(
             &job,
@@ -307,7 +301,7 @@ fn feature_command_uses_the_selected_gpu_and_matches_cpu_output() {
                 &NoReporter,
             ));
             let expected_backend = if backend == "cpu" {
-                "ndarray-cpu"
+                "flex-cpu"
             } else {
                 GPU_NAME
             };
@@ -365,7 +359,7 @@ fn frame_models_load_and_infer_on_the_selected_gpu() {
             ),
         );
         let models =
-            FrameModels::<GpuBackend>::load_on(config.models().unwrap(), ctx.device.clone())
+            FrameModels::load_on(config.models().unwrap(), ctx.device.clone())
                 .unwrap();
         let frame = models
             .decoder()

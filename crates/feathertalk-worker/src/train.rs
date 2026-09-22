@@ -5,32 +5,166 @@ use std::time::Instant;
 
 use burn::{
     module::AutodiffModule,
-    optim::{AdamConfig, Optimizer},
-    tensor::{Device, backend::AutodiffBackend},
+    optim::AdamConfig,
+    tensor::Device,
 };
 use feathertalk_domain::{
     Metrics, Progress, TaskError, TaskStage, TrainParams, TrainingMode as DomainTrainingMode,
-    UnetVariant,
-};
+    UnetVariant};
 use feathertalk_export::ModelConfiguration;
 use feathertalk_media::CancellationToken;
 use feathertalk_models::unet::{MobileOneUnetConfig, OriginalUnetConfig, TrainableTalkingHead};
 use feathertalk_training::{
     CheckpointCompatibility, PerceptualFeatureExtractor, TrainingDataset, TrainingError,
-    load_training_checkpoint, load_vgg19_package,
-};
+    Vgg19Conv3_3, load_training_checkpoint, load_vgg19_package};
 use feathertalk_training_data::{ProjectTrainingDataset, TrainingItem};
 use feathertalk_training_run::{StepReport, TrainingRunner, build_preview_artifact};
 
+/// Diagnostic-only: when the env var FEATHERTALK_TRAIN_PERCEPTUAL is off, the
+/// perceptual branch is dropped from the autodiff graph so backward_secs
+/// measures the UNet (depthwise conv) backward alone. Compare against a normal
+/// run to see how much of backward is VGG19. Not a training knob; unset for real runs.
+enum DiagnosticExtractor {
+    Vgg19(Vgg19Conv3_3),
+    Identity}
+
+impl PerceptualFeatureExtractor for DiagnosticExtractor {
+    fn forward(&self, image: burn::tensor::Tensor<4>) -> burn::tensor::Tensor<4> {
+        match self {
+            DiagnosticExtractor::Vgg19(inner) => inner.forward(image),
+            DiagnosticExtractor::Identity => image}
+    }
+}
+
+fn perceptual_enabled_from_env() -> bool {
+    !matches!(
+        std::env::var("FEATHERTALK_TRAIN_PERCEPTUAL")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "0" | "off" | "false" | "no" | "identity"
+    )
+}
+
+/// Reads the freeze experiment setting for the step profile meta record.
+///
+/// This only records what the operator requested via the environment; the
+/// value is reported verbatim so an experiment log can distinguish its runs.
+fn freeze_setting_from_env() -> String {
+    match std::env::var("FEATHERTALK_TRAIN_FREEZE") {
+        Ok(value) => {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                "none".to_owned()
+            } else {
+                trimmed.to_ascii_lowercase()
+            }
+        }
+        Err(_) => "none".to_owned()}
+}
+
+/// Whether the runner's data-loader prefetch is on, mirroring the same
+/// environment variable the runner reads, so the meta record matches behaviour.
+fn prefetch_enabled_from_env() -> bool {
+    match std::env::var("FEATHERTALK_TRAIN_PREFETCH") {
+        Ok(value) => !matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no"
+        ),
+        Err(_) => true}
+}
+
+/// Appends per-step timing rows to `outputs/metrics/step-profile.jsonl`.
+///
+/// Enabled only when `FEATHERTALK_STEP_PROFILE` is set. The first line is a
+/// `meta` record describing the run; every later line is one committed step.
+/// Profiling is best-effort: a write failure disables further logging instead
+/// of failing the training run.
+struct StepProfileWriter {
+    file: std::fs::File,
+    healthy: bool}
+
+impl StepProfileWriter {
+    fn open(plan: &TrainingPlan, execution_name: &str) -> Option<Self> {
+        if std::env::var_os("FEATHERTALK_STEP_PROFILE").is_none() {
+            return None;
+        }
+        let path = plan.paths.step_profile();
+        if let Some(parent) = path.parent()
+            && let Err(error) = std::fs::create_dir_all(parent)
+        {
+            eprintln!("step profile disabled: create {}: {error}", parent.display());
+            return None;
+        }
+        // Truncate: each experiment run owns a fresh profile, as the docs advise.
+        let file = match std::fs::File::create(&path) {
+            Ok(file) => file,
+            Err(error) => {
+                eprintln!("step profile disabled: open {}: {error}", path.display());
+                return None;
+            }
+        };
+        let mut writer = Self {
+            file,
+            healthy: true};
+        let meta = serde_json::json!({
+            "record": "meta",
+            "backend": execution_name,
+            "mode": plan.mode,
+            "variant": plan.variant,
+            "batch_size": plan.config.batch_size,
+            "total_epochs": plan.config.total_epochs,
+            "freeze": freeze_setting_from_env(),
+            "prefetch": prefetch_enabled_from_env(),
+            "perceptual": perceptual_enabled_from_env(),
+            "resumed": plan.resume_from.is_some()});
+        writer.write_line(&meta);
+        Some(writer)
+    }
+
+    fn record(&mut self, report: &StepReport) {
+        if !self.healthy {
+            return;
+        }
+        let t = report.timings;
+        let row = serde_json::json!({
+            "record": "step",
+            "epoch": report.epoch,
+            "global_step": report.global_step,
+            "samples_in_batch": report.samples_in_batch,
+            "load_secs": t.load_secs,
+            "prefetch_wait_secs": t.prefetch_wait_secs,
+            "forward_secs": t.forward_secs,
+            "backward_secs": t.backward_secs,
+            "optim_secs": t.optim_secs,
+            "total_secs": t.total_secs});
+        self.write_line(&row);
+    }
+
+    fn write_line(&mut self, value: &serde_json::Value) {
+        use std::io::Write;
+        let mut line = value.to_string();
+        line.push('\n');
+        if let Err(error) = self
+            .file
+            .write_all(line.as_bytes())
+            .and_then(|_| self.file.flush())
+        {
+            eprintln!("step profile disabled: write: {error}");
+            self.healthy = false;
+        }
+    }
+}
 use crate::admission::{check_project_dir, invalid_request};
+use crate::execution_backend::{execution_name, gpu_memory_bytes};
 use crate::train_result::train_to_json_on;
 use crate::{
-    CommandOutcome, MAX_EPOCHS, TRAINING_SEED, TaskReporter, TrainBackend, TrainDevice,
-    TrainSummary, TrainingPaths, TrainingPlan, TrainingToolchain, WORKER_STATE, WorkerBackend,
+    CommandOutcome, MAX_EPOCHS, TRAINING_SEED, TaskReporter,
+    TrainSummary, TrainingPaths, TrainingPlan, TrainingToolchain, WORKER_STATE,
     checkpoint_descriptor, latest_checkpoint, preview_sample, publish_checkpoint, sample_count,
     training_config, training_data_task_error, training_task_error, write_metrics_unless_present,
-    write_preview_unless_present,
-};
+    write_preview_unless_present};
 
 /// Trains until the plan's epoch count is reached, the task is cancelled, or a
 /// step fails.
@@ -39,22 +173,21 @@ use crate::{
 /// tests drive it with a stub dataset and a constant extractor instead of a
 /// locked project and half a gigabyte of VGG19 weights.
 #[allow(clippy::too_many_arguments)]
-pub fn run_training<B, M, O, D, E>(
+pub fn run_training<M, O, D, E>(
     plan: &TrainingPlan,
     dataset: D,
     model: M,
     optimizer: O,
     extractor: &E,
-    device: &Device<B>,
+    device: &Device,
     token: &CancellationToken,
     reporter: &dyn TaskReporter,
 ) -> CommandOutcome
 where
-    B: AutodiffBackend + WorkerBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
-    D: TrainingDataset<Item = TrainingItem>,
-    E: PerceptualFeatureExtractor<B>,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    O: feathertalk_training::CheckpointableOptimizer + Clone,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
+    E: PerceptualFeatureExtractor,
 {
     let mut runner = match build_runner(plan, dataset, model, optimizer, device) {
         Ok(runner) => runner,
@@ -67,6 +200,7 @@ where
     // and the throughput this feeds has to describe the run that is starting.
     let started = Instant::now();
     let total = total_steps(plan);
+    let mut step_profile = StepProfileWriter::open(plan, execution_name(device));
     let mut published = Published::default();
     let mut stage = TaskStage::Preparing;
     let mut steps: u64 = 0;
@@ -93,20 +227,21 @@ where
 
         let report = match runner.step(extractor) {
             Ok(report) => report,
-            Err(error) => return CommandOutcome::Failed(training_task_error(&error, stage)),
-        };
+            Err(error) => return CommandOutcome::Failed(training_task_error(&error, stage))};
         steps = steps.saturating_add(1);
+        if let Some(profile) = step_profile.as_mut() {
+            profile.record(&report);
+        }
         total_loss = Some(report.losses.total);
         stage = TaskStage::Training {
             epoch: u32::try_from(report.epoch).unwrap_or(u32::MAX),
             step: report.global_step,
-            loss: report.losses.total,
-        };
+            loss: report.losses.total};
         reporter.report_metrics(
             stage.clone(),
             Some(progress(report.global_step, total)),
             Metrics {
-                vram_bytes: B::gpu_memory_bytes(device),
+                vram_bytes: gpu_memory_bytes(device),
                 ..Default::default()
             },
         );
@@ -151,9 +286,8 @@ where
         checkpoint_dir: published.latest.as_deref(),
         checkpoints_written: published.checkpoints,
         metrics_written: published.metrics,
-        previews_written: published.previews,
-    };
-    CommandOutcome::Completed(Some(train_to_json_on(&summary, B::EXECUTION_NAME)))
+        previews_written: published.previews};
+    CommandOutcome::Completed(Some(train_to_json_on(&summary, execution_name(device))))
 }
 
 /// What this run has put on disk.
@@ -162,22 +296,20 @@ struct Published {
     checkpoints: u64,
     metrics: u64,
     previews: u64,
-    latest: Option<PathBuf>,
-}
+    latest: Option<PathBuf>}
 
 /// Starts a fresh run, or continues from the checkpoint the plan names.
-fn build_runner<B, M, O, D>(
+fn build_runner<M, O, D>(
     plan: &TrainingPlan,
     dataset: D,
     model: M,
     optimizer: O,
-    device: &Device<B>,
-) -> Result<TrainingRunner<B, M, O, D>, TrainingError>
+    device: &Device,
+) -> Result<TrainingRunner<M, O, D>, TrainingError>
 where
-    B: AutodiffBackend + WorkerBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
-    D: TrainingDataset<Item = TrainingItem>,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    O: feathertalk_training::CheckpointableOptimizer + Clone,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
     let Some(directory) = plan.resume_from.as_deref() else {
         return TrainingRunner::new(
@@ -198,13 +330,13 @@ where
         plan.frame_count,
     );
     let restored =
-        load_training_checkpoint::<B, M, O>(directory, &model, &optimizer, device, &expected)?;
+        load_training_checkpoint::<M, O>(directory, &model, &optimizer, device, &expected)?;
     TrainingRunner::restore(dataset, restored, device.clone())
 }
 
 /// Publishes a checkpoint for `global_step` and remembers it as the newest one.
-fn publish<B, M, O, D>(
-    runner: &TrainingRunner<B, M, O, D>,
+fn publish<M, O, D>(
+    runner: &TrainingRunner<M, O, D>,
     plan: &TrainingPlan,
     global_step: u64,
     published: &mut Published,
@@ -212,10 +344,9 @@ fn publish<B, M, O, D>(
     stage: &TaskStage,
 ) -> Result<(), TaskError>
 where
-    B: AutodiffBackend + WorkerBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
-    D: TrainingDataset<Item = TrainingItem>,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    O: feathertalk_training::CheckpointableOptimizer + Clone,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
     let mut health_failure = None;
     let checkpoint = publish_checkpoint(&plan.paths, global_step, |staged| {
@@ -242,21 +373,20 @@ where
 
 /// What an epoch boundary owes: the checkpoint first, then the two diagnostics.
 #[allow(clippy::too_many_arguments)]
-fn close_epoch<B, M, O, D>(
-    runner: &TrainingRunner<B, M, O, D>,
+fn close_epoch<M, O, D>(
+    runner: &TrainingRunner<M, O, D>,
     plan: &TrainingPlan,
     report: &StepReport,
     started: Instant,
-    device: &Device<B>,
+    device: &Device,
     published: &mut Published,
     reporter: &dyn TaskReporter,
     stage: &TaskStage,
 ) -> Result<(), TaskError>
 where
-    B: AutodiffBackend + WorkerBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    O: Optimizer<M, B> + Clone,
-    D: TrainingDataset<Item = TrainingItem>,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    O: feathertalk_training::CheckpointableOptimizer + Clone,
+    D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
     let error_at_stage = |error: TrainingError| training_task_error(&error, stage.clone());
     publish(runner, plan, report.global_step, published, reporter, stage)?;
@@ -265,7 +395,7 @@ where
         .metrics(
             report,
             started.elapsed(),
-            B::gpu_memory_bytes(device),
+            gpu_memory_bytes(device),
             WORKER_STATE,
         )
         .map_err(error_at_stage)?;
@@ -275,7 +405,7 @@ where
         published.metrics = published.metrics.saturating_add(1);
     }
 
-    let artifact = build_preview_artifact::<B, M, D>(
+    let artifact = build_preview_artifact::<M, D>(
         runner.model().map_err(error_at_stage)?,
         runner.dataset(),
         device,
@@ -314,10 +444,8 @@ fn progress(global_step: u64, total: Option<u64>) -> Progress {
     Progress {
         completed: match total {
             Some(total) => global_step.min(total),
-            None => global_step,
-        },
-        total,
-    }
+            None => global_step},
+        total}
 }
 
 /// Trains the U-Net of a locked project.
@@ -331,16 +459,16 @@ pub fn execute_train(
     reporter: &dyn TaskReporter,
     toolchain: &TrainingToolchain,
 ) -> CommandOutcome {
-    execute_train_on::<TrainBackend>(params, token, reporter, toolchain, &TrainDevice::default())
+    execute_train_on(params, token, reporter, toolchain, &crate::cpu_training_device())
 }
 
 /// Runs training on the caller's already-selected tensor device.
-pub fn execute_train_on<B: AutodiffBackend + WorkerBackend>(
+pub fn execute_train_on(
     params: &TrainParams,
     token: &CancellationToken,
     reporter: &dyn TaskReporter,
     toolchain: &TrainingToolchain,
-    device: &Device<B>,
+    device: &Device,
 ) -> CommandOutcome {
     // Admission reads the asset manifest, the whole feature file and then half a
     // gigabyte of VGG19 weights, so the stage goes out before any of it.
@@ -358,6 +486,10 @@ pub fn execute_train_on<B: AutodiffBackend + WorkerBackend>(
         ));
     }
 
+    // Autodiff is a device property in burn 0.22: enable it once here so the
+    // model initializes with gradient tracking and the whole run shares one
+    // device. Callers may pass either a plain or an already-autodiff device.
+    let device = &crate::ensure_autodiff_device(device);
     // The variant is a type rather than a value, so each arm monomorphises the
     // whole run for one model. This is the only place that branches on it.
     match params.variant {
@@ -371,7 +503,7 @@ pub fn execute_train_on<B: AutodiffBackend + WorkerBackend>(
                 toolchain,
                 device,
                 described,
-                |device| configuration.init::<B>(device),
+                |device| configuration.init(device),
             )
         }
         UnetVariant::MobileOneUnet => {
@@ -386,34 +518,32 @@ pub fn execute_train_on<B: AutodiffBackend + WorkerBackend>(
                 toolchain,
                 device,
                 described,
-                |device| configuration.init::<B>(device),
+                |device| configuration.init(device),
             )
         }
     }
 }
 
 /// The rest of the command, once the model type is known.
-fn start<B, M, F>(
+fn start<M, F>(
     params: &TrainParams,
     token: &CancellationToken,
     reporter: &dyn TaskReporter,
     toolchain: &TrainingToolchain,
-    device: &Device<B>,
+    device: &Device,
     configuration: ModelConfiguration,
     init: F,
 ) -> CommandOutcome
 where
-    B: AutodiffBackend + WorkerBackend,
-    M: TrainableTalkingHead<B> + AutodiffModule<B> + Clone,
-    F: FnOnce(&Device<B>) -> M,
+    M: TrainableTalkingHead + AutodiffModule + Clone,
+    F: FnOnce(&Device) -> M,
 {
     // Deliberately never named: writing out `ProjectTrainingDataset<JpegFrameReader>`
     // would pull `feathertalk-inference` into this crate's dependencies for the
     // sake of one type annotation.
     let dataset = match ProjectTrainingDataset::open(&params.project_dir) {
         Ok(dataset) => dataset,
-        Err(error) => return CommandOutcome::Failed(training_data_task_error(&error)),
-    };
+        Err(error) => return CommandOutcome::Failed(training_data_task_error(&error))};
     let frame_count = dataset.frame_count();
     if let Err(error) = check_frame_count(params.mode, frame_count) {
         return CommandOutcome::Failed(error);
@@ -422,8 +552,7 @@ where
     let paths = TrainingPaths::new(&params.project_dir);
     let found = match latest_checkpoint(&paths) {
         Ok(found) => found,
-        Err(error) => return failed_preparing(&error),
-    };
+        Err(error) => return failed_preparing(&error)};
     if params.resume && found.is_none() {
         return CommandOutcome::Failed(invalid_request(
             "未找到可续训的检查点",
@@ -432,8 +561,7 @@ where
     }
     let descriptor = match checkpoint_descriptor(&configuration) {
         Ok(descriptor) => descriptor,
-        Err(error) => return failed_preparing(&error),
-    };
+        Err(error) => return failed_preparing(&error)};
     let plan = TrainingPlan {
         mode: params.mode,
         variant: params.variant,
@@ -444,19 +572,21 @@ where
         paths,
         // Without `--resume`, a checkpoint on disk is not continued: the run
         // starts from fresh weights and republishes over the old names.
-        resume_from: if params.resume { found } else { None },
-    };
+        resume_from: if params.resume { found } else { None }};
 
-    let extractor = match load_vgg19_package::<B>(toolchain.vgg19_dir(), device) {
-        Ok(extractor) => extractor,
-        Err(error) => return failed_preparing(&error),
+    let extractor = if perceptual_enabled_from_env() {
+        match load_vgg19_package(toolchain.vgg19_dir(), device) {
+            Ok(extractor) => DiagnosticExtractor::Vgg19(extractor),
+            Err(error) => return failed_preparing(&error)}
+    } else {
+        DiagnosticExtractor::Identity
     };
     // Loading the weights took seconds; the caller may have given up meanwhile.
     if token.is_cancelled() {
         return CommandOutcome::Cancelled;
     }
 
-    let optimizer = AdamConfig::new().init::<B, M>();
+    let optimizer = AdamConfig::new().init();
     run_training(
         &plan,
         dataset,
