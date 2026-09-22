@@ -4,7 +4,6 @@ use feathertalk_inference::{
     BgrFrame, InferenceError, InferenceFramePlan, RenderGeometry, build_unet_audio_input,
     build_unet_image_input, run_unet_prediction};
 use feathertalk_models::{
-    backend::CpuBackend,
     unet::{MobileOneUnetConfig, OriginalUnetConfig, TalkingHeadModel}};
 
 struct OutputModel {

@@ -354,7 +354,6 @@ mod tests {
     use std::{collections::BTreeSet, path::PathBuf};
 
     use burn::nn::LinearConfig;
-    use feathertalk_models::backend::CpuBackend;
 
     use crate::{
         PfldIgnoredTensors, TensorAudit, TensorSummary, WeightImportError, source::sha256_file};

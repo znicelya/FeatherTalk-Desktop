@@ -8,7 +8,6 @@ use feathertalk_face::{ImageSize, compute_face_crop_geometry};
 use feathertalk_frame_adapters::{FrameImageCache, JpegFrameDecoder, PfldLandmarkPredictor};
 use feathertalk_frame_pipeline::{
     DecodedFrame, FaceDetection, FrameDecoder, LandmarkPredictor, PipelineError};
-use feathertalk_models::backend::CpuBackend;
 
 /// The committed PFLD artifact directory, one crate over. `PfldRuntime::load`
 /// names the manifest and the weights inside it.

@@ -8,8 +8,6 @@ use burn::{
 use feathertalk_pfld::PfldRuntime;
 use sha2::{Digest, Sha256};
 
-type CpuBackend = Flex;
-
 fn fixture_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/pytorch_cpu_v1")
 }

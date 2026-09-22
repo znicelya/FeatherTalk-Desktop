@@ -84,9 +84,6 @@ fn validate(
 mod tests {
     use super::*;
     use burn::backend::Flex;
-    use burn::tensor::Device;
-
-    type Cpu = Flex;
 
     fn valid(device: &burn::tensor::Device) -> GeneratedOutput {
         (

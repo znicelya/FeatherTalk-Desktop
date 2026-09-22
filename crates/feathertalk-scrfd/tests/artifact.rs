@@ -4,8 +4,6 @@ use burn::{backend::Flex, tensor::Tensor};
 use feathertalk_scrfd::{ScrfdArtifactPaths, ScrfdError, ScrfdModel};
 use tempfile::TempDir;
 
-type CpuBackend = Flex;
-
 fn artifact_paths() -> ScrfdArtifactPaths {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts/scrfd_2_5g");
     ScrfdArtifactPaths {

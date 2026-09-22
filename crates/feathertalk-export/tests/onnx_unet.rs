@@ -3,7 +3,6 @@ use feathertalk_export::onnx::{
     OnnxModelContract, OnnxModelKind, OnnxModelProto, OnnxTensorContract,
     export_mobileone_unet_onnx, export_original_unet_onnx, validate_model_contract};
 use feathertalk_models::{
-    backend::CpuBackend,
     unet::{MobileOneUnetConfig, OriginalUnetConfig}};
 use prost::Message;
 

@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use burn::{backend::Flex, tensor::Tensor};
+use burn::tensor::Tensor;
 use feathertalk_scrfd::ScrfdArtifactPaths;
 use ndarray::ArrayD;
 use ndarray_npy::ReadNpyExt;

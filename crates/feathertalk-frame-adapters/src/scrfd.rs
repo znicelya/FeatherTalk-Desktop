@@ -361,7 +361,6 @@ mod tests {
 
     #[test]
     fn batched_readback_keeps_all_levels_fields_and_anchor_coordinates() {
-        type TestBackend = Flex;
         let device = Default::default();
         let outputs: [ScrfdLevelOutput; 3] = std::array::from_fn(|level| {
             let base = level as f32 * 100.0;

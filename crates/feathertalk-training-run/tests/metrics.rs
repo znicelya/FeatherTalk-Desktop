@@ -8,7 +8,7 @@ use feathertalk_training::TrainingMode;
 use feathertalk_training_run::TrainingRunner;
 use fixture::{dataset, locked_project};
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, assert_close, model, on_step_stack,
+    CpuDevice, IdentityExtractor, assert_close, model, on_step_stack,
     training_config};
 
 #[test]

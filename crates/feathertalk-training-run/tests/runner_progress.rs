@@ -6,7 +6,7 @@ use feathertalk_training::{TrainingDataset, TrainingMode};
 use feathertalk_training_run::TrainingRunner;
 use fixture::{dataset, locked_project};
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, model, on_step_stack, training_config};
+    CpuDevice, IdentityExtractor, model, on_step_stack, training_config};
 
 #[test]
 fn a_full_batch_advances_the_epoch_without_reporting_it() {

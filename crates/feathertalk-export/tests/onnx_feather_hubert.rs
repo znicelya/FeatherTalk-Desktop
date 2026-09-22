@@ -5,8 +5,6 @@ use feathertalk_export::onnx::{
 use feathertalk_models::feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder};
 use prost::Message;
 
-use feathertalk_models::backend::CpuBackend;
-
 fn contract() -> OnnxModelContract {
     OnnxModelContract::new(
         OnnxModelKind::FeatherHubert,

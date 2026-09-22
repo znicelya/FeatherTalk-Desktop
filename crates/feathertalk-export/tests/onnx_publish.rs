@@ -2,7 +2,7 @@
 
 use feathertalk_export::onnx::{ONNX_OPSET_VERSION, OnnxModelKind, export_original_unet_onnx};
 use feathertalk_export::{OnnxPublishError, publish_onnx_model};
-use feathertalk_models::{backend::CpuBackend, unet::OriginalUnetConfig};
+use feathertalk_models::{unet::OriginalUnetConfig};
 use sha2::{Digest, Sha256};
 
 /// A real graph, small enough to build in a test. The declared interface is the

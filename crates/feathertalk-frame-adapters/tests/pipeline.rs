@@ -12,7 +12,6 @@ use feathertalk_frame_pipeline::{
     AnomalyCode, BLUR_VARIANCE_THRESHOLD, CommandSpec, FrameAnomaly, FrameEvaluation,
     FrameExtractor, FramePipelineSpec, PipelineError, ProcessOutput, ProcessRunner, RecoveryAction,
     evaluate_frames_with_models, extract_frames_with_runner};
-use feathertalk_models::backend::CpuBackend;
 use feathertalk_scrfd::ScrfdArtifactPaths;
 
 /// The committed SCRFD artifact pair, two crates over.

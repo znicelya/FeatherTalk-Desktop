@@ -8,7 +8,6 @@ use feathertalk_export::{
     LicenseBundle, LicenseEntry, MAX_MANIFEST_BYTES, ModelConfiguration, ModelDescription,
     ModelPackageManifest, PackageBuildRequest, PackageError, SourceManifest, TrainingManifest,
     load_model_package, read_package_manifest, write_model_package};
-use feathertalk_models::backend::CpuBackend;
 use sha2::{Digest, Sha256};
 
 fn description() -> ModelDescription {

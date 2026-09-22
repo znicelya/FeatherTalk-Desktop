@@ -60,7 +60,6 @@ fn cpu_adapter_can_take_ownership_of_an_imported_model() {
 fn wgpu_adapter_runs_without_cpu_fallback() {
     use burn::backend::Wgpu;
 
-    type GpuBackend = Wgpu;
     let device = Default::default();
     let mut encoder = BurnFeatherHubertEncoder::from_config(
         FeatherHubertConfig::parity_micro(),

@@ -8,7 +8,6 @@ use feathertalk_export::{
     FeatherHubertPackageRequest, LicenseBundle, LicenseEntry, build_feather_hubert_package,
     load_model_package};
 use feathertalk_models::{
-    backend::CpuBackend,
     feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder}};
 use zip::ZipArchive;
 

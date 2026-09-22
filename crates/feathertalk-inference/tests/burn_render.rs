@@ -2,7 +2,7 @@ use burn::tensor::{Tensor, TensorData};
 use feathertalk_audio::FeatureMatrix;
 use feathertalk_inference::{
     BgrFrame, InferenceError, InferenceFramePlan, RenderGeometry, render_planned_frame};
-use feathertalk_models::{backend::CpuBackend, unet::TalkingHeadModel};
+use feathertalk_models::unet::TalkingHeadModel;
 use feathertalk_preprocess::FaceBoundingBox;
 
 struct OutputModel {

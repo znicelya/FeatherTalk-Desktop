@@ -8,7 +8,7 @@ use feathertalk_training::{
 use feathertalk_training_run::{TrainingRunner, data_loader_config_for};
 use fixture::{dataset, locked_project};
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
+    CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
     on_step_stack, training_config};
 
 fn descriptor() -> CheckpointDescriptor {

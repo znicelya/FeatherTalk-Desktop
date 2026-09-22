@@ -5,8 +5,6 @@ use burn::{
     tensor::{Tensor, TensorData}};
 use feathertalk_pfld::{PfldRuntime, PfldRuntimeError};
 
-type CpuBackend = Flex;
-
 fn artifact_dir() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts/pfld_ghost_one")
 }

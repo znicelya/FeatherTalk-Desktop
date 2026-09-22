@@ -1,5 +1,5 @@
 use burn::{module::Module, tensor::Tensor};
-use feathertalk_models::{MobileOneBlock, backend::CpuBackend};
+use feathertalk_models::MobileOneBlock;
 
 fn assert_module<M: Module>() {}
 

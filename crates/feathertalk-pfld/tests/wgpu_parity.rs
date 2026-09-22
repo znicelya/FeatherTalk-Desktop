@@ -5,8 +5,6 @@ use burn::{
     tensor::{Tensor, TensorData}};
 use feathertalk_pfld::PfldRuntime;
 
-type GpuBackend = Wgpu;
-
 #[test]
 #[ignore = "requires a certified WGPU adapter"]
 fn committed_pfld_artifact_runs_on_wgpu_without_cpu_fallback() {

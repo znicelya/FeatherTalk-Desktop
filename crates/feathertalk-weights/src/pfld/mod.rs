@@ -312,7 +312,7 @@ mod tests {
 
     use burn::{nn::{BatchNormConfig, LinearConfig}, tensor::Tensor};
     use burn_store::ModuleSnapshot;
-    use feathertalk_models::{PFLD_GhostOne, PfldConfig, backend::CpuBackend};
+    use feathertalk_models::{PFLD_GhostOne, PfldConfig};
 
     use crate::{PfldImportRequest, TensorSummary, WeightImportError, source::SnapshotFile};
 

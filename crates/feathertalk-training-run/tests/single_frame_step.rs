@@ -6,7 +6,7 @@ use feathertalk_training::{TrainingError, TrainingMode};
 use feathertalk_training_data::SingleFrameBatch;
 use feathertalk_training_run::train_single_frame_step;
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
+    CpuDevice, IdentityExtractor, NanExtractor, assert_close, model,
     on_step_stack, training_config};
 
 fn batch(device: &CpuDevice) -> SingleFrameBatch{

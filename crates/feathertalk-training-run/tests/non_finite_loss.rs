@@ -6,7 +6,7 @@ use feathertalk_training::{TrainingError, TrainingMode};
 use feathertalk_training_run::TrainingRunner;
 use fixture::{dataset, locked_project};
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, NanExtractor, model, on_step_stack,
+    CpuDevice, IdentityExtractor, NanExtractor, model, on_step_stack,
     training_config};
 
 fn message(error: TrainingError) -> String {

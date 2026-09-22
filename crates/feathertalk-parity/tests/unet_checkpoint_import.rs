@@ -1,4 +1,4 @@
-use feathertalk_models::{backend::CpuBackend, unet::OriginalUnetConfig};
+use feathertalk_models::{unet::OriginalUnetConfig};
 use feathertalk_parity::archive::GoldenArchive;
 use feathertalk_weights::{LegacyImportRequest, LegacyModelKind, import_into};
 

@@ -8,8 +8,6 @@ use feathertalk_training_data::{
     stack_temporal_batch};
 use support::{GradientFrameReader, INNER_SIZE, locked_project};
 
-type CpuBackend = burn::backend::Flex;
-
 fn open_dataset(project_dir: &Path) -> ProjectTrainingDataset<GradientFrameReader> {
     ProjectTrainingDataset::open_with_reader(project_dir, GradientFrameReader).unwrap()
 }

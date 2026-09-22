@@ -11,7 +11,6 @@ use feathertalk_frame_adapters::{
 use feathertalk_frame_pipeline::{
     DecodedFrame, FACE_CONFIDENCE_THRESHOLD, FaceDetection, FaceDetector, FrameDecoder,
     NMS_IOU_THRESHOLD};
-use feathertalk_models::backend::CpuBackend;
 use feathertalk_scrfd::{SCRFD_INPUT_SHAPE, ScrfdArtifactPaths, ScrfdModel};
 
 /// The committed SCRFD artifact pair, two crates over.

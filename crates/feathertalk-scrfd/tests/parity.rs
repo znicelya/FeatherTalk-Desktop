@@ -6,8 +6,6 @@ use burn::{
 };
 use feathertalk_scrfd::ScrfdModel;
 
-type CpuBackend = Flex;
-
 #[test]
 fn all_nine_outputs_match_opencv_cpu() {
     let fixture = support::load_and_verify_fixture().unwrap();

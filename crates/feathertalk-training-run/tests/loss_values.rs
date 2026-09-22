@@ -4,8 +4,6 @@ use burn::{
 use feathertalk_training::LossBreakdown;
 use feathertalk_training_run::LossValues;
 
-type TestBackend = Autodiff<Flex>;
-
 fn scalar(value: f32) -> Tensor<1> {
     Tensor::from_floats([value], &burn::tensor::Device::default().autodiff())
 }

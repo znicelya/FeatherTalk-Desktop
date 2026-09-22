@@ -6,7 +6,7 @@ use feathertalk_training::{TrainingError, TrainingMode};
 use feathertalk_training_data::TemporalBatch;
 use feathertalk_training_run::train_temporal_step;
 use support::{
-    CpuAutodiffBackend, CpuDevice, IdentityExtractor, assert_close, model, on_step_stack,
+    CpuDevice, IdentityExtractor, assert_close, model, on_step_stack,
     training_config};
 
 fn stacked(

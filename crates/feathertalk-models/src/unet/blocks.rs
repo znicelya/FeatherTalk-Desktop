@@ -250,7 +250,6 @@ impl OutConv {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::{CpuAutodiffBackend, CpuBackend};
     use burn::tensor::TensorData;
 
     fn assert_close(actual: &[f32], expected: &[f32]) {

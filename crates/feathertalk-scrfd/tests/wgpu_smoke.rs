@@ -6,8 +6,6 @@ use burn::{
 };
 use feathertalk_scrfd::ScrfdModel;
 
-type GpuBackend = Wgpu;
-
 #[test]
 #[ignore = "requires a compatible WGPU adapter"]
 fn committed_scrfd_artifact_runs_on_wgpu() {

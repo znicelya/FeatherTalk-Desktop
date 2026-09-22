@@ -1,11 +1,8 @@
 use std::{
-    rc::Rc,
     sync::atomic::{AtomicU64, Ordering}};
 
 use burn::{
-    module::ParamId,
     tensor::{DType, Shape, TensorData}};
-use burn_store::burn_pack::Tensor;
 use feathertalk_export::onnx::{
     InitializerSet, ONNX_FLOAT_DATA_TYPE, OnnxExportError, OnnxTensorProto,
     add_snapshot_initializers, initializer_from_snapshot};

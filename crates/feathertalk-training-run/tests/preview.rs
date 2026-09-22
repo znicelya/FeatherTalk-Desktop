@@ -7,7 +7,7 @@ use feathertalk_training::{
 use feathertalk_training_data::TrainingItem;
 use feathertalk_training_run::build_preview_artifact;
 use fixture::{dataset, locked_project};
-use support::{CpuAutodiffBackend, CpuDevice, model, on_step_stack};
+use support::{CpuDevice, model, on_step_stack};
 
 const PLANE: usize = 160 * 160;
 

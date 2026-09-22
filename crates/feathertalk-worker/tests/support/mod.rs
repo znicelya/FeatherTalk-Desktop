@@ -34,7 +34,7 @@ use feathertalk_training::{
     TrainingSample, save_training_checkpoint};
 use feathertalk_training_data::{FrameSample, TrainingItem};
 use feathertalk_worker::{
-    RenderBackend, RenderDevice, TRAINING_SEED, TaskReporter, TrainBackend, TrainDevice,
+    RenderDevice, TRAINING_SEED, TaskReporter, TrainDevice,
     TrainingPaths, TrainingPlan, checkpoint_descriptor, project_assets, training_config};
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
