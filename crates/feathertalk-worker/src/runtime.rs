@@ -100,6 +100,11 @@ where
     R: BufRead + Send + 'static,
     W: Write,
 {
+    // Enable CubeCL's compiled-kernel cache before any device is initialized;
+    // device certification inside ready_frame() is the first such point, and the
+    // runtime config freezes on first read.
+    crate::install_runtime_config();
+
     let mut writer = FrameWriter::new(output);
     // The handshake goes out before a single byte is read, so a desktop that
     // sees an incompatible version never has to send a request first.

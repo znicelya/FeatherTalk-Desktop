@@ -120,3 +120,45 @@ pub(crate) fn ensure_autodiff_device(device: &burn::tensor::Device) -> burn::ten
         device.clone().autodiff()
     }
 }
+
+/// Turns on CubeCL's on-disk compiled-kernel cache so a fresh worker process
+/// reuses previously compiled GPU kernels instead of recompiling them, which is
+/// the bulk of the multi-minute first-step warmup on CUDA. CubeCL already
+/// persists its autotune cache by default; the compiled-kernel cache
+/// (`compilation.cache`) is off by default and has no environment-variable
+/// switch, so it can only be enabled programmatically.
+///
+/// Must run before the first CubeCL device is initialized - device
+/// certification during the handshake is the earliest such point - because the
+/// runtime config is loaded once and then frozen. `try_set` is a no-op once a
+/// config has been installed or read, so this is safe to call more than once and
+/// never clobbers an operator-provided `cubecl.toml`. Starting from the config
+/// the file/env would produce means this only adds the kernel cache and leaves
+/// every other tuning knob untouched.
+///
+/// Operators can force recompilation (e.g. when debugging kernels) by setting
+/// `FEATHERTALK_CUBECL_KERNEL_CACHE` to `0`/`false`/`off`/`no`.
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
+pub(crate) fn install_runtime_config() {
+    if let Ok(value) = std::env::var("FEATHERTALK_CUBECL_KERNEL_CACHE")
+        && matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "0" | "false" | "off" | "no"
+        )
+    {
+        return;
+    }
+
+    use burn::cubecl::config::{CubeClRuntimeConfig, RuntimeConfig};
+
+    let mut config = CubeClRuntimeConfig::from_current_dir().override_from_env();
+    config.compilation.cache = true;
+    // CubeCL persists autotune results by default; keep that explicit so the two
+    // caches always travel together.
+    config.autotune.disable_cache = false;
+    let _ = CubeClRuntimeConfig::try_set(config);
+}
+
+/// No-op on targets without CubeCL's std filesystem cache support.
+#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+pub(crate) fn install_runtime_config() {}
