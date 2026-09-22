@@ -19,8 +19,7 @@ fn micro_batch(device: &burn::tensor::Device) -> (Tensor<4>, Tensor<4>, Tensor<4
 #[test]
 fn l1_loss_matches_hand_computed_value() {
     let device = Default::default();
-    let prediction =
-        Tensor::<2>::from_data(TensorData::from([[1.0_f32, -2.0, 3.0]]), &device);
+    let prediction = Tensor::<2>::from_data(TensorData::from([[1.0_f32, -2.0, 3.0]]), &device);
     let target = Tensor::<2>::zeros([1, 3], &device);
     let actual: f32 = l1_loss(prediction, target).into_scalar();
     assert!((actual - 2.0).abs() <= f32::EPSILON);
@@ -39,14 +38,16 @@ fn backward_registers_output_weight_gradient() {
 #[test]
 fn zero_learning_rate_leaves_output_weight_unchanged() {
     let device = burn::tensor::Device::default().autodiff();
-    let model = OriginalUnetConfig::parity_micro().init(&device).fork(&device);
+    let model = OriginalUnetConfig::parity_micro()
+        .init(&device)
+        .fork(&device);
     let before = model.outc.conv.weight.val().into_data();
     let (image, audio, target) = micro_batch(&device);
     let mut optimizer: ModuleOptimizer = AdamConfig::new().init();
     let (model, loss) = adam_train_step(model, &mut optimizer, image, audio, target, 0.0);
     let after = model.outc.conv.weight.val().into_data();
-    eprintln!("BEFORE={:?}", before.to_vec::<f32>().unwrap());
-    eprintln!("AFTER={:?}", after.to_vec::<f32>().unwrap());
+    eprintln!("BEFORE={:?}", before.try_to_vec::<f32>().unwrap());
+    eprintln!("AFTER={:?}", after.try_to_vec::<f32>().unwrap());
     eprintln!("LOSS={loss}");
     assert!(loss.is_finite());
     assert_eq!(before, after);

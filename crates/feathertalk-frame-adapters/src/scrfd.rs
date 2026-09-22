@@ -3,10 +3,12 @@ use std::{fmt, sync::Arc};
 use burn::tensor::{Tensor, TensorData, Transaction};
 use feathertalk_face::{
     Detection, DetectionConfig, FaceError, ImageSize, ResizeTransform, decode_level,
-    generate_anchor_centers, non_max_suppression, resize_with_padding};
+    generate_anchor_centers, non_max_suppression, resize_with_padding,
+};
 use feathertalk_frame_pipeline::{
     DecodedFrame, FACE_CONFIDENCE_THRESHOLD, FaceDetection, FaceDetector, NMS_IOU_THRESHOLD,
-    PipelineError};
+    PipelineError,
+};
 use feathertalk_image::{BgrImage, resize_area};
 use feathertalk_scrfd::{SCRFD_INPUT_SHAPE, ScrfdArtifactPaths, ScrfdLevelOutput, ScrfdModel};
 
@@ -26,7 +28,8 @@ pub struct ScrfdInput {
     /// The mapping Task 11 inverts to return detections in source pixels.
     pub transform: ResizeTransform,
     /// NCHW `[1, 3, 640, 640]`, RGB, normalized to `(v - 127.5) / 128`.
-    pub data: Vec<f32>}
+    pub data: Vec<f32>,
+}
 
 /// Letterbox `image` into SCRFD's 640x640 canvas and build the input blob.
 ///
@@ -36,10 +39,12 @@ pub struct ScrfdInput {
 pub fn scrfd_input(image: &BgrImage) -> Result<ScrfdInput, PipelineError> {
     let transform = resize_with_padding(ImageSize {
         width: image.width(),
-        height: image.height()})
+        height: image.height(),
+    })
     .map_err(|error| PipelineError::Adapter {
         component: "scrfd",
-        message: format!("letterbox failed: {error}")})?;
+        message: format!("letterbox failed: {error}"),
+    })?;
 
     let resized =
         resize_area(image, transform.new_width, transform.new_height).map_err(|error| {
@@ -48,7 +53,8 @@ pub fn scrfd_input(image: &BgrImage) -> Result<ScrfdInput, PipelineError> {
                 message: format!(
                     "resize to {}x{} failed: {error}",
                     transform.new_width, transform.new_height
-                )}
+                ),
+            }
         })?;
 
     let edge = SCRFD_EDGE as usize;
@@ -67,7 +73,8 @@ pub fn scrfd_input(image: &BgrImage) -> Result<ScrfdInput, PipelineError> {
             component: "scrfd",
             message: format!(
                 "letterbox does not fit the {edge}x{edge} canvas: {width}x{height} at ({pad_x}, {pad_y})"
-            )});
+            ),
+        });
     }
 
     let mut data = vec![PADDED_VALUE; 3 * plane];
@@ -104,7 +111,8 @@ pub struct LevelHostData {
     /// One score per anchor: 12 800, 3 200 and 800 for strides 8, 16 and 32.
     pub scores: Vec<f32>,
     pub bbox_distances: Vec<[f32; 4]>,
-    pub keypoint_distances: Vec<[f32; 10]>}
+    pub keypoint_distances: Vec<[f32; 10]>,
+}
 
 /// Decode three SCRFD levels and reduce them with non-maximum suppression.
 ///
@@ -137,7 +145,8 @@ pub fn scrfd_detections(
                         "level {} {field} holds {actual} entries, expected {}",
                         level.level,
                         anchors.len()
-                    )});
+                    ),
+                });
             }
         }
 
@@ -161,14 +170,16 @@ pub fn scrfd_detections(
                 // A box that clamps to zero area is not an error: upstream
                 // never emits it, and the frame may still hold a real face.
                 Err(FaceError::InvalidDetectionGeometry { .. }) => continue,
-                Err(error) => return Err(level_error(level.level, Some(index), &error))}
+                Err(error) => return Err(level_error(level.level, Some(index), &error)),
+            }
         }
     }
 
     let kept =
         non_max_suppression(&candidates, config).map_err(|error| PipelineError::Adapter {
             component: "scrfd",
-            message: error.to_string()})?;
+            message: error.to_string(),
+        })?;
 
     Ok(kept
         .into_iter()
@@ -177,7 +188,8 @@ pub fn scrfd_detections(
             FaceDetection {
                 bbox: candidate.bbox,
                 score: candidate.score,
-                keypoints: candidate.keypoints}
+                keypoints: candidate.keypoints,
+            }
         })
         .collect())
 }
@@ -188,10 +200,12 @@ pub fn scrfd_detections(
 fn level_error(level: usize, anchor: Option<usize>, error: &FaceError) -> PipelineError {
     let message = match anchor {
         Some(anchor) => format!("level {level} anchor {anchor}: {error}"),
-        None => format!("level {level}: {error}")};
+        None => format!("level {level}: {error}"),
+    };
     PipelineError::Adapter {
         component: "scrfd",
-        message}
+        message,
+    }
 }
 
 /// `FaceDetector` backed by the SCRFD 2.5G model.
@@ -203,7 +217,8 @@ pub struct ScrfdFaceDetector {
     model: ScrfdModel,
     device: burn::tensor::Device,
     cache: Arc<FrameImageCache>,
-    config: DetectionConfig}
+    config: DetectionConfig,
+}
 
 impl ScrfdFaceDetector {
     /// Load the artifact pair and share `cache` with the decoder.
@@ -217,7 +232,8 @@ impl ScrfdFaceDetector {
     ) -> Result<Self, PipelineError> {
         let model = ScrfdModel::load(paths, &device).map_err(|error| PipelineError::Adapter {
             component: "scrfd",
-            message: error.to_string()})?;
+            message: error.to_string(),
+        })?;
         Ok(Self::from_model(model, device, cache))
     }
 
@@ -233,7 +249,9 @@ impl ScrfdFaceDetector {
             cache,
             config: DetectionConfig {
                 confidence_threshold: FACE_CONFIDENCE_THRESHOLD,
-                nms_iou_threshold: NMS_IOU_THRESHOLD}}
+                nms_iou_threshold: NMS_IOU_THRESHOLD,
+            },
+        }
     }
 
     /// Override the thresholds. The pipeline never calls this; it exists so a
@@ -269,7 +287,8 @@ impl FaceDetector for ScrfdFaceDetector {
             .forward(input)
             .map_err(|error| PipelineError::Adapter {
                 component: "scrfd",
-                message: error.to_string()})?;
+                message: error.to_string(),
+            })?;
 
         let levels = host_levels(output.levels)?;
 
@@ -279,9 +298,7 @@ impl FaceDetector for ScrfdFaceDetector {
 
 /// SCRFD returns nine tensors. Submit their readbacks together so decoding
 /// waits once per frame instead of once per field at each pyramid level.
-fn host_levels(
-    outputs: [ScrfdLevelOutput; 3],
-) -> Result<[LevelHostData; 3], PipelineError> {
+fn host_levels(outputs: [ScrfdLevelOutput; 3]) -> Result<[LevelHostData; 3], PipelineError> {
     let strides = outputs.each_ref().map(|output| output.stride);
     let mut transaction = Transaction::default();
     for output in outputs {
@@ -294,7 +311,8 @@ fn host_levels(
         .try_execute()
         .map_err(|error| PipelineError::Adapter {
             component: "scrfd",
-            message: format!("reading detection outputs: {error}")})?
+            message: format!("reading detection outputs: {error}"),
+        })?
         .into_iter();
     let mut next_level = || -> [TensorData; 3] {
         std::array::from_fn(|_| data.next().expect("three readbacks per SCRFD level"))
@@ -336,7 +354,8 @@ fn host_level(
         stride,
         scores,
         bbox_distances,
-        keypoint_distances})
+        keypoint_distances,
+    })
 }
 
 /// `into_vec::<f32>` requires the backend's float element type to be exactly
@@ -351,13 +370,13 @@ fn host_floats(
     data.try_into_vec::<f32>()
         .map_err(|error| PipelineError::Adapter {
             component: "scrfd",
-            message: format!("level {level} {field}: {error}")})
+            message: format!("level {level} {field}: {error}"),
+        })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::Flex;
 
     #[test]
     fn batched_readback_keeps_all_levels_fields_and_anchor_coordinates() {
@@ -380,7 +399,8 @@ mod tests {
                         [1, 2, 10],
                     ),
                     &device,
-                )}
+                ),
+            }
         });
 
         for (index, level) in host_levels(outputs).unwrap().into_iter().enumerate() {
