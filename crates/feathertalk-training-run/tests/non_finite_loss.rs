@@ -19,7 +19,7 @@ fn message(error: TrainingError) -> String {
 #[test]
 fn a_non_finite_loss_poisons_the_runner() {
     on_step_stack("poisoned", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),

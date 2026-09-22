@@ -37,7 +37,7 @@ fn batch(device: &CpuDevice) -> TemporalBatch{
 #[test]
 fn a_temporal_step_reports_every_loss_component() {
     on_step_stack("temporal-step", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let (_model, values) = train_temporal_step(
             model(&device),
@@ -67,7 +67,7 @@ fn a_temporal_step_reports_every_loss_component() {
 #[test]
 fn a_non_temporal_mode_is_rejected() {
     on_step_stack("non-temporal-rejection", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let error = train_temporal_step(
             model(&device),
@@ -90,7 +90,7 @@ fn a_non_temporal_mode_is_rejected() {
 #[test]
 fn a_row_count_that_does_not_fill_the_pairs_is_rejected() {
     on_step_stack("temporal-row-guard", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let mut wrong = batch(&device);
         wrong.image = stacked(&[0.25, 0.25, 0.75], 6, 160, &device);

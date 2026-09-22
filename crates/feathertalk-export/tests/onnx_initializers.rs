@@ -1,8 +1,6 @@
-use std::{
-    sync::atomic::{AtomicU64, Ordering}};
+use std::{sync::atomic::{AtomicU64, Ordering}};
 
-use burn::{
-    tensor::{DType, Shape, TensorData}};
+use burn::{tensor::{DType, Shape, TensorData}};
 use feathertalk_export::onnx::{
     InitializerSet, ONNX_FLOAT_DATA_TYPE, OnnxExportError, OnnxTensorProto,
     add_snapshot_initializers, initializer_from_snapshot};

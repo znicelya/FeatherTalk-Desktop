@@ -14,7 +14,7 @@ use support::{
 #[test]
 fn zero_elapsed_time_reports_no_rate_and_no_eta() {
     on_step_stack("zero-elapsed", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -46,7 +46,7 @@ fn zero_elapsed_time_reports_no_rate_and_no_eta() {
 #[test]
 fn the_metrics_copy_every_loss_component() {
     on_step_stack("loss-components", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -77,7 +77,7 @@ fn the_metrics_copy_every_loss_component() {
 #[test]
 fn the_eta_shrinks_as_the_run_progresses() {
     on_step_stack("eta-shrinks", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),

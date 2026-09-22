@@ -20,7 +20,7 @@ fn batch(device: &CpuDevice) -> SingleFrameBatch{
 #[test]
 fn a_baseline_step_reports_only_the_required_losses() {
     on_step_stack("baseline-step", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let (_model, values) = train_single_frame_step(
             model(&device),
@@ -40,7 +40,7 @@ fn a_baseline_step_reports_only_the_required_losses() {
 #[test]
 fn a_mouth_roi_step_adds_the_weighted_mouth_loss() {
     on_step_stack("mouth-roi-step", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let (_model, values) = train_single_frame_step(
             model(&device),
@@ -64,7 +64,7 @@ fn a_mouth_roi_step_adds_the_weighted_mouth_loss() {
 #[test]
 fn the_mouth_roi_total_exceeds_the_baseline_total() {
     on_step_stack("mouth-roi-vs-baseline", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let start = model(&device);
         let mut baseline_optimizer = AdamConfig::new().init();
         let (_model, baseline) = train_single_frame_step(
@@ -97,7 +97,7 @@ fn the_mouth_roi_total_exceeds_the_baseline_total() {
 #[test]
 fn a_zero_learning_rate_leaves_the_weights_untouched() {
     on_step_stack("zero-learning-rate", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut config = training_config(TrainingMode::Baseline, 2, 1, 0);
         config.learning_rate = 0.0;
         let mut optimizer = AdamConfig::new().init();
@@ -119,7 +119,7 @@ fn a_zero_learning_rate_leaves_the_weights_untouched() {
 #[test]
 fn the_temporal_mode_is_rejected() {
     on_step_stack("temporal-rejection", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let error = train_single_frame_step(
             model(&device),
@@ -139,7 +139,7 @@ fn the_temporal_mode_is_rejected() {
 #[test]
 fn a_non_finite_loss_is_rejected_and_the_optimizer_survives() {
     on_step_stack("non-finite-loss", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let mut optimizer = AdamConfig::new().init();
         let start = model(&device);
         let error = train_single_frame_step(

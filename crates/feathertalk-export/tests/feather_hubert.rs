@@ -7,8 +7,7 @@ use burn::tensor::{Tensor, TensorData};
 use feathertalk_export::{
     FeatherHubertPackageRequest, LicenseBundle, LicenseEntry, build_feather_hubert_package,
     load_model_package};
-use feathertalk_models::{
-    feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder}};
+use feathertalk_models::{feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder}};
 use zip::ZipArchive;
 
 #[test]

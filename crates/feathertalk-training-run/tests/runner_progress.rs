@@ -11,7 +11,7 @@ use support::{
 #[test]
 fn a_full_batch_advances_the_epoch_without_reporting_it() {
     on_step_stack("full-batch", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -38,7 +38,7 @@ fn a_full_batch_advances_the_epoch_without_reporting_it() {
 #[test]
 fn a_short_final_batch_still_counts_every_sample() {
     on_step_stack("short-batch", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(5);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -68,7 +68,7 @@ fn a_short_final_batch_still_counts_every_sample() {
 #[test]
 fn the_runner_finishes_after_its_last_epoch() {
     on_step_stack("finishes", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -91,7 +91,7 @@ fn the_runner_finishes_after_its_last_epoch() {
 #[test]
 fn a_temporal_run_steps_through_its_pairs() {
     on_step_stack("temporal-run", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(5);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),

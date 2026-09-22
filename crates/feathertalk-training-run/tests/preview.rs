@@ -24,7 +24,7 @@ fn single_frame() -> TrainingSample {
 #[test]
 fn the_preview_masks_the_prediction_with_the_mouth_roi() {
     on_step_stack("preview-mask", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let data = dataset(&project_dir);
         let unet = model(&device);
@@ -83,7 +83,7 @@ fn the_preview_masks_the_prediction_with_the_mouth_roi() {
 #[test]
 fn a_temporal_sample_has_no_preview() {
     on_step_stack("preview-temporal", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let data = dataset(&project_dir);
         let unet = model(&device);
@@ -115,7 +115,7 @@ fn a_temporal_sample_has_no_preview() {
 #[test]
 fn the_preview_round_trips_through_disk() {
     on_step_stack("preview-round-trip", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let data = dataset(&project_dir);
         let unet = model(&device);

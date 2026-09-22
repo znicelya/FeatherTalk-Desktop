@@ -50,13 +50,23 @@ where
     values.require_finite()?;
     let forward_secs = forward_started.elapsed().as_secs_f64();
     let device = breakdown.total.device();
+    // Full-device syncs isolate the backward and optimizer phases so their
+    // timings are attributable, but each one is a pipeline stall. Pay for them
+    // only while profiling; otherwise the per-step loss readback in
+    // `LossValues::from_breakdown` already flushes the in-flight queue to one
+    // step, so the extra barriers are pure overhead.
+    let profile = profiling_enabled();
     let backward_started = Instant::now();
     let gradients = GradientsParams::from_grads(breakdown.total.backward(), &model);
-    sync_backend(&device)?;
+    if profile {
+        sync_backend(&device)?;
+    }
     let backward_secs = backward_started.elapsed().as_secs_f64();
     let optim_started = Instant::now();
     let model = optimizer.optimizer_step(learning_rate, model, gradients);
-    sync_backend(&device)?;
+    if profile {
+        sync_backend(&device)?;
+    }
     Ok((
         model,
         values,
@@ -71,6 +81,17 @@ fn sync_backend(device: &burn::tensor::Device) -> Result<(), TrainingError> {
     device.sync().map_err(|error| {
         TrainingError::InvalidInput(format!("training backend sync failed: {error}"))
     })
+}
+
+/// Whether step profiling is active, read from the environment once and cached.
+///
+/// Mirrors the `FEATHERTALK_STEP_PROFILE` gate the runner and worker use, so
+/// the per-phase backend syncs that make `backward_secs`/`optim_secs`
+/// attributable are only paid when those numbers are actually recorded.
+fn profiling_enabled() -> bool {
+    use std::sync::OnceLock;
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("FEATHERTALK_STEP_PROFILE").is_some())
 }
 
 /// Runs one optimizer step over a single-frame batch.

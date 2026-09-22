@@ -18,7 +18,7 @@ fn descriptor() -> CheckpointDescriptor {
 #[test]
 fn a_restored_runner_reproduces_the_next_steps() {
     on_step_stack("restore-replay", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -79,7 +79,7 @@ fn a_restored_runner_reproduces_the_next_steps() {
 #[test]
 fn the_checkpoint_state_matches_the_runner() {
     on_step_stack("checkpoint-state", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let config = training_config(TrainingMode::Baseline, 2, 2, 0);
         let mut runner = TrainingRunner::<_, _, _>::new(
@@ -115,7 +115,7 @@ fn the_checkpoint_state_matches_the_runner() {
 #[test]
 fn a_mismatched_dataset_refuses_to_restore() {
     on_step_stack("mismatched-dataset", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
@@ -165,7 +165,7 @@ fn a_mismatched_dataset_refuses_to_restore() {
 #[test]
 fn a_poisoned_runner_refuses_to_save() {
     on_step_stack("poisoned-save", || {
-        let device = CpuDevice::default();
+        let device = CpuDevice::default().autodiff();
         let (_temp, project_dir) = locked_project(4);
         let mut runner = TrainingRunner::<_, _, _>::new(
             dataset(&project_dir),
