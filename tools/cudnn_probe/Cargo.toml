@@ -1,0 +1,20 @@
+﻿[package]
+name = "cudnn_probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Standalone workspace so this experiment does not touch the FeatherTalk build.
+[workspace]
+
+[dependencies]
+cudarc = { version = "=0.19.9", default-features = false, features = [
+    "std",
+    "driver",
+    "cudnn",
+    "cuda-12080",
+    "dynamic-loading",
+] }
+
+[profile.release]
+opt-level = 3
