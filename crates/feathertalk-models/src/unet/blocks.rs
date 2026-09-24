@@ -199,12 +199,14 @@ pub(crate) fn upsample_and_concat(
     Tensor::cat(vec![input, skip], 1)
 }
 
+#[allow(dead_code)]
 fn bilinear_upsample_2x_align_corners(input: Tensor<4>) -> Tensor<4> {
     let [_, _, height, width] = input.dims();
     let input = interpolate_axis_align_corners(input, 2, height, height * 2);
     interpolate_axis_align_corners(input, 3, width, width * 2)
 }
 
+#[allow(dead_code)]
 fn interpolate_axis_align_corners(
     input: Tensor<4>,
     axis: usize,
