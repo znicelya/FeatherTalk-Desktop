@@ -4,8 +4,8 @@ use burn::nn::{
     conv::{Conv2d, Conv2dConfig},
     interpolate::{Interpolate2d, Interpolate2dConfig, InterpolateMode},
 };
-use burn::tensor::{Tensor, TensorData, ops::PadMode};
 use burn::tensor::Device;
+use burn::tensor::{Tensor, TensorData, ops::PadMode};
 
 #[derive(burn::module::Module, Debug)]
 pub struct InvertedResidual {
@@ -16,7 +16,8 @@ pub struct InvertedResidual {
     pub project_conv: Conv2d,
     pub project_bn: BatchNorm,
     #[module(skip)]
-    pub use_residual: bool}
+    pub use_residual: bool,
+}
 
 impl InvertedResidual {
     pub(crate) fn new(config: &InvertedResidualConfig, device: &Device) -> Self {
@@ -48,7 +49,8 @@ impl InvertedResidual {
                 device,
             ),
             project_bn: batch_norm(config.oup, device),
-            use_residual: config.stride == 1 && config.inp == config.oup}
+            use_residual: config.stride == 1 && config.inp == config.oup,
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
@@ -73,7 +75,8 @@ impl InvertedResidual {
 #[derive(burn::module::Module, Debug)]
 pub struct DoubleConvDw {
     pub first: InvertedResidual,
-    pub second: InvertedResidual}
+    pub second: InvertedResidual,
+}
 
 impl DoubleConvDw {
     pub(crate) fn new(inp: usize, oup: usize, stride: usize, device: &Device) -> Self {
@@ -85,7 +88,8 @@ impl DoubleConvDw {
             second: InvertedResidualConfig::new(oup, oup)
                 .with_expansion(2)
                 .with_stride(1)
-                .init(device)}
+                .init(device),
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
@@ -95,14 +99,16 @@ impl DoubleConvDw {
 
 #[derive(burn::module::Module, Debug)]
 pub struct InConvDw {
-    pub inconv: InvertedResidual}
+    pub inconv: InvertedResidual,
+}
 
 impl InConvDw {
     pub(crate) fn new(inp: usize, oup: usize, device: &Device) -> Self {
         Self {
             inconv: InvertedResidualConfig::new(inp, oup)
                 .with_expansion(2)
-                .init(device)}
+                .init(device),
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
@@ -112,12 +118,14 @@ impl InConvDw {
 
 #[derive(burn::module::Module, Debug)]
 pub struct Down {
-    pub maxpool_conv: DoubleConvDw}
+    pub maxpool_conv: DoubleConvDw,
+}
 
 impl Down {
     pub(crate) fn new(inp: usize, oup: usize, device: &Device) -> Self {
         Self {
-            maxpool_conv: DoubleConvDw::new(inp, oup, 2, device)}
+            maxpool_conv: DoubleConvDw::new(inp, oup, 2, device),
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
@@ -128,7 +136,8 @@ impl Down {
 #[derive(burn::module::Module, Debug)]
 pub struct Up {
     pub up: Interpolate2d,
-    pub conv: DoubleConvDw}
+    pub conv: DoubleConvDw,
+}
 
 impl Up {
     pub(crate) fn new(inp: usize, oup: usize, device: &Device) -> Self {
@@ -139,7 +148,8 @@ impl Up {
             .init();
         Self {
             up,
-            conv: DoubleConvDw::new(inp, oup, 1, device)}
+            conv: DoubleConvDw::new(inp, oup, 1, device),
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>, skip: Tensor<4>) -> Tensor<4> {
@@ -153,11 +163,18 @@ pub(crate) fn upsample_and_concat(
     input: Tensor<4>,
     skip: Tensor<4>,
 ) -> Tensor<4> {
-    let input = if input.device().is_autodiff() {
-        bilinear_upsample_2x_align_corners(input)
-    } else {
-        up.forward(input)
-    };
+    // Native cuDNN-style bilinear interpolate on every device. The original
+    // FeatherTalk code took a matmul-based resampling path under autodiff to
+    // dodge a slow scatter-add interpolate backward on CUDA; on this
+    // burn/cubecl build the native interpolate (fwd+bwd) benchmarks 6-10x
+    // faster per up-stage, so we always use it.
+    //
+    // let input = if input.device().is_autodiff() {
+    //     bilinear_upsample_2x_align_corners(input)
+    // } else {
+    //     up.forward(input)
+    // };
+    let input = up.forward(input);
     let [_, _, input_h, input_w] = input.dims();
     let [_, _, skip_h, skip_w] = skip.dims();
     assert!(
@@ -221,13 +238,19 @@ fn interpolate_axis_align_corners(
         2 => resample
             .reshape([1, 1, output_size, input_size])
             .matmul(input),
-        3 => input.matmul(resample.transpose().reshape([1, 1, input_size, output_size])),
-        _ => unreachable!("2D interpolation axis must be height or width")}
+        3 => input.matmul(
+            resample
+                .transpose()
+                .reshape([1, 1, input_size, output_size]),
+        ),
+        _ => unreachable!("2D interpolation axis must be height or width"),
+    }
 }
 
 #[derive(burn::module::Module, Debug)]
 pub struct OutConv {
-    pub conv: Conv2d}
+    pub conv: Conv2d,
+}
 
 impl OutConv {
     pub(crate) fn new(inp: usize, device: &Device) -> Self {
@@ -239,7 +262,8 @@ impl OutConv {
                 burn::nn::PaddingConfig2d::Valid,
                 true,
                 device,
-            )}
+            ),
+        }
     }
 
     pub fn forward(&self, input: Tensor<4>) -> Tensor<4> {
@@ -265,10 +289,8 @@ mod tests {
     #[test]
     fn bilinear_2x_align_corners_matches_separable_interpolation() {
         let device = Default::default();
-        let input = Tensor::<4>::from_data(
-            TensorData::from([[[[1.0_f32, -2.0], [0.5, 4.0]]]]),
-            &device,
-        );
+        let input =
+            Tensor::<4>::from_data(TensorData::from([[[[1.0_f32, -2.0], [0.5, 4.0]]]]), &device);
         let actual = bilinear_upsample_2x_align_corners(input)
             .into_data()
             .try_to_vec::<f32>()
@@ -314,9 +336,7 @@ mod tests {
             .unwrap();
         assert_close(
             &actual,
-            &[
-                3.24, 4.32, 3.24, 4.32, 5.76, 4.32, 3.24, 4.32, 3.24,
-            ],
+            &[3.24, 4.32, 3.24, 4.32, 5.76, 4.32, 3.24, 4.32, 3.24],
         );
     }
 }
