@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, path::Path};
 
 use burn::{
-    module::AutodiffModule,
+    module::Module,
     optim::{GradientsParams, ModuleOptimizer, OptimizerRecord},
 };
 
@@ -17,7 +17,7 @@ use crate::{DataLoaderState, TrainingError};
 pub trait CheckpointableOptimizer {
     fn checkpoint_record(&self) -> OptimizerRecord;
     fn restore_record(self, record: OptimizerRecord) -> Self;
-    fn optimizer_step<M: AutodiffModule>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M;
+    fn optimizer_step<M: Module>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M;
 }
 
 impl CheckpointableOptimizer for ModuleOptimizer {
@@ -29,7 +29,7 @@ impl CheckpointableOptimizer for ModuleOptimizer {
         self.load_record(record)
     }
 
-    fn optimizer_step<M: AutodiffModule>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M {
+    fn optimizer_step<M: Module>(&mut self, learning_rate: f64, module: M, grads: GradientsParams) -> M {
         self.step(learning_rate, module, grads)
     }
 }
@@ -363,7 +363,7 @@ pub fn save_training_checkpoint<M, O>(
     state: TrainingCheckpointState,
 ) -> Result<TrainingCheckpointManifest, TrainingError>
 where
-    M: AutodiffModule + Clone,
+    M: Module + Clone,
     O: CheckpointableOptimizer + Clone,
 {
     descriptor.validate()?;
@@ -462,7 +462,7 @@ pub fn load_training_checkpoint<M, O>(
     expected: &CheckpointCompatibility,
 ) -> Result<RestoredTrainingState<M, O>, TrainingError>
 where
-    M: AutodiffModule + Clone,
+    M: Module + Clone,
     O: CheckpointableOptimizer + Clone,
 {
     let directory = directory.as_ref();
@@ -570,7 +570,7 @@ pub fn read_training_checkpoint(
 /// The `AutodiffBackend` bound is not decoration: the record was written by a
 /// module on `Autodiff<_>`, so reading it back with the same types is what makes
 /// it certainly compatible instead of probably compatible. The caller drops the
-/// autodiff shell afterwards with `AutodiffModule::valid`.
+/// autodiff shell afterwards with `Module::valid`.
 ///
 /// The template is only ever cloned. A failed load leaves the caller's template
 /// untouched, the same rule `load_training_checkpoint` follows.
@@ -581,7 +581,7 @@ pub fn load_training_checkpoint_model<M>(
     expected: &CheckpointDescriptor,
 ) -> Result<RestoredCheckpointModel<M>, TrainingError>
 where
-    M: AutodiffModule + Clone,
+    M: Module + Clone,
 {
     let directory = directory.as_ref();
     let metadata = read_training_checkpoint(directory)?;

@@ -12,7 +12,7 @@
 use std::path::{Path, PathBuf};
 
 use feathertalk_project::{
-    ModelSelection, ProjectManifest, read_project_manifest, write_project_manifest_atomic,
+    read_project_manifest, write_project_manifest_atomic, ModelSelection, ProjectManifest,
 };
 use thiserror::Error;
 

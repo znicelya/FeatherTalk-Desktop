@@ -7,7 +7,7 @@
 
 use feathertalk_domain::{TaskKind, TaskStatus};
 
-use crate::tasks::{TaskRow, latest_row};
+use crate::tasks::{latest_row, TaskRow};
 
 /// What the last task of one kind is owed on screen.
 pub(crate) enum Activity<'a> {

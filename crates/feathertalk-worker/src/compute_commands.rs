@@ -11,7 +11,8 @@ use feathertalk_media::{CancellationToken, ProcessRunner};
 use crate::{
     CommandOutcome, FeatureModel, FrameModels, GpuContext, GpuFailure, TaskReporter, WorkerConfig,
     execute_extract_features, execute_extract_frames, execute_render_on, execute_train_on,
-    execution_name, package_task_error, pipeline_task_error};
+    execution_name, package_task_error, pipeline_task_error,
+};
 use crate::{commands::unsupported, error_map::panic_task_error, reporter::TrackedReporter};
 
 pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
@@ -33,15 +34,7 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
         Backend::Cpu => {
             let device = crate::cpu_device();
             with_device_metadata(
-                execute_on::<R>(
-                    request,
-                    config,
-                    token,
-                    reporter,
-                    runner,
-                    &device,
-                    None,
-                ),
+                execute_on::<R>(request, config, token, reporter, runner, &device, None),
                 &adapter,
                 execution_name(&device),
                 None,
@@ -112,7 +105,8 @@ pub(crate) fn execute_compute<R: ProcessRunner + ?Sized>(
                 adapter.backend
             ))
             .task_error(TaskStage::Preparing),
-        )}
+        ),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -133,7 +127,8 @@ fn execute_gpu<R: ProcessRunner + ?Sized>(
     }
     let guarded = ComputeReporter {
         inner: &tracked,
-        context: &context};
+        context: &context,
+    };
     let outcome = catch_unwind(AssertUnwindSafe(|| {
         execute_on::<R>(
             request,
@@ -159,7 +154,8 @@ fn execute_gpu<R: ProcessRunner + ?Sized>(
             execution_name(device),
             Some(context.graphics_api()),
         ),
-        Err(payload) => CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage()))}
+        Err(payload) => CommandOutcome::Failed(panic_task_error(payload.as_ref(), tracked.stage())),
+    }
 }
 
 fn execute_on<R: ProcessRunner + ?Sized>(
@@ -200,10 +196,10 @@ fn execute_on<R: ProcessRunner + ?Sized>(
                 return CommandOutcome::Failed(unsupported(request.kind()));
             };
             reporter.report(TaskStage::Preparing, None);
-            let models =
-                match FrameModels::load_checked(models, device.clone(), context.cloned()) {
-                    Ok(models) => models,
-                    Err(error) => return CommandOutcome::Failed(pipeline_task_error(&error))};
+            let models = match FrameModels::load_checked(models, device.clone(), context.cloned()) {
+                Ok(models) => models,
+                Err(error) => return CommandOutcome::Failed(pipeline_task_error(&error)),
+            };
             // The frame pipeline checks cancellation between chunks and bounds
             // each extractor process with its existing timeout.
             execute_extract_frames(
@@ -225,18 +221,21 @@ fn execute_on<R: ProcessRunner + ?Sized>(
             reporter.report(TaskStage::Preparing, None);
             let model = match FeatureModel::load_on(features, device.clone()) {
                 Ok(model) => model,
-                Err(error) => return CommandOutcome::Failed(package_task_error(&error))};
+                Err(error) => return CommandOutcome::Failed(package_task_error(&error)),
+            };
             let (mut encoder, model_sha256) = model.into_parts();
             execute_extract_features(params, token, reporter, &mut encoder, &model_sha256)
         }
-        _ => CommandOutcome::Failed(unsupported(request.kind()))}
+        _ => CommandOutcome::Failed(unsupported(request.kind())),
+    }
 }
 
 /// Combines progress observation with the final GPU check while keeping the
 /// public CPU command helpers independent of a native graphics context.
 struct ComputeReporter<'a> {
     inner: &'a TrackedReporter<'a>,
-    context: &'a GpuContext}
+    context: &'a GpuContext,
+}
 
 impl TaskReporter for ComputeReporter<'_> {
     fn report(&self, stage: TaskStage, progress: Option<Progress>) {

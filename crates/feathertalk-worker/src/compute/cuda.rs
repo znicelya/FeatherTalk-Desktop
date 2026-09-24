@@ -3,15 +3,14 @@
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     path::Path,
-    sync::Arc};
+    sync::Arc,
+};
 
 use burn::{
     backend::{DispatchDevice, wgpu::CubeBackend},
-    cubecl::{
-        Runtime,
-        cuda::{CudaDevice, CudaRuntime},
-        future::block_on},
-    tensor::{Device, Tensor}};
+    cubecl::{Device as CubeDevice, cuda::CudaDevice, future::block_on},
+    tensor::{Device, Tensor},
+};
 use cudarc::driver::CudaContext as DriverContext;
 use feathertalk_domain::{AdapterInfo, AdapterKind, Backend};
 
@@ -22,20 +21,19 @@ use super::{FaultState, GpuFailure, diagnostic, panic_detail, server_failure};
 pub struct CudaContext {
     pub device: Device,
     _driver: Arc<DriverContext>,
-    faults: Arc<FaultState>}
+    faults: Arc<FaultState>,
+}
 
 impl CudaContext {
     pub fn check(&self) -> Result<(), GpuFailure> {
         self.faults.check()?;
         let result = catch_unwind(AssertUnwindSafe(|| {
-            let native = cuda_device(&self.device).ok_or_else(|| {
-                GpuFailure::Other("CudaContext holds a non-CUDA device".into())
-            })?;
+            let native = cuda_cube_device(&self.device)
+                .ok_or_else(|| GpuFailure::Other("CudaContext holds a non-CUDA device".into()))?;
             // Fusion and CubeCL each buffer operations on the calling thread's
             // stream. Flush both before publishing or leaving a loader thread.
-            burn_fusion::get_client::<CubeBackend<CudaRuntime>>(native)
-                .sync(|| ());
-            let client = CudaRuntime::client(native);
+            burn_fusion::get_client::<CubeBackend>(native).sync(|| ());
+            let client = native.client();
             client.flush().map_err(server_failure)?;
             block_on(client.sync()).map_err(server_failure)
         }));
@@ -45,33 +43,28 @@ impl CudaContext {
             Err(payload) => self.faults.record(GpuFailure::Other(format!(
                 "CUDA synchronization failed: {}",
                 panic_detail(payload)
-            )))}
+            ))),
+        }
         self.faults.check()
     }
 }
 
 /// Extract the native CUDA device from the unified [`Device`], or `None` when
 /// the device belongs to another backend.
-fn cuda_device(device: &Device) -> Option<&CudaDevice> {
+fn cuda_cube_device(device: &Device) -> Option<&CubeDevice> {
     let mut dispatch = device.as_dispatch();
     while let DispatchDevice::Autodiff(inner) = dispatch {
         dispatch = inner;
     }
     match dispatch {
-        DispatchDevice::Cuda(native) => Some(native),
-        _ => None}
+        DispatchDevice::Cube(cube @ CubeDevice::Cuda(_)) => Some(cube),
+        _ => None,
+    }
 }
 
 pub(crate) fn memory_usage_bytes(device: &Device) -> Option<u64> {
-    let device = cuda_device(device)?;
-    catch_unwind(AssertUnwindSafe(|| {
-        CudaRuntime::client(device)
-            .memory_usage()
-            .ok()
-            .map(|usage| usage.bytes_in_use)
-    }))
-    .ok()
-    .flatten()
+    let device = cuda_cube_device(device)?;
+    catch_unwind(AssertUnwindSafe(|| device.client().memory_usage().bytes_in_use)).ok()
 }
 
 pub(super) fn discover() -> Vec<(AdapterInfo, CudaContext)> {
@@ -142,7 +135,8 @@ fn discover_checked() -> Result<Vec<(AdapterInfo, CudaContext)>, String> {
             Err(payload) => diagnostic(format_args!(
                 "CUDA device {index} failed its runtime probe: {}",
                 panic_detail(payload)
-            ))}
+            )),
+        }
     }
     Ok(adapters)
 }
@@ -169,7 +163,8 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, CudaContext), String> {
     let context = CudaContext {
         device: Device::new(CudaDevice::new(index)),
         _driver: driver,
-        faults: Arc::new(FaultState::default())};
+        faults: Arc::new(FaultState::default()),
+    };
     // A driver or nvcc version alone does not prove that NVRTC, its builtins,
     // headers and the installed driver can compile and run CubeCL kernels.
     let values = (Tensor::<1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
@@ -191,7 +186,8 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, CudaContext), String> {
                 AdapterKind::Discrete
             },
             certified: true,
-            vram_bytes},
+            vram_bytes,
+        },
         context,
     ))
 }

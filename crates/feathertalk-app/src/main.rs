@@ -14,10 +14,10 @@ use feathertalk_app::args::{self, LaunchOptions};
 use feathertalk_app::catalog;
 use feathertalk_app::components::compute_control;
 use feathertalk_app::state::AppState;
-use feathertalk_app::workbench::{Workbench, install_keyboard_navigation};
+use feathertalk_app::workbench::{install_keyboard_navigation, Workbench};
 use feathertalk_app::{theme, ui_assets::WorkbenchAssets};
 use gpui::{
-    App, AppContext, Application, Bounds, TitlebarOptions, WindowBounds, WindowOptions, px, size,
+    px, size, App, AppContext, Application, Bounds, TitlebarOptions, WindowBounds, WindowOptions,
 };
 use yororen_ui::i18n::Translate;
 use yororen_ui::renderer;

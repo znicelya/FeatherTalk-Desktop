@@ -6,15 +6,15 @@ use std::path::{Path, PathBuf};
 use feathertalk_domain::{TaskKind, TaskStage, TaskStatus};
 use feathertalk_project::AssetManifest;
 use gpui::{
-    App, Div, Entity, FontWeight, InteractiveElement, ParentElement, SharedString, Stateful,
-    Styled, Window, div, px,
+    div, px, App, Div, Entity, FontWeight, InteractiveElement, ParentElement, SharedString,
+    Stateful, Styled, Window,
 };
-use yororen_ui::ActionVariantKind;
 use yororen_ui::headless::badge::badge;
 use yororen_ui::headless::button::button;
 use yororen_ui::headless::number_input::number_input;
 use yororen_ui::headless::radio::radio;
 use yororen_ui::i18n::Translate;
+use yororen_ui::ActionVariantKind;
 
 use crate::assets::AssetSurvey;
 use crate::components::control_renderers::RadioControlExt;
@@ -25,9 +25,9 @@ use crate::components::ui::{
 };
 use crate::facts::{Fact, FactValue};
 use crate::generate::{
-    FormState, GenerateForm, MAX_PREVIEW_FRAMES, MIN_PREVIEW_FRAMES, PickedCheckpoint, RENDER_FPS,
-    RenderRequest, RenderSurvey, RenderedVideo, audio_path, checkpoint_path, ensure_renders_dir,
-    form_state, output_path,
+    audio_path, checkpoint_path, ensure_renders_dir, form_state, output_path, FormState,
+    GenerateForm, PickedCheckpoint, RenderRequest, RenderSurvey, RenderedVideo, MAX_PREVIEW_FRAMES,
+    MIN_PREVIEW_FRAMES, RENDER_FPS,
 };
 use crate::navigation::Page;
 use crate::picker::{pick_audio_track, pick_checkpoint_dir, pick_output_path};
@@ -35,10 +35,10 @@ use crate::project::ProjectState;
 use crate::state::AppState;
 use crate::submit::submit;
 use crate::tasks::{
-    Note, Summary, TaskCenter, TaskRow, blocked_key, latest_row, stage_key, status_key,
+    blocked_key, latest_row, stage_key, status_key, Note, Summary, TaskCenter, TaskRow,
 };
 use crate::theme::color;
-use crate::training::{TrainingSurvey, mode_value};
+use crate::training::{mode_value, TrainingSurvey};
 
 pub fn generate_page(window: &mut Window, cx: &mut App) -> Div {
     let state = cx.global::<AppState>();

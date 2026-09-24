@@ -1,8 +1,8 @@
 //! Native desktop frame: compact navigation, project toolbar and scrolling pages.
 
 use gpui::{
-    App, Context, Div, InteractiveElement, IntoElement, ParentElement, Render, Styled, Window, div,
-    px,
+    div, px, App, Context, Div, InteractiveElement, IntoElement, ParentElement, Render, Styled,
+    Window,
 };
 use yororen_ui::headless::button::button;
 use yororen_ui::headless::icon::IconSource;

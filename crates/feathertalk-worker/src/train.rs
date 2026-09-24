@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use burn::{
-    module::AutodiffModule,
+    module::Module,
     optim::AdamConfig,
     tensor::Device,
 };
@@ -184,7 +184,7 @@ pub fn run_training<M, O, D, E>(
     reporter: &dyn TaskReporter,
 ) -> CommandOutcome
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     O: feathertalk_training::CheckpointableOptimizer + Clone,
     D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
     E: PerceptualFeatureExtractor,
@@ -307,7 +307,7 @@ fn build_runner<M, O, D>(
     device: &Device,
 ) -> Result<TrainingRunner<M, O, D>, TrainingError>
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     O: feathertalk_training::CheckpointableOptimizer + Clone,
     D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
@@ -344,7 +344,7 @@ fn publish<M, O, D>(
     stage: &TaskStage,
 ) -> Result<(), TaskError>
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     O: feathertalk_training::CheckpointableOptimizer + Clone,
     D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
@@ -384,7 +384,7 @@ fn close_epoch<M, O, D>(
     stage: &TaskStage,
 ) -> Result<(), TaskError>
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     O: feathertalk_training::CheckpointableOptimizer + Clone,
     D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {
@@ -535,7 +535,7 @@ fn start<M, F>(
     init: F,
 ) -> CommandOutcome
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     F: FnOnce(&Device) -> M,
 {
     // Deliberately never named: writing out `ProjectTrainingDataset<JpegFrameReader>`

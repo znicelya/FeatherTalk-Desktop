@@ -13,7 +13,7 @@ use crate::compute::ComputeState;
 use crate::generate::GenerateForm;
 use crate::models::ModelForm;
 use crate::navigation::Navigation;
-use crate::project::{ProjectState, has_task_history};
+use crate::project::{has_task_history, ProjectState};
 use crate::tasks::{Note, TaskCenter};
 use crate::training::TrainingForm;
 use crate::ui::UiState;

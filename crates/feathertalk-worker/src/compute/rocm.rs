@@ -3,17 +3,17 @@
 use std::{
     ffi::CStr,
     panic::{AssertUnwindSafe, catch_unwind},
-    sync::Arc};
+    sync::Arc,
+};
 
 use burn::{
     backend::{DispatchDevice, wgpu::CubeBackend},
-    cubecl::{
-        Runtime,
-        future::block_on,
-        hip::{AmdDevice, HipRuntime}},
-    tensor::{Device, Tensor}};
+    cubecl::{Device as CubeDevice, future::block_on, hip::AmdDevice},
+    tensor::{Device, Tensor},
+};
 use cubecl_hip_sys::{
-    HIP_SUCCESS, hipDeviceProp_tR0600, hipGetDeviceCount, hipGetDevicePropertiesR0600};
+    HIP_SUCCESS, hipDeviceProp_tR0600, hipGetDeviceCount, hipGetDevicePropertiesR0600,
+};
 use feathertalk_domain::{AdapterInfo, AdapterKind, Backend};
 
 use super::{FaultState, GpuFailure, diagnostic, panic_detail, server_failure};
@@ -22,18 +22,17 @@ use super::{FaultState, GpuFailure, diagnostic, panic_detail, server_failure};
 #[derive(Clone, Debug)]
 pub struct RocmContext {
     pub device: Device,
-    faults: Arc<FaultState>}
+    faults: Arc<FaultState>,
+}
 
 impl RocmContext {
     pub fn check(&self) -> Result<(), GpuFailure> {
         self.faults.check()?;
         let result = catch_unwind(AssertUnwindSafe(|| {
-            let native = rocm_device(&self.device).ok_or_else(|| {
-                GpuFailure::Other("RocmContext holds a non-ROCm device".into())
-            })?;
-            burn_fusion::get_client::<CubeBackend<HipRuntime>>(native)
-                .sync(|| ());
-            let client = HipRuntime::client(native);
+            let native = rocm_cube_device(&self.device)
+                .ok_or_else(|| GpuFailure::Other("RocmContext holds a non-ROCm device".into()))?;
+            burn_fusion::get_client::<CubeBackend>(native).sync(|| ());
+            let client = native.client();
             client.flush().map_err(server_failure)?;
             block_on(client.sync()).map_err(server_failure)
         }));
@@ -43,33 +42,28 @@ impl RocmContext {
             Err(payload) => self.faults.record(GpuFailure::Other(format!(
                 "ROCm synchronization failed: {}",
                 panic_detail(payload)
-            )))}
+            ))),
+        }
         self.faults.check()
     }
 }
 
 /// Extract the native ROCm device from the unified [`Device`], or `None` when
 /// the device belongs to another backend.
-fn rocm_device(device: &Device) -> Option<&AmdDevice> {
+fn rocm_cube_device(device: &Device) -> Option<&CubeDevice> {
     let mut dispatch = device.as_dispatch();
     while let DispatchDevice::Autodiff(inner) = dispatch {
         dispatch = inner;
     }
     match dispatch {
-        DispatchDevice::Rocm(native) => Some(native),
-        _ => None}
+        DispatchDevice::Cube(cube @ CubeDevice::Hip(_)) => Some(cube),
+        _ => None,
+    }
 }
 
 pub(crate) fn memory_usage_bytes(device: &Device) -> Option<u64> {
-    let device = rocm_device(device)?;
-    catch_unwind(AssertUnwindSafe(|| {
-        HipRuntime::client(device)
-            .memory_usage()
-            .ok()
-            .map(|usage| usage.bytes_in_use)
-    }))
-    .ok()
-    .flatten()
+    let device = rocm_cube_device(device)?;
+    catch_unwind(AssertUnwindSafe(|| device.client().memory_usage().bytes_in_use)).ok()
 }
 
 pub(super) fn discover() -> Vec<(AdapterInfo, RocmContext)> {
@@ -115,7 +109,8 @@ fn discover_checked() -> Result<Vec<(AdapterInfo, RocmContext)>, String> {
             Err(payload) => diagnostic(format_args!(
                 "ROCm device {index} failed its runtime probe: {}",
                 panic_detail(payload)
-            ))}
+            )),
+        }
     }
     Ok(adapters)
 }
@@ -143,8 +138,9 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, RocmContext), String> {
     }
 
     let context = RocmContext {
-        device: Device::new(AmdDevice::new(index)),
-        faults: Arc::new(FaultState::default())};
+        device: Device::new(CubeDevice::rocm(index).expect("HIP runtime is linked in this build")),
+        faults: Arc::new(FaultState::default()),
+    };
     let values = (Tensor::<1>::from_floats([1.0, 2.0, 3.0], &context.device) * 2.0)
         .into_data()
         .try_to_vec::<f32>()
@@ -165,7 +161,8 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, RocmContext), String> {
                 AdapterKind::Discrete
             },
             certified: true,
-            vram_bytes: Some(properties.totalGlobalMem as u64)},
+            vram_bytes: Some(properties.totalGlobalMem as u64),
+        },
         context,
     ))
 }

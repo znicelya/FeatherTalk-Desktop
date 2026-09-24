@@ -3,28 +3,28 @@
 use std::path::{Path, PathBuf};
 
 use feathertalk_domain::{ProjectDirParams, Request, TaskKind, TaskStatus};
-use feathertalk_supervisor::recovery::{IncompleteTask, Resolution, resolve_project};
+use feathertalk_supervisor::recovery::{resolve_project, IncompleteTask, Resolution};
 use feathertalk_supervisor::status::task_status;
 use gpui::{
-    App, ClipboardItem, Div, Entity, FontWeight, InteractiveElement, ParentElement, SharedString,
-    Stateful, StatefulInteractiveElement, Styled, div, px,
+    div, px, App, ClipboardItem, Div, Entity, FontWeight, InteractiveElement, ParentElement,
+    SharedString, Stateful, StatefulInteractiveElement, Styled,
 };
-use yororen_ui::ActionVariantKind;
-use yororen_ui::headless::badge::{BadgeVariant, badge};
+use yororen_ui::headless::badge::{badge, BadgeVariant};
 use yororen_ui::headless::button::button;
 use yororen_ui::headless::progress::progress;
 use yororen_ui::i18n::Translate;
+use yororen_ui::ActionVariantKind;
 
 use crate::components::ui::{label_separator, muted, page_frame, path_field, section};
 use crate::project::ProjectState;
 use crate::state::AppState;
 use crate::submit::{note, submit};
 use crate::tasks::{
-    Failure, Note, Summary, TaskCenter, TaskRow, blocked_key, kind_key, recovery_key, stage_key,
-    status_key,
+    blocked_key, kind_key, recovery_key, stage_key, status_key, Failure, Note, Summary, TaskCenter,
+    TaskRow,
 };
 use crate::theme::color;
-use crate::ui::{ProgressPresentation, TaskFilter, progress_presentation};
+use crate::ui::{progress_presentation, ProgressPresentation, TaskFilter};
 
 pub fn tasks_page(cx: &mut App) -> Div {
     let state = cx.global::<AppState>();

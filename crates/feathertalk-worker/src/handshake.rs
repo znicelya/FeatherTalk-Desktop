@@ -1,5 +1,6 @@
 use feathertalk_domain::{
-    AdapterInfo, AdapterKind, Backend, Capabilities, PROTOCOL_VERSION, ReadyFrame, TaskKind};
+    AdapterInfo, AdapterKind, Backend, Capabilities, PROTOCOL_VERSION, ReadyFrame, TaskKind,
+};
 
 use crate::WorkerConfig;
 
@@ -14,7 +15,8 @@ pub fn cpu_adapter() -> AdapterInfo {
         backend: Backend::Cpu,
         kind: AdapterKind::Cpu,
         certified: true,
-        vram_bytes: None}
+        vram_bytes: None,
+    }
 }
 
 pub fn supported_commands(config: &WorkerConfig) -> Vec<TaskKind> {
@@ -84,5 +86,7 @@ pub fn ready_frame(config: &WorkerConfig) -> ReadyFrame {
             training: config.training().is_some(),
             wgpu_training,
             onnx_validation: false,
-            ffmpeg: config.media().is_some()}}
+            ffmpeg: config.media().is_some(),
+        },
+    }
 }

@@ -12,7 +12,7 @@
 
 use std::path::PathBuf;
 
-use async_channel::{Receiver, Sender, unbounded};
+use async_channel::{unbounded, Receiver, Sender};
 use feathertalk_client::{CancelToken, EventSink};
 use feathertalk_domain::{Event, Request, TaskId, TaskKind};
 use feathertalk_supervisor::journal::TaskJournal;

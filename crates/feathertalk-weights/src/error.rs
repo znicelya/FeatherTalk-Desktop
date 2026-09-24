@@ -31,4 +31,5 @@ pub enum WeightImportError {
     #[error("artifact validation failed: {0}")]
     ArtifactValidation(String),
     #[error("manifest error: {0}")]
-    Manifest(String)}
+    Manifest(String),
+}

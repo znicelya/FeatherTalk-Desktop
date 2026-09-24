@@ -6,13 +6,16 @@ use feathertalk_domain::{ExportOnnxParams, OnnxExportKind, Progress, TaskStage};
 use feathertalk_export::{
     ModelConfiguration, ModelDescription, ModelPackageManifest, OnnxArtifact,
     export_feather_hubert_onnx, export_mobileone_unet_onnx, export_original_unet_onnx,
-    load_model_package, onnx::OnnxModelKind, publish_onnx_model, read_package_manifest};
+    load_model_package, onnx::OnnxModelKind, publish_onnx_model, read_package_manifest,
+};
 use feathertalk_media::CancellationToken;
 use feathertalk_models::{
     feather_hubert::FeatherHubertEncoder,
     unet::{
         MobileOneUnet, MobileOneUnetConfig, MobileOneUnetInference, OriginalUnet,
-        OriginalUnetConfig}};
+        OriginalUnetConfig,
+    },
+};
 
 use crate::features::feather_hubert_config;
 use crate::{ModelSourceKind, TaskReporter, model_source_kind};
@@ -20,20 +23,23 @@ use crate::{ModelSourceKind, TaskReporter, model_source_kind};
 #[derive(Debug)]
 pub enum ExportOnnxError {
     Cancelled { stage: TaskStage },
-    Failed { detail: String, stage: TaskStage }}
+    Failed { detail: String, stage: TaskStage },
+}
 
 impl fmt::Display for ExportOnnxError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cancelled { .. } => formatter.write_str("onnx export cancelled"),
-            Self::Failed { detail, .. } => formatter.write_str(detail)}
+            Self::Failed { detail, .. } => formatter.write_str(detail),
+        }
     }
 }
 
 impl ExportOnnxError {
     pub fn stage(&self) -> TaskStage {
         match self {
-            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone()}
+            Self::Cancelled { stage } | Self::Failed { stage, .. } => stage.clone(),
+        }
     }
 
     pub fn is_cancelled(&self) -> bool {
@@ -73,7 +79,8 @@ pub fn execute_export_onnx(
         TaskStage::Exporting,
         Some(Progress {
             completed: 0,
-            total: Some(1)}),
+            total: Some(1),
+        }),
     );
     if token.is_cancelled() {
         return Err(cancelled(TaskStage::Exporting));
@@ -88,7 +95,8 @@ pub fn execute_export_onnx(
         TaskStage::Exporting,
         Some(Progress {
             completed: 1,
-            total: Some(1)}),
+            total: Some(1),
+        }),
     );
     Ok(report_json(params, &manifest, &artifact))
 }
@@ -119,7 +127,8 @@ fn build_graph(
                 return Err(mismatch(configuration, kind));
             };
             let config = OriginalUnetConfig {
-                channels: *channels};
+                channels: *channels,
+            };
             let (model, _) = load_model_package::<OriginalUnet, _>(
                 source,
                 &ModelDescription::original_unet(config.clone()),
@@ -134,13 +143,15 @@ fn build_graph(
             let ModelConfiguration::MobileOneUnet {
                 channels,
                 num_conv_branches,
-                reparameterized} = configuration
+                reparameterized,
+            } = configuration
             else {
                 return Err(mismatch(configuration, kind));
             };
             let config = MobileOneUnetConfig {
                 channels: *channels,
-                num_conv_branches: *num_conv_branches};
+                num_conv_branches: *num_conv_branches,
+            };
             // Migration design section 5.6 publishes the fused inference graph. A
             // package written by `export_model_package` is already fused; one that
             // still carries the training branches is fused here.
@@ -203,7 +214,8 @@ fn validate_request(params: &ExportOnnxParams) -> Result<(), ExportOnnxError> {
             ));
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string()))}
+        Err(error) => return Err(failure(TaskStage::Preparing, error.to_string())),
+    }
     let parent = params
         .destination
         .parent()
@@ -237,14 +249,16 @@ fn model_type(kind: OnnxExportKind) -> &'static str {
     match kind {
         OnnxExportKind::FeatherHubert => "feather_hubert",
         OnnxExportKind::OriginalUnet => "original_unet",
-        OnnxExportKind::MobileOneUnet => "mobileone_unet"}
+        OnnxExportKind::MobileOneUnet => "mobileone_unet",
+    }
 }
 
 fn onnx_kind(kind: OnnxExportKind) -> OnnxModelKind {
     match kind {
         OnnxExportKind::FeatherHubert => OnnxModelKind::FeatherHubert,
         OnnxExportKind::OriginalUnet => OnnxModelKind::OriginalUnet,
-        OnnxExportKind::MobileOneUnet => OnnxModelKind::MobileOneUnet}
+        OnnxExportKind::MobileOneUnet => OnnxModelKind::MobileOneUnet,
+    }
 }
 
 /// The manifest agreed on the kind but not on the configuration shape. The
@@ -287,5 +301,6 @@ fn cancelled(stage: TaskStage) -> ExportOnnxError {
 fn failure(stage: TaskStage, detail: impl Into<String>) -> ExportOnnxError {
     ExportOnnxError::Failed {
         detail: detail.into(),
-        stage}
+        stage,
+    }
 }

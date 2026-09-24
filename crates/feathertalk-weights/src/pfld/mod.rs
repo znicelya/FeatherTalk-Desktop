@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf}};
-use burn::{module::AutodiffModule, tensor::DType};
+use burn::{module::Module, tensor::DType};
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, PytorchStore, pytorch::PytorchReader};
 use serde::{Deserialize, Serialize};
 
@@ -104,7 +104,7 @@ pub fn import_pfld_checkpoint<M>(
     request: &PfldImportRequest,
 ) -> Result<PfldImportReport, WeightImportError>
 where
-    M: ModuleSnapshot + AutodiffModule,
+    M: ModuleSnapshot + Module,
 {
     if request.destination_dir.as_os_str().is_empty() {
         return Err(WeightImportError::ArtifactValidation(
@@ -172,7 +172,7 @@ const PFLD_DETACHED_CLONE_STACK_BYTES: usize = 64 * 1024 * 1024;
 
 fn clone_module_detached<M>(module: &mut M) -> Result<Box<M>, WeightImportError>
 where
-    M: ModuleSnapshot + AutodiffModule,
+    M: ModuleSnapshot + Module,
 {
     // A mutable scoped borrow is Send under Module's existing Send contract, so callers don't need
     // an additional Sync bound even though the conversion itself runs on a dedicated stack.
@@ -197,7 +197,7 @@ fn prepare_pfld_import<M>(
     request: &PfldImportRequest,
 ) -> Result<PreparedPfldImport<M>, WeightImportError>
 where
-    M: ModuleSnapshot + AutodiffModule,
+    M: ModuleSnapshot + Module,
 {
     let pickle = PytorchReader::read_pickle_data(snapshot.path(), None)
         .map_err(|error| WeightImportError::InvalidPfldEnvelope(error.to_string()))?;

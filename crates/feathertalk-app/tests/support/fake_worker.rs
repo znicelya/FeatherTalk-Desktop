@@ -1,8 +1,8 @@
 use std::io::{BufReader, Write};
 
 use feathertalk_domain::{
-    AdapterInfo, AdapterKind, Backend, Capabilities, ClientFrame, FrameReader, PROTOCOL_VERSION,
-    ReadyFrame, ServerFrame, TaskKind, encode_line,
+    encode_line, AdapterInfo, AdapterKind, Backend, Capabilities, ClientFrame, FrameReader,
+    ReadyFrame, ServerFrame, TaskKind, PROTOCOL_VERSION,
 };
 
 fn main() {

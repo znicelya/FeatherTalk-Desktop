@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use feathertalk_app::facts::FactValue;
-use feathertalk_app::models::{ModelForm, ModelKind, ModelOperation, result_facts};
+use feathertalk_app::models::{result_facts, ModelForm, ModelKind, ModelOperation};
 use feathertalk_domain::{
     ExportModelPackageParams, ExportOnnxParams, ImportLegacyModelParams, InspectModelParams,
     LegacyModelKind, MigrateLegacyFeaturesParams, OnnxExportKind, Request, TaskKind,
@@ -398,10 +398,10 @@ fn checkpoint_results_never_turn_unknown_parameter_counts_into_zeroes() {
             "parameter_count": null, "tensor_count": null, "epoch": 12, "global_step": 2400
         }),
     );
-    assert!(
-        facts.iter().any(|fact| fact.label == "models.result.epoch"
-            && fact.value == FactValue::Text("12".into()))
-    );
+    assert!(facts
+        .iter()
+        .any(|fact| fact.label == "models.result.epoch"
+            && fact.value == FactValue::Text("12".into())));
     assert!(!facts.iter().any(|fact| matches!(
         fact.label,
         "models.result.parameters" | "models.result.tensors"
@@ -416,17 +416,13 @@ fn inspection_reports_incompatibility_even_when_the_task_completed() {
             "model_kind": "original_unet", "compatible": false, "incompatibilities": ["file_size"]
         }),
     );
-    assert!(
-        facts
-            .iter()
-            .any(|fact| fact.label == "models.result.compatibility"
-                && fact.value == FactValue::Key("models.result.incompatible"))
-    );
-    assert!(
-        facts
-            .iter()
-            .any(|fact| fact.value == FactValue::Key("models.reason.file_size"))
-    );
+    assert!(facts
+        .iter()
+        .any(|fact| fact.label == "models.result.compatibility"
+            && fact.value == FactValue::Key("models.result.incompatible")));
+    assert!(facts
+        .iter()
+        .any(|fact| fact.value == FactValue::Key("models.reason.file_size")));
 }
 
 #[test]
@@ -442,10 +438,8 @@ fn migration_summary_uses_only_the_returned_dimensions_and_byte_count() {
         ("models.result.dimensions", "1024"),
         ("models.result.bytes", "344080"),
     ] {
-        assert!(
-            facts
-                .iter()
-                .any(|fact| fact.label == label && fact.value == FactValue::Text(value.into()))
-        );
+        assert!(facts
+            .iter()
+            .any(|fact| fact.label == label && fact.value == FactValue::Text(value.into())));
     }
 }

@@ -8,3 +8,5 @@ __pycache__
 docs/reports
 .worktrees/
 .superpowers
+/tools/*/target
+/vendor/*/target

@@ -11,23 +11,27 @@ const INDIRECT_DISPLAY_DEVICE: u32 = 1 << 6;
 #[repr(C)]
 struct Luid {
     low: u32,
-    high: i32}
+    high: i32,
+}
 
 #[repr(C)]
 struct OpenAdapterFromLuid {
     luid: Luid,
-    handle: u32}
+    handle: u32,
+}
 
 #[repr(C)]
 struct QueryAdapterInfo {
     handle: u32,
     kind: i32,
     data: *mut c_void,
-    size: u32}
+    size: u32,
+}
 
 #[repr(C)]
 struct CloseAdapter {
-    handle: u32}
+    handle: u32,
+}
 
 #[link(name = "gdi32")]
 unsafe extern "system" {
@@ -68,7 +72,8 @@ impl Drop for KernelAdapter {
 pub(super) fn adapter_type(low: u32, high: i32) -> Result<u32, String> {
     let mut request = OpenAdapterFromLuid {
         luid: Luid { low, high },
-        handle: 0};
+        handle: 0,
+    };
     // SAFETY: The input LUID and output handle have the SDK's C layout, and
     // request remains writable for the duration of the synchronous call.
     let status = unsafe { D3DKMTOpenAdapterFromLuid(&mut request) };
@@ -89,7 +94,8 @@ pub(super) fn adapter_type(low: u32, high: i32) -> Result<u32, String> {
         // indirect display device's renderer has the physical GPU's flags.
         kind: KMTQAITYPE_ADAPTERTYPE,
         data: (&mut flags as *mut u32).cast(),
-        size: size_of::<u32>() as u32};
+        size: size_of::<u32>() as u32,
+    };
     // SAFETY: The open handle stays live through the call. ADAPTERTYPE writes
     // exactly one 32-bit flags value to the live, correctly sized output buffer.
     let status = unsafe { D3DKMTQueryAdapterInfo(&query) };

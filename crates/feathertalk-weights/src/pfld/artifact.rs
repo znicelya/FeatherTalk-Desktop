@@ -3,7 +3,7 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::Path};
-use burn::module::AutodiffModule;
+use burn::module::Module;
 use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, SafetensorsStore};
 
 use crate::{
@@ -101,7 +101,7 @@ pub(super) fn verify_staged_artifacts<M>(
     staged: &StagedArtifacts,
 ) -> Result<(), WeightImportError>
 where
-    M: ModuleSnapshot + AutodiffModule,
+    M: ModuleSnapshot + Module,
 {
     let model_path = staged.path().join(MODEL_FILE_NAME);
     let mut reloaded = clone_module_detached::<M>(original)?;

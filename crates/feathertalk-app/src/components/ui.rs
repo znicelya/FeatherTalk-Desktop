@@ -3,8 +3,8 @@
 use yororen_ui::i18n::I18nContext;
 
 use gpui::{
-    App, Div, ElementId, FontWeight, InteractiveElement, IntoElement, ParentElement, SharedString,
-    Stateful, StatefulInteractiveElement, Styled, div, px,
+    div, px, App, Div, ElementId, FontWeight, InteractiveElement, IntoElement, ParentElement,
+    SharedString, Stateful, StatefulInteractiveElement, Styled,
 };
 
 use crate::theme::color;

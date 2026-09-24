@@ -1,6 +1,6 @@
 //! Compact, bounded presentation of facts read from worker output or project files.
 
-use gpui::{App, Div, InteractiveElement, ParentElement, SharedString, Styled, div, px};
+use gpui::{div, px, App, Div, InteractiveElement, ParentElement, SharedString, Styled};
 use yororen_ui::i18n::Translate;
 
 use crate::components::ui::muted;

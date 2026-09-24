@@ -1,9 +1,9 @@
 //! Explicit settings surface for appearance, devices and service diagnostics.
 
-use gpui::{App, ClipboardItem, Div, ParentElement, Styled, Window, div};
-use yororen_ui::ActionVariantKind;
+use gpui::{div, App, ClipboardItem, Div, ParentElement, Styled, Window};
 use yororen_ui::headless::button::button;
 use yororen_ui::i18n::Translate;
+use yororen_ui::ActionVariantKind;
 
 use crate::components::{
     compute_control::compute_control,
@@ -11,7 +11,7 @@ use crate::components::{
 };
 use crate::state::AppState;
 use crate::ui::AppLocale;
-use crate::worker_status::{WorkerStatus, source_key};
+use crate::worker_status::{source_key, WorkerStatus};
 
 pub fn set_theme(dark: bool, cx: &mut App) {
     let ui = cx.global::<AppState>().ui.clone();

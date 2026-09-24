@@ -5,7 +5,7 @@
 
 use gpui::App;
 use thiserror::Error;
-use yororen_ui::i18n::{LoadError, TranslationMap, parse_translation_value};
+use yororen_ui::i18n::{parse_translation_value, LoadError, TranslationMap};
 
 use crate::ui::AppLocale;
 

@@ -2,11 +2,11 @@ use feathertalk_app::assets::Step;
 use feathertalk_app::catalog;
 use feathertalk_app::navigation::Page;
 use feathertalk_app::tasks::{
-    CRASHED_KEY, REJECTED_KEY, UNAVAILABLE_KEY, UNSUPPORTED_KEY, kind_key, recovery_key, stage_key,
-    status_key,
+    kind_key, recovery_key, stage_key, status_key, CRASHED_KEY, REJECTED_KEY, UNAVAILABLE_KEY,
+    UNSUPPORTED_KEY,
 };
 use feathertalk_app::training::{
-    ALL_MODES, ALL_VARIANTS, mode_hint_key, mode_label_key, variant_label_key,
+    mode_hint_key, mode_label_key, variant_label_key, ALL_MODES, ALL_VARIANTS,
 };
 use feathertalk_domain::{Recovery, TaskKind, TaskStage, TaskStatus};
 

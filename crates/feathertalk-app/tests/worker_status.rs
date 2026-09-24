@@ -1,6 +1,6 @@
 use std::fs;
 
-use feathertalk_app::worker_status::{WorkerStatus, source_key};
+use feathertalk_app::worker_status::{source_key, WorkerStatus};
 use feathertalk_client::{WorkerLocator, WorkerPathSource};
 
 #[test]

@@ -1,7 +1,8 @@
 use std::{
     ffi::OsString,
     path::{Path, PathBuf},
-    time::Duration};
+    time::Duration,
+};
 
 use feathertalk_domain::{AdapterInfo, Backend, TaskKind};
 use feathertalk_media::MediaToolchain;
@@ -22,7 +23,8 @@ pub const ENV_ADAPTER: &str = "FEATHERTALK_WORKER_ADAPTER";
 #[derive(Debug, Clone)]
 struct ComputeChoice {
     backend: Backend,
-    adapter_id: Option<String>}
+    adapter_id: Option<String>,
+}
 
 /// Where the worker finds the two model artifact directories.
 ///
@@ -32,7 +34,8 @@ struct ComputeChoice {
 #[derive(Debug, Clone)]
 pub struct ModelToolchain {
     scrfd_dir: PathBuf,
-    pfld_dir: PathBuf}
+    pfld_dir: PathBuf,
+}
 
 impl ModelToolchain {
     pub fn scrfd_dir(&self) -> &Path {
@@ -51,7 +54,8 @@ impl ModelToolchain {
 /// job, so the manifest and the weights are validated when a job loads them.
 #[derive(Debug, Clone)]
 pub struct FeatureToolchain {
-    hubert_dir: PathBuf}
+    hubert_dir: PathBuf,
+}
 
 impl FeatureToolchain {
     pub fn hubert_dir(&self) -> &Path {
@@ -67,7 +71,8 @@ impl FeatureToolchain {
 /// can disappear between startup and the first job.
 #[derive(Debug, Clone)]
 pub struct TrainingToolchain {
-    vgg19_dir: PathBuf}
+    vgg19_dir: PathBuf,
+}
 
 impl TrainingToolchain {
     pub fn vgg19_dir(&self) -> &Path {
@@ -92,7 +97,8 @@ pub struct WorkerConfig {
     training: Option<TrainingToolchain>,
     training_rejection: Option<String>,
     compute: ComputeRegistry,
-    compute_choice: Result<ComputeChoice, String>}
+    compute_choice: Result<ComputeChoice, String>,
+}
 
 impl WorkerConfig {
     pub fn from_env() -> Self {
@@ -190,16 +196,20 @@ impl WorkerConfig {
     ) -> Self {
         let (media, media_rejection) = match media_toolchain(ffprobe, ffmpeg, timeout_ms) {
             Ok(toolchain) => (Some(toolchain), None),
-            Err(reason) => (None, Some(reason))};
+            Err(reason) => (None, Some(reason)),
+        };
         let (models, model_rejection) = match model_toolchain(scrfd_dir, pfld_dir) {
             Ok(toolchain) => (Some(toolchain), None),
-            Err(reason) => (None, Some(reason))};
+            Err(reason) => (None, Some(reason)),
+        };
         let (features, feature_rejection) = match feature_toolchain(hubert_dir) {
             Ok(toolchain) => (Some(toolchain), None),
-            Err(reason) => (None, Some(reason))};
+            Err(reason) => (None, Some(reason)),
+        };
         let (training, training_rejection) = match training_toolchain(vgg19_dir) {
             Ok(toolchain) => (Some(toolchain), None),
-            Err(reason) => (None, Some(reason))};
+            Err(reason) => (None, Some(reason)),
+        };
         Self {
             worker_version: env!("CARGO_PKG_VERSION").to_owned(),
             media,
@@ -213,7 +223,9 @@ impl WorkerConfig {
             compute: ComputeRegistry::cpu_only(),
             compute_choice: Ok(ComputeChoice {
                 backend: Backend::Auto,
-                adapter_id: None})}
+                adapter_id: None,
+            }),
+        }
     }
 
     /// Supply a discovered registry without making value constructors probe
@@ -232,13 +244,15 @@ impl WorkerConfig {
             Some("rocm") => Ok(Backend::Rocm),
             Some(value) => Err(format!(
                 "{ENV_BACKEND} must be auto, cpu, wgpu, cuda or rocm, got {value:?}"
-            ))}
+            )),
+        }
         .map(|backend| ComputeChoice {
             backend,
             adapter_id: adapter
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
-                .map(str::to_owned)});
+                .map(str::to_owned),
+        });
         self
     }
 
@@ -368,7 +382,8 @@ fn media_toolchain(
         None => DEFAULT_MEDIA_TIMEOUT_MS,
         Some(value) => value.trim().parse::<u64>().map_err(|_| {
             format!("{ENV_MEDIA_TIMEOUT_MS} must be a whole number of milliseconds, got {value:?}")
-        })?};
+        })?,
+    };
     if timeout_ms == 0 {
         return Err(format!("{ENV_MEDIA_TIMEOUT_MS} must be greater than zero"));
     }
@@ -384,7 +399,8 @@ fn model_toolchain(
     let pfld_dir = required_path(pfld_dir, ENV_PFLD_DIR)?;
     Ok(ModelToolchain {
         scrfd_dir,
-        pfld_dir})
+        pfld_dir,
+    })
 }
 
 fn feature_toolchain(hubert_dir: Option<String>) -> Result<FeatureToolchain, String> {

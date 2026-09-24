@@ -4,7 +4,7 @@ use std::{
     fmt, fs,
     path::{Path, PathBuf}};
 
-use burn::module::AutodiffModule;
+use burn::module::Module;
 use feathertalk_domain::{ExportModelPackageParams, Progress, TaskStage};
 use feathertalk_export::{
     LICENSE_FILE_NAME, ModelDescription, ModelPackageManifest, PackageBuildRequest, SourceManifest,

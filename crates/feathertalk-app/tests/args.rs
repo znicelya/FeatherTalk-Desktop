@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use feathertalk_app::args::{ArgsError, LaunchOptions, parse};
+use feathertalk_app::args::{parse, ArgsError, LaunchOptions};
 
 fn arguments(values: &[&str]) -> Vec<OsString> {
     values.iter().map(OsString::from).collect()

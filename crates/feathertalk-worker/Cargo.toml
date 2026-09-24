@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "feathertalk-worker"
 version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 burn = { workspace = true, features = ["cubecl"] }
-burn-fusion = { version = "=0.22.0-pre.3", default-features = false, features = ["std"] }
+burn-fusion = { version = "=0.22.0-pre.4", default-features = false, features = ["std"] }
 feathertalk-audio = { path = "../feathertalk-audio" }
 feathertalk-domain = { path = "../feathertalk-domain" }
 feathertalk-export = { path = "../feathertalk-export" }
@@ -40,5 +40,7 @@ burn-rocm.workspace = true
 cubecl-hip-sys.workspace = true
 
 [dev-dependencies]
-cubek = { version = "=0.3.0-pre.3", default-features = false, features = ["std", "stdlib", "matmul"] }
+cubek = { version = "=0.3.0-pre.4", default-features = false, features = ["std", "stdlib", "matmul"] }
 tempfile = { workspace = true }
+
+

@@ -11,7 +11,8 @@ use crate::{
     error_map::{package_task_error, training_task_error},
     inspect_result::inspect_to_json,
     inspecting::model_source_kind,
-    package_files, package_incompatibilities};
+    package_files, package_incompatibilities,
+};
 
 /// Reads the manifests of a model directory and reports what is in it.
 ///
@@ -31,12 +32,14 @@ pub fn execute_inspect_model(
     let source = params.source.as_path();
     let kind = match model_source_kind(source) {
         Ok(kind) => kind,
-        Err(error) => return CommandOutcome::Failed(error)};
+        Err(error) => return CommandOutcome::Failed(error),
+    };
     let payload = match kind {
         ModelSourceKind::ModelPackage => {
             let manifest = match read_package_manifest(source) {
                 Ok(manifest) => manifest,
-                Err(error) => return CommandOutcome::Failed(package_task_error(&error))};
+                Err(error) => return CommandOutcome::Failed(package_task_error(&error)),
+            };
             let files = package_files(source, &manifest);
             let reasons = package_incompatibilities(&manifest, &files, config.worker_version());
             if token.is_cancelled() {
@@ -47,7 +50,8 @@ pub fn execute_inspect_model(
                 source_path: source,
                 model: InspectedModel::Package(&manifest),
                 files: &files,
-                incompatibilities: &reasons})
+                incompatibilities: &reasons,
+            })
         }
         ModelSourceKind::TrainingCheckpoint => {
             let checkpoint = match read_training_checkpoint(source) {
@@ -69,7 +73,8 @@ pub fn execute_inspect_model(
                 source_path: source,
                 model: InspectedModel::Checkpoint(&checkpoint),
                 files: &files,
-                incompatibilities: &reasons})
+                incompatibilities: &reasons,
+            })
         }
     };
     CommandOutcome::Completed(Some(payload))

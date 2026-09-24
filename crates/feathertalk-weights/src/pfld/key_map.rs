@@ -104,7 +104,8 @@ fn is_reviewed_source_batch_norm_parent(parent: &str) -> bool {
     match segments.as_slice() {
         [.., "rbr_conv", index, "bn"] => is_decimal_index(index),
         [.., "rbr_scale", "bn"] | [.., "rbr_skip"] => true,
-        _ => false}
+        _ => false,
+    }
 }
 
 fn is_mapped_batch_norm_parent(parent: &str) -> bool {
@@ -112,7 +113,8 @@ fn is_mapped_batch_norm_parent(parent: &str) -> bool {
     match segments.as_slice() {
         [.., "branches", index, "1"] => is_decimal_index(index),
         [.., "scale", "1"] | [.., "skip"] => true,
-        _ => false}
+        _ => false,
+    }
 }
 
 fn is_decimal_index(segment: &str) -> bool {

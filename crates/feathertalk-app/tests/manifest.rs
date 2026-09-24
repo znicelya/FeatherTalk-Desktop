@@ -4,12 +4,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use feathertalk_app::manifest::{
-    Bootstrap, ManifestError, display_name_from_dir, ensure_manifest, manifest_path,
-    project_id_from_dir,
+    display_name_from_dir, ensure_manifest, manifest_path, project_id_from_dir, Bootstrap,
+    ManifestError,
 };
 use feathertalk_project::{
-    ModelSelection, ProjectManifest, TaskHistoryEntry, TaskHistoryStatus, read_project_manifest,
-    write_project_manifest_atomic,
+    read_project_manifest, write_project_manifest_atomic, ModelSelection, ProjectManifest,
+    TaskHistoryEntry, TaskHistoryStatus,
 };
 
 /// A project path ending in `name`.

@@ -12,7 +12,7 @@ use feathertalk_domain::{
     ExtractFeaturesParams, ExtractFramesParams, NormalizeMediaParams, ProjectDirParams, Request,
     TaskKind,
 };
-use feathertalk_project::{AssetManifest, AssetPackageState, read_asset_manifest};
+use feathertalk_project::{read_asset_manifest, AssetManifest, AssetPackageState};
 
 // The line type is shared with the training page, so it lives in `facts` and is
 // re-exported here: `assets::Fact` is the path every caller already uses.

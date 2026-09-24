@@ -1,7 +1,6 @@
-use burn::backend::wgpu::WgpuRuntime;
+use burn::cubecl::Device as CubeDevice;
 use cubek::{
     cubecl::{
-        Runtime,
         ir::{ElemType, FloatKind},
         prelude::TensorBinding,
         std::tensor::TensorHandle,
@@ -52,7 +51,7 @@ fn transpose_last_two(strides: &[usize]) -> Vec<usize> {
 }
 
 /// Borrow a handle as a launch binding without consuming it.
-fn binding_of(handle: &TensorHandle<WgpuRuntime>) -> TensorBinding<WgpuRuntime> {
+fn binding_of(handle: &TensorHandle) -> TensorBinding {
     handle.clone().binding()
 }
 
@@ -75,7 +74,7 @@ fn double_buffered_matmul_does_not_read_past_odd_k_stage_counts() {
             let device = context
                 .native_wgpu_device()
                 .expect("wgpu context exposes a native device");
-            let client = WgpuRuntime::client(&device);
+            let client = CubeDevice::from(device).client();
             let strategy = Strategy::MultiLevel(multi_level::Strategy::DoubleUnit(
                 BlueprintStrategy::Inferred(DoubleUnitSelectionArgs {
                     tile_size: TileSizeSelection::MaxTileSize,
@@ -90,7 +89,7 @@ fn double_buffered_matmul_does_not_read_past_odd_k_stage_counts() {
                     [6_400, k].into(),
                     F32_SIZE,
                 );
-                let lhs = TensorHandle::<WgpuRuntime>::new(
+                let lhs = TensorHandle::new(
                     lhs_layout.memory,
                     [6_400, k],
                     lhs_layout.strides,
@@ -101,8 +100,8 @@ fn double_buffered_matmul_does_not_read_past_odd_k_stage_counts() {
                     client.create_tensor_from_slice(&ones_bytes(48 * k), [48, k].into(), F32_SIZE);
                 let rhs_strides = transpose_last_two(&rhs_layout.strides);
                 let rhs =
-                    TensorHandle::<WgpuRuntime>::new(rhs_layout.memory, [k, 48], rhs_strides, F32);
-                let output = TensorHandle::<WgpuRuntime>::empty(&client, [6_400, 48], F32);
+                    TensorHandle::new(rhs_layout.memory, [k, 48], rhs_strides, F32);
+                let output = TensorHandle::empty(&client, [6_400, 48], F32);
                 let mut dtypes = MatmulElems::from_globals(&MatmulGlobalElems {
                     lhs: F32,
                     rhs: F32,
@@ -147,7 +146,7 @@ fn double_buffered_inner_product_does_not_read_the_next_batch() {
             let device = context
                 .native_wgpu_device()
                 .expect("wgpu context exposes a native device");
-            let client = WgpuRuntime::client(&device);
+            let client = CubeDevice::from(device).client();
             let strategy = Strategy::MultiLevel(multi_level::Strategy::DoubleVecMat(
                 BlueprintStrategy::Inferred(().into()),
             ));
@@ -156,7 +155,7 @@ fn double_buffered_inner_product_does_not_read_the_next_batch() {
             // makes an unchecked extra stage read real values from that batch.
             let lhs_layout =
                 client.create_tensor_from_slice(&ones_bytes(2 * 384), [2, 1, 384].into(), F32_SIZE);
-            let lhs = TensorHandle::<WgpuRuntime>::new(
+            let lhs = TensorHandle::new(
                 lhs_layout.memory,
                 [2, 1, 384],
                 lhs_layout.strides,
@@ -167,8 +166,8 @@ fn double_buffered_inner_product_does_not_read_the_next_batch() {
                 client.create_tensor_from_slice(&ones_bytes(2 * 384), [2, 1, 384].into(), F32_SIZE);
             let rhs_strides = transpose_last_two(&rhs_layout.strides);
             let rhs =
-                TensorHandle::<WgpuRuntime>::new(rhs_layout.memory, [2, 384, 1], rhs_strides, F32);
-            let output = TensorHandle::<WgpuRuntime>::empty(&client, [2, 1, 1], F32);
+                TensorHandle::new(rhs_layout.memory, [2, 384, 1], rhs_strides, F32);
+            let output = TensorHandle::empty(&client, [2, 1, 1], F32);
             let mut dtypes = MatmulElems::from_globals(&MatmulGlobalElems {
                 lhs: F32,
                 rhs: F32,

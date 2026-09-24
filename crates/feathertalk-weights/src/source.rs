@@ -91,8 +91,33 @@ pub(crate) fn sha256_file(path: &Path) -> Result<String, WeightImportError> {
     Ok(hex::encode(hasher.finalize()))
 }
 
-pub(crate) fn tensor_elements(snapshot: &burn_store::burn_pack::Tensor) -> Result<u64, WeightImportError> {
-    snapshot.shape.iter().try_fold(1u64, |total, dimension| {
+/// Convert the pytorch reader dtype enum to burn's. burn 0.22.0-pre.4 gives the
+/// reader its own `DType` (no `Flex32`/`QFloat`), so bridge it explicitly.
+pub(crate) fn reader_dtype_to_burn(dtype: burn_store::pytorch_reader::DType) -> burn::tensor::DType {
+    use burn::tensor::DType as B;
+    use burn_store::pytorch_reader::DType as R;
+    match dtype {
+        R::F64 => B::F64,
+        R::F32 => B::F32,
+        R::F16 => B::F16,
+        R::BF16 => B::BF16,
+        R::I64 => B::I64,
+        R::I32 => B::I32,
+        R::I16 => B::I16,
+        R::I8 => B::I8,
+        R::U64 => B::U64,
+        R::U32 => B::U32,
+        R::U16 => B::U16,
+        R::U8 => B::U8,
+        R::Bool => B::Bool(burn::tensor::BoolStore::Native),
+    }
+}
+
+/// Element count from raw dimensions, sharing the overflow guards of
+/// [`tensor_elements`]. burn 0.22.0-pre.4 split the pytorch reader tensor out of
+/// `burn_pack::Tensor`, so reader-side callers pass `Tensor::shape()` here.
+pub(crate) fn shape_elements<'a>(dims: impl IntoIterator<Item = &'a usize>) -> Result<u64, WeightImportError> {
+    dims.into_iter().try_fold(1u64, |total, dimension| {
         let dimension = u64::try_from(*dimension).map_err(|_| {
             WeightImportError::UnsafeLimit("tensor dimension exceeds u64".to_owned())
         })?;
@@ -100,4 +125,7 @@ pub(crate) fn tensor_elements(snapshot: &burn_store::burn_pack::Tensor) -> Resul
             WeightImportError::UnsafeLimit("tensor element count overflowed u64".to_owned())
         })
     })
+}
+pub(crate) fn tensor_elements(snapshot: &burn_store::burn_pack::Tensor) -> Result<u64, WeightImportError> {
+    shape_elements(snapshot.shape.iter())
 }

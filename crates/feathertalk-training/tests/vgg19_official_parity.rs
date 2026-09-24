@@ -3,10 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use burn::{
-    backend::Flex,
-    tensor::{Tensor, TensorData},
-};
+use burn::tensor::{Tensor, TensorData};
 use feathertalk_training::{load_vgg19_package, read_vgg19_manifest};
 use ndarray::ArrayD;
 use ndarray_npy::ReadNpyExt;

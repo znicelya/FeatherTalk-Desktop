@@ -5,7 +5,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering}};
 
 use burn::{
-    module::AutodiffModule,
+    module::Module,
     optim::OptimizerRecord,
 };
 use crate::checkpoint::CheckpointableOptimizer;
@@ -85,7 +85,7 @@ pub(crate) fn reject_symlink_components(path: &Path) -> Result<(), TrainingError
 
 pub(crate) fn write_model_record<M>(model: &M, stem: &Path) -> Result<PathBuf, TrainingError>
 where
-    M: AutodiffModule + Clone,
+    M: Module + Clone,
 {
     model
         .clone()
@@ -96,7 +96,7 @@ where
 
 pub(crate) fn write_optimizer_record<M, O>(optimizer: &O, stem: &Path) -> Result<PathBuf, TrainingError>
 where
-    M: AutodiffModule,
+    M: Module,
     O: CheckpointableOptimizer + Clone,
 {
     optimizer
@@ -109,7 +109,7 @@ where
 
 pub(crate) fn load_model_record<M>(model: M, path: &Path) -> Result<M, TrainingError>
 where
-    M: AutodiffModule + Clone,
+    M: Module + Clone,
 {
     model
         .try_load_file(path)
@@ -118,7 +118,7 @@ where
 
 pub(crate) fn load_optimizer_record<M, O>(optimizer: O, path: &Path) -> Result<O, TrainingError>
 where
-    M: AutodiffModule,
+    M: Module,
     O: CheckpointableOptimizer + Clone,
 {
     let record = OptimizerRecord::load(path)

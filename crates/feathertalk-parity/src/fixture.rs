@@ -545,7 +545,7 @@ fn init_wgpu<G: burn::backend::wgpu::graphics::GraphicsApi>(
             evidence.graphics, requested_graphics
         )));
     }
-    Ok((burn::tensor::Device::new(burn::backend::DispatchDevice::Wgpu(device.clone())), evidence.clone()))
+    Ok((burn::tensor::Device::new(device.clone()), evidence.clone()))
 }
 
 fn panic_message(panic: Box<dyn std::any::Any + Send>) -> String {
@@ -1019,7 +1019,7 @@ fn validate_training_provenance(fixture: &GoldenFixture) -> Result<(), ParityErr
 }
 
 pub fn run_cpu_train_step(archive: &GoldenArchive) -> Result<TrainStepParity, ParityError> {
-    use burn::module::AutodiffModule;
+    use burn::module::Module;
     use burn::optim::AdamConfig;
     archive
         .verify_sidecar_sha256()

@@ -403,6 +403,7 @@ fn detached_batch_norm(source: &BatchNorm) -> BatchNorm {
     BatchNorm {
         gamma: Param::from_tensor(source.gamma.val().detach()),
         beta: Param::from_tensor(source.beta.val().detach()),
+        training: source.training.clone(),
         running_mean: RunningState::new(source.running_mean.value().detach()),
         running_var: RunningState::new(source.running_var.value().detach()),
         momentum: source.momentum,

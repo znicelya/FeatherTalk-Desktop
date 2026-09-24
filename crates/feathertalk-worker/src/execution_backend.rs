@@ -5,7 +5,7 @@
 //! and allocator statistics are derived from the device that a command was
 //! handed instead of from a `B: Backend` parameter.
 
-use burn::{backend::DispatchDevice, tensor::Device};
+use burn::{backend::DispatchDevice, cubecl::Device as CubeDevice, tensor::Device};
 
 /// Peels the autodiff wrapper, if any, so backend identification always sees
 /// the concrete hardware device underneath a training device.
@@ -25,12 +25,13 @@ fn hardware_dispatch(device: &Device) -> &DispatchDevice {
 pub fn execution_name(device: &Device) -> &'static str {
     match hardware_dispatch(device) {
         DispatchDevice::Flex(_) => "flex-cpu",
-        DispatchDevice::Vulkan(_) | DispatchDevice::Wgpu(_) => "wgpu",
+        DispatchDevice::Cube(CubeDevice::Wgpu(_)) => "wgpu",
         #[cfg(any(target_os = "windows", target_os = "linux"))]
-        DispatchDevice::Cuda(_) => "cuda",
+        DispatchDevice::Cube(CubeDevice::Cuda(_)) => "cuda",
         #[cfg(target_os = "linux")]
-        DispatchDevice::Rocm(_) => "rocm",
-        _ => "unknown"}
+        DispatchDevice::Cube(CubeDevice::Hip(_)) => "rocm",
+        _ => "unknown",
+    }
 }
 
 /// Bytes occupied by active CubeCL tensor allocations on `device`, or `None`
@@ -38,12 +39,13 @@ pub fn execution_name(device: &Device) -> &'static str {
 /// backend, which has no CubeCL client).
 pub fn gpu_memory_bytes(device: &Device) -> Option<u64> {
     match hardware_dispatch(device) {
-        DispatchDevice::Vulkan(_) | DispatchDevice::Wgpu(_) => {
+        DispatchDevice::Cube(CubeDevice::Wgpu(_)) => {
             crate::compute::wgpu_memory_usage_bytes(device)
         }
         #[cfg(any(target_os = "windows", target_os = "linux"))]
-        DispatchDevice::Cuda(_) => crate::compute::cuda::memory_usage_bytes(device),
+        DispatchDevice::Cube(CubeDevice::Cuda(_)) => crate::compute::cuda::memory_usage_bytes(device),
         #[cfg(target_os = "linux")]
-        DispatchDevice::Rocm(_) => crate::compute::rocm::memory_usage_bytes(device),
-        _ => None}
+        DispatchDevice::Cube(CubeDevice::Hip(_)) => crate::compute::rocm::memory_usage_bytes(device),
+        _ => None,
+    }
 }

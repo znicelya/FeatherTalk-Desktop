@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use feathertalk_app::assets::{
-    AssetSurvey, FactValue, Step, StepState, facts, request, step_state,
+    facts, request, step_state, AssetSurvey, FactValue, Step, StepState,
 };
 use feathertalk_domain::Request;
 

@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, path::Path, thread::JoinHandle, time::Duration};
 
-use burn::module::AutodiffModule;
+use burn::module::Module;
 use feathertalk_models::unet::TrainableTalkingHead;
 use feathertalk_training::PreparedBatchWithTiming;
 use feathertalk_training::{
@@ -58,7 +58,7 @@ where
 
 impl<M, O, D> TrainingRunner<M, O, D>
 where
-    M: TrainableTalkingHead + AutodiffModule + Clone,
+    M: TrainableTalkingHead + Module + Clone,
     O: feathertalk_training::CheckpointableOptimizer + Clone,
     D: TrainingDataset<Item = TrainingItem> + Send + Sync + 'static,
 {

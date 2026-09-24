@@ -1,4 +1,5 @@
 use super::*;
+use burn::cubecl::wgpu::WgpuDeviceKind;
 use feathertalk_domain::Recovery;
 
 fn nvidia(api: wgpu::Backend) -> wgpu::AdapterInfo {
@@ -14,7 +15,8 @@ fn nvidia(api: wgpu::Backend) -> wgpu::AdapterInfo {
         subgroup_min_size: 32,
         subgroup_max_size: 32,
         transient_saves_memory: None,
-        limit_bucket: None}
+        limit_bucket: None,
+    }
 }
 
 fn gpu(id: &str, certified: bool, kind: AdapterKind) -> AdapterInfo {
@@ -24,7 +26,8 @@ fn gpu(id: &str, certified: bool, kind: AdapterKind) -> AdapterInfo {
         backend: Backend::Wgpu,
         kind,
         certified,
-        vram_bytes: None}
+        vram_bytes: None,
+    }
 }
 
 fn pc_gpu(
@@ -278,7 +281,8 @@ fn arc_and_radeon_selection_reaches_the_worker_and_training_handshake() {
                 adapters,
                 native: BTreeMap::new(),
                 #[cfg(any(target_os = "windows", target_os = "linux"))]
-                cuda: BTreeMap::new()};
+                cuda: BTreeMap::new(),
+            };
             assert_eq!(registry.resolve(Backend::Wgpu, None).unwrap(), adapter);
             let config = crate::WorkerConfig::from_values_with_training(
                 None,
@@ -503,7 +507,8 @@ fn filtering_display_aliases_keeps_linked_physical_gpus_and_their_handles() {
             native::NativeMetadata {
                 identity: Some(identity.into()),
                 vram_bytes: Some(8 * 1024 * 1024 * 1024),
-                software_or_indirect},
+                software_or_indirect,
+            },
             handle,
         )
     });
@@ -631,7 +636,8 @@ fn typed_gpu_failures_keep_their_code_recovery_and_original_stage() {
     let stage = TaskStage::Training {
         epoch: 2,
         step: 34,
-        loss: 0.5};
+        loss: 0.5,
+    };
     for (failure, code, recovery) in [
         (
             GpuFailure::OutOfMemory("allocation failed".into()),
@@ -674,7 +680,8 @@ fn gpu_error_details_remain_valid_protocol_messages() {
 fn uncaptured_oom_is_typed_and_retained_after_follow_on_errors() {
     let faults = FaultState::default();
     faults.record_wgpu(wgpu::Error::OutOfMemory {
-        source: Box::new(std::io::Error::other("allocation failed"))});
+        source: Box::new(std::io::Error::other("allocation failed")),
+    });
     faults.record(GpuFailure::DeviceLost("device lost after OOM".into()));
     faults.record(GpuFailure::Other("subsequent validation error".into()));
     assert!(matches!(faults.check(), Err(GpuFailure::OutOfMemory(_))));
@@ -691,13 +698,13 @@ fn typed_fault_replaces_an_earlier_generic_diagnostic() {
 
 #[test]
 fn telemetry_does_not_open_an_implicit_or_software_device() {
-    for device in [
-        WgpuDevice::DefaultDevice,
-        WgpuDevice::Cpu,
-        WgpuDevice::DiscreteGpu(0),
+    for kind in [
+        WgpuDeviceKind::DefaultDevice,
+        WgpuDeviceKind::Cpu,
+        WgpuDeviceKind::DiscreteGpu(0),
     ] {
         assert_eq!(
-            wgpu_memory_usage_bytes(&Device::new(DispatchDevice::Wgpu(device))),
+            wgpu_memory_usage_bytes(&Device::new(WgpuDevice::new(kind))),
             None
         );
     }
@@ -705,23 +712,30 @@ fn telemetry_does_not_open_an_implicit_or_software_device() {
 
 #[test]
 fn nested_runtime_and_profiling_errors_preserve_typed_allocation_failure() {
-    use burn::cubecl::server::ProfileError;
-
     let allocation = || LaunchError::OutOfMemory {
         reason: "physical allocation failed".into(),
-        backtrace: Default::default()};
+        backtrace: Default::default(),
+    };
+    let io_oom = || IoError::OutOfMemory {
+        size: 1 << 20,
+        backtrace: Default::default(),
+    };
     let errors = [
         ServerError::Launch(allocation()),
-        ServerError::ServerUnhealthy {
+        ServerError::Io(io_oom()),
+        // burn 0.22.0-pre.4: several failures at once, and a skipped read whose
+        // oot names the real cause. Both must still classify as OOM.
+        ServerError::Several {
             errors: vec![ServerError::Launch(allocation())],
-            backtrace: Default::default()},
-        ServerError::Io(IoError::Execution(Box::new(ServerError::Launch(
-            allocation(),
-        )))),
-        ServerError::Profile(ProfileError::Launch(allocation())),
-        ServerError::Profile(ProfileError::Server(Box::new(ServerError::Launch(
-            allocation(),
-        )))),
+            backtrace: Default::default(),
+        },
+        ServerError::Unwritten {
+            failure: 0,
+            claimed: 1,
+            chain: Vec::new(),
+            root: Box::new(ServerError::Launch(allocation())),
+            backtrace: Default::default(),
+        },
     ];
     for error in errors {
         assert!(matches!(server_failure(error), GpuFailure::OutOfMemory(_)));
@@ -732,21 +746,20 @@ fn nested_runtime_and_profiling_errors_preserve_typed_allocation_failure() {
 fn diagnostic_text_does_not_turn_unrelated_errors_into_out_of_memory() {
     let error = ServerError::Generic {
         reason: "out of memory appeared in a shader comment".into(),
-        backtrace: Default::default()};
+        backtrace: Default::default(),
+    };
     assert!(matches!(server_failure(error), GpuFailure::Other(_)));
     let error = ServerError::Io(IoError::BufferTooBig {
         size: u64::MAX,
-        backtrace: Default::default()});
+        backtrace: Default::default(),
+    });
     assert!(matches!(server_failure(error), GpuFailure::Other(_)));
 }
 
 #[test]
 #[ignore = "requires a certified native GPU; explicitly enabling this test never falls back or skips"]
 fn native_gpu_tensor_smoke() {
-    use burn::{
-        backend::wgpu::WgpuRuntime,
-        cubecl::Runtime,
-        tensor::Tensor};
+    use burn::tensor::Tensor;
 
     let registry = ComputeRegistry::discover();
     let selected = registry
@@ -764,12 +777,11 @@ fn native_gpu_tensor_smoke() {
         .open_wgpu(&selected.id)
         .expect("the selected GPU must open");
     assert!(
-        matches!(wgpu_device(&context.device), Some(WgpuDevice::Existing(_))),
+        matches!(
+            wgpu_native(&context.device).map(|native| &native.kind),
+            Some(WgpuDeviceKind::Existing(_))
+        ),
         "Burn must execute the registered setup"
-    );
-    assert!(
-        matches!(context.device.as_dispatch(), DispatchDevice::Wgpu(WgpuDevice::Existing(_))),
-        "existing WGPU devices must stay on AutoCompiler, not the Vulkan compiler"
     );
     assert_eq!(
         entry.adapter, context.setup.adapter,
@@ -802,13 +814,21 @@ fn native_gpu_tensor_smoke() {
         assert_eq!(context.graphics_api(), "metal");
         assert!(actual.name.starts_with("Apple "));
     }
-    let native = wgpu_device(&context.device).expect("a wgpu context wraps a native wgpu device");
-    assert_eq!(*WgpuRuntime::<AutoCompiler>::client(native).info(), actual.backend);
+    // burn 0.22.0-pre.4 exposes only the runtime name on the client; the
+    // concrete graphics backend is asserted above via the adapter info and
+    // graphics_api(). On Vulkan the wgpu runtime still selects the native
+    // SPIR-V compiler, which its name reflects.
+    let cube = wgpu_cube_device(&context.device)
+        .expect("a wgpu context wraps a native wgpu device");
+    let runtime_name = cube.client().name();
+    assert!(
+        runtime_name.starts_with("wgpu"),
+        "unexpected wgpu runtime name: {runtime_name}"
+    );
     if actual.backend == wgpu::Backend::Vulkan {
-        assert_eq!(
-            WgpuRuntime::name(&WgpuRuntime::<AutoCompiler>::client(native)),
-            "wgpu<spirv>",
-            "Vulkan computation must use the native SPIR-V compiler"
+        assert!(
+            runtime_name.contains("spirv"),
+            "Vulkan computation must use the native SPIR-V compiler, got {runtime_name}"
         );
     }
     let reopened = registry
@@ -840,7 +860,8 @@ fn native_gpu_tensor_smoke() {
         label: Some("pending upload synchronization regression"),
         size: expected.len() as u64,
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false});
+        mapped_at_creation: false,
+    });
     context.setup.queue.write_buffer(&upload, 0, &expected);
     context
         .check()
@@ -854,7 +875,8 @@ fn native_gpu_tensor_smoke() {
         .device
         .poll(wgpu::PollType::Wait {
             submission_index: None,
-            timeout: Some(Duration::from_secs(5))})
+            timeout: Some(Duration::from_secs(5)),
+        })
         .expect("mapping the completed upload must finish");
     receiver
         .recv_timeout(Duration::from_secs(5))

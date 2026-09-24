@@ -1,4 +1,4 @@
-use feathertalk_app::ui::{AppLocale, ProgressPresentation, TaskFilter, progress_presentation};
+use feathertalk_app::ui::{progress_presentation, AppLocale, ProgressPresentation, TaskFilter};
 use feathertalk_domain::{Progress, TaskStatus};
 
 #[test]

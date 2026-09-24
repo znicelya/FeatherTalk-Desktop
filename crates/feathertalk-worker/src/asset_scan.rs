@@ -7,7 +7,8 @@ use std::path::Path;
 use feathertalk_domain::{Progress, TaskStage};
 use feathertalk_frame_adapters::probe_jpeg_geometry;
 use feathertalk_frame_pipeline::{
-    MAX_FRAME_BYTES, PipelineError, QualityReport, read_landmark_file};
+    MAX_FRAME_BYTES, PipelineError, QualityReport, read_landmark_file,
+};
 use feathertalk_media::CancellationToken;
 
 use crate::{CommandOutcome, TaskReporter, admission::invalid_request, pipeline_task_error};
@@ -66,7 +67,8 @@ pub(crate) fn verify_frames(
         None => Err(CommandOutcome::Failed(invalid_request(
             "素材包没有可用的帧",
             "the quality report lists no frames".to_owned(),
-        )))}
+        ))),
+    }
 }
 
 /// Prove the asset directories hold exactly the files the report declares.
@@ -99,23 +101,28 @@ fn verify_frame(path: &Path) -> Result<(u32, u32), PipelineError> {
         Ok(metadata) => metadata,
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
             return Err(PipelineError::FrameMissing {
-                path: path.to_owned()});
+                path: path.to_owned(),
+            });
         }
-        Err(source) => return Err(io("stat_frame", path, source))};
+        Err(source) => return Err(io("stat_frame", path, source)),
+    };
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(PipelineError::FrameNotRegular {
-            path: path.to_owned()});
+            path: path.to_owned(),
+        });
     }
     let size = metadata.len();
     if size == 0 {
         return Err(PipelineError::FrameEmpty {
-            path: path.to_owned()});
+            path: path.to_owned(),
+        });
     }
     if size > MAX_FRAME_BYTES {
         return Err(PipelineError::FrameTooLarge {
             path: path.to_owned(),
             limit: MAX_FRAME_BYTES,
-            actual: size});
+            actual: size,
+        });
     }
     let prefix = read_prefix(path, JPEG_HEADER_PROBE_BYTES)?;
     match probe_jpeg_geometry(path, &prefix) {
@@ -127,7 +134,8 @@ fn verify_frame(path: &Path) -> Result<(u32, u32), PipelineError> {
             let whole = read_prefix(path, size)?;
             probe_jpeg_geometry(path, &whole)
         }
-        Err(error) => Err(error)}
+        Err(error) => Err(error),
+    }
 }
 
 /// Read at most `limit` bytes from `path`.
@@ -171,7 +179,8 @@ fn io(operation: &'static str, path: &Path, source: std::io::Error) -> PipelineE
     PipelineError::Io {
         operation,
         path: path.to_owned(),
-        source}
+        source,
+    }
 }
 
 /// Nothing in this module can produce `PipelineError::Cancelled`, so there is
@@ -208,7 +217,8 @@ mod tests {
 
     #[derive(Default)]
     struct Recorder {
-        events: Mutex<Vec<(TaskStage, Option<Progress>)>>}
+        events: Mutex<Vec<(TaskStage, Option<Progress>)>>,
+    }
 
     impl TaskReporter for Recorder {
         fn report(&self, stage: TaskStage, progress: Option<Progress>) {

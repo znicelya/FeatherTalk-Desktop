@@ -9,7 +9,8 @@ pub enum AdapterLockError {
     #[error("adapter {adapter_id} is already running task {}", holder.as_str())]
     Occupied { adapter_id: String, holder: TaskId },
     #[error("adapter {0} is not locked")]
-    NotHeld(String)}
+    NotHeld(String),
+}
 
 /// Enforces "at most one task per adapter".
 ///
@@ -18,13 +19,15 @@ pub enum AdapterLockError {
 #[derive(Debug)]
 pub struct AdapterLocks {
     known: BTreeSet<String>,
-    occupied: BTreeMap<String, TaskId>}
+    occupied: BTreeMap<String, TaskId>,
+}
 
 impl AdapterLocks {
     pub fn new(adapter_ids: impl IntoIterator<Item = String>) -> Self {
         Self {
             known: adapter_ids.into_iter().collect(),
-            occupied: BTreeMap::new()}
+            occupied: BTreeMap::new(),
+        }
     }
 
     pub fn acquire(&mut self, adapter_id: &str, task_id: TaskId) -> Result<(), AdapterLockError> {
@@ -32,7 +35,8 @@ impl AdapterLocks {
         if let Some(holder) = self.occupied.get(adapter_id) {
             return Err(AdapterLockError::Occupied {
                 adapter_id: adapter_id.to_owned(),
-                holder: holder.clone()});
+                holder: holder.clone(),
+            });
         }
         self.occupied.insert(adapter_id.to_owned(), task_id);
         Ok(())

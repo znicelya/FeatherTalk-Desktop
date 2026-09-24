@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use feathertalk_app::compute::{ComputeState, spawn_discovery};
+use feathertalk_app::compute::{spawn_discovery, ComputeState};
 use feathertalk_client::{ComputeOptions, SessionOptions, WorkerLocator};
 use feathertalk_domain::{
-    AdapterInfo, AdapterKind, Backend, Capabilities, PROTOCOL_VERSION, ReadyFrame, TaskKind,
+    AdapterInfo, AdapterKind, Backend, Capabilities, ReadyFrame, TaskKind, PROTOCOL_VERSION,
 };
 
 fn ready() -> ReadyFrame {

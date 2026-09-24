@@ -13,11 +13,10 @@ use feathertalk_client::CancelToken;
 use feathertalk_domain::{Event, Progress, Request, TaskId, TaskKind, TaskStage};
 use feathertalk_supervisor::supervisor::{SupervisedOutcome, SupervisionReport};
 use gpui::{
-    AnyElement, App, Bounds, Div, Entity, FocusHandle, Global, InteractiveElement, Modifiers,
-    Pixels, Stateful, TestAppContext, VisualTestContext, Window, point, px, size,
+    point, px, size, AnyElement, App, Bounds, Div, Entity, FocusHandle, Global, InteractiveElement,
+    Modifiers, Pixels, Stateful, TestAppContext, VisualTestContext, Window,
 };
 use yororen_ui::{
-    RendererContext,
     headless::{
         badge::BadgeProps, button::ButtonProps, number_input::NumberInputProps,
         progress::ProgressBarProps, text_input::TextInputState,
@@ -26,6 +25,7 @@ use yororen_ui::{
     renderer::renderers::{
         BadgeRenderer, ButtonRenderer, NumberInputRenderer, ProgressBarRenderer,
     },
+    RendererContext,
 };
 
 const TASK_ID: &str = "1756000000000-00000001";

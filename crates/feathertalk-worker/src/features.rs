@@ -1,7 +1,10 @@
 use burn::tensor::Device;
 use feathertalk_export::{
-    ModelConfiguration, ModelDescription, PackageError, load_model_package, read_package_manifest};
-use feathertalk_models::feather_hubert::{BurnFeatherHubertEncoder, FeatherHubertConfig, FeatherHubertEncoder};
+    ModelConfiguration, ModelDescription, PackageError, load_model_package, read_package_manifest,
+};
+use feathertalk_models::feather_hubert::{
+    BurnFeatherHubertEncoder, FeatherHubertConfig, FeatherHubertEncoder,
+};
 
 use crate::FeatureToolchain;
 
@@ -10,9 +13,10 @@ use crate::FeatureToolchain;
 #[derive(Debug)]
 pub struct FeatureModel {
     encoder: BurnFeatherHubertEncoder,
-    model_sha256: String}
+    model_sha256: String,
+}
 
-impl FeatureModel{
+impl FeatureModel {
     pub fn load(features: &FeatureToolchain) -> Result<Self, PackageError> {
         Self::load_on(features, Default::default())
     }
@@ -36,7 +40,8 @@ impl FeatureModel {
         )?;
         Ok(Self {
             encoder: BurnFeatherHubertEncoder::from_model(model, &device),
-            model_sha256: manifest.model.sha256})
+            model_sha256: manifest.model.sha256,
+        })
     }
 
     /// Splits the loaded model into the two pieces the command needs.
@@ -55,14 +60,17 @@ pub(crate) fn feather_hubert_config(
             expansion,
             num_blocks,
             output_dim,
-            dropout} => Ok(FeatherHubertConfig {
+            dropout,
+        } => Ok(FeatherHubertConfig {
             channels: *channels,
             expansion: *expansion,
             num_blocks: *num_blocks,
             output_dim: *output_dim,
-            dropout: *dropout}),
+            dropout: *dropout,
+        }),
         other => Err(PackageError::InvalidManifest(format!(
             "expected a feather_hubert configuration, got {}",
             other.model_type()
-        )))}
+        ))),
+    }
 }

@@ -4,27 +4,27 @@ use std::path::Path;
 
 use feathertalk_domain::TaskStatus;
 use gpui::{
-    App, ClipboardItem, Div, Entity, FontWeight, InteractiveElement, ParentElement, Stateful,
-    StatefulInteractiveElement, Styled, div, px,
+    div, px, App, ClipboardItem, Div, Entity, FontWeight, InteractiveElement, ParentElement,
+    Stateful, StatefulInteractiveElement, Styled,
 };
-use yororen_ui::ActionVariantKind;
-use yororen_ui::headless::badge::{BadgeVariant, badge};
+use yororen_ui::headless::badge::{badge, BadgeVariant};
 use yororen_ui::headless::button::button;
 use yororen_ui::headless::disclosure::disclosure;
 use yororen_ui::headless::form_field::form_field;
 use yororen_ui::headless::radio_group::radio_group;
 use yororen_ui::headless::toggle_button::toggle_button;
 use yororen_ui::i18n::Translate;
+use yororen_ui::ActionVariantKind;
 
 use crate::components::tasks_page::{cancel_row, progress_bar};
 use crate::components::ui::{inline_muted, muted, page_frame, path_field, section};
 use crate::facts::FactValue;
 use crate::model_picker::{pick_destination, pick_source};
-use crate::models::{ModelForm, ModelIssue, ModelOperation, result_facts};
+use crate::models::{result_facts, ModelForm, ModelIssue, ModelOperation};
 use crate::navigation::Page;
 use crate::state::AppState;
 use crate::submit::submit;
-use crate::tasks::{Summary, TaskRow, blocked_key, kind_key, stage_key, status_key};
+use crate::tasks::{blocked_key, kind_key, stage_key, status_key, Summary, TaskRow};
 use crate::theme::color;
 use crate::ui::TaskFilter;
 

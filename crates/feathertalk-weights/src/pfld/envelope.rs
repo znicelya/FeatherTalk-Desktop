@@ -1,11 +1,12 @@
 use std::{collections::BTreeSet, path::Path};
 
 use burn::tensor::DType;
-use burn_store::pytorch::{PytorchReader, reader::PickleValue};
+use burn_store::pytorch::PytorchReader;
+use burn_store::pytorch_reader::PickleValue;
 
 use crate::{
     PfldIgnoredTensors, PfldImportRequest, TensorAudit, TensorSummary, WeightImportError,
-    source::tensor_elements};
+    source::{reader_dtype_to_burn, shape_elements}};
 
 use super::{
     PFLD_CHECKPOINT_EPOCH,
@@ -174,8 +175,8 @@ fn read_tensor_facts(
         .map(|(key, snapshot)| {
             Ok(TensorFact {
                 key,
-                dtype: snapshot.dtype,
-                elements: tensor_elements(&snapshot)?})
+                dtype: reader_dtype_to_burn(snapshot.dtype()),
+                elements: shape_elements(snapshot.shape().iter())?})
         })
         .collect()
 }
@@ -326,7 +327,7 @@ fn checked_add_elements(total: u64, elements: u64) -> Result<u64, WeightImportEr
 #[cfg(test)]
 mod tests {
     use burn::tensor::DType;
-    use burn_store::pytorch::reader::PickleValue;
+    use burn_store::pytorch_reader::PickleValue;
 
     use crate::WeightImportError;
 

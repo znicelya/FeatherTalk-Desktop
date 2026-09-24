@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use feathertalk_app::generate::PickedCheckpoint;
-use feathertalk_app::project::{ProjectState, absolute_dir, has_task_history};
+use feathertalk_app::project::{absolute_dir, has_task_history, ProjectState};
 use feathertalk_app::tasks::Note;
 
 /// A project directory with an asset tree to write artifacts into.

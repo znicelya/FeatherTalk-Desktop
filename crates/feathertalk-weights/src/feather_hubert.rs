@@ -3,7 +3,8 @@ use std::{
     path::Path};
 
 use burn::tensor::DType;
-use burn_store::pytorch::{PytorchReader, reader::PickleValue};
+use burn_store::pytorch::PytorchReader;
+use burn_store::pytorch_reader::PickleValue;
 use feathertalk_models::feather_hubert::{FeatherHubertConfig, FeatherHubertEncoder};
 
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
     legacy::select_top_level_key,
     source::{
         DEFAULT_MAX_FILE_BYTES, DEFAULT_MAX_TENSOR_COUNT, DEFAULT_MAX_TOTAL_ELEMENTS, SnapshotFile,
-        tensor_elements}};
+        reader_dtype_to_burn, shape_elements}};
 
 #[derive(Debug, Clone)]
 pub struct FeatherHubertCheckpoint {
@@ -132,7 +133,7 @@ fn inspect_snapshot(
     let mut total_elements = 0u64;
     for (key, tensor) in reader.into_tensors() {
         total_elements = total_elements
-            .checked_add(tensor_elements(&tensor)?)
+            .checked_add(shape_elements(tensor.shape().iter())?)
             .ok_or_else(|| {
                 WeightImportError::UnsafeLimit("total tensor elements overflowed u64".to_owned())
             })?;
@@ -140,8 +141,8 @@ fn inspect_snapshot(
             .insert(
                 key.clone(),
                 TensorFact {
-                    dtype: tensor.dtype,
-                    shape: tensor.shape.to_vec()},
+                    dtype: reader_dtype_to_burn(tensor.dtype()),
+                    shape: tensor.shape().to_vec()},
             )
             .is_some()
         {

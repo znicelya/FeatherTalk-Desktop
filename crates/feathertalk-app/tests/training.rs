@@ -6,9 +6,9 @@ use std::path::Path;
 use feathertalk_app::assets::AssetSurvey;
 use feathertalk_app::facts::FactValue;
 use feathertalk_app::training::{
-    DEFAULT_EPOCHS, FormState, MAX_EPOCHS, MIN_EPOCHS, ReadError, TrainingForm, TrainingSurvey,
     checkpoint_facts, config_facts, form_state, fresh_over_checkpoint, metric_summary,
-    metrics_facts, read_checkpoint_state, read_metrics,
+    metrics_facts, read_checkpoint_state, read_metrics, FormState, ReadError, TrainingForm,
+    TrainingSurvey, DEFAULT_EPOCHS, MAX_EPOCHS, MIN_EPOCHS,
 };
 use feathertalk_domain::{Request, TrainingMode, UnetVariant};
 use feathertalk_project::{AssetManifest, AssetPackageState, FeatureType};
@@ -502,51 +502,37 @@ fn the_facts_cover_the_three_panels() {
     let metrics = survey.metrics.as_ref().expect("the metrics");
     let numbers = metrics_facts(metrics);
 
-    assert!(
-        numbers
-            .iter()
-            .any(|fact| fact.label == "training.metrics.total_loss")
-    );
-    assert!(
-        numbers
-            .iter()
-            .any(|fact| fact.label == "training.metrics.samples_per_second")
-    );
-    assert!(
-        numbers
-            .iter()
-            .any(|fact| fact.label == "training.metrics.gpu_memory"
-                && fact.value == FactValue::Key("training.metrics.gpu_memory_none"))
-    );
+    assert!(numbers
+        .iter()
+        .any(|fact| fact.label == "training.metrics.total_loss"));
+    assert!(numbers
+        .iter()
+        .any(|fact| fact.label == "training.metrics.samples_per_second"));
+    assert!(numbers
+        .iter()
+        .any(|fact| fact.label == "training.metrics.gpu_memory"
+            && fact.value == FactValue::Key("training.metrics.gpu_memory_none")));
 
     let state = survey.state.as_ref().expect("the state");
     let config = config_facts(state);
 
-    assert!(
-        config
-            .iter()
-            .any(|fact| fact.label == "training.config.batch_size")
-    );
-    assert!(
-        config
-            .iter()
-            .any(|fact| fact.label == "training.config.learning_rate")
-    );
+    assert!(config
+        .iter()
+        .any(|fact| fact.label == "training.config.batch_size"));
+    assert!(config
+        .iter()
+        .any(|fact| fact.label == "training.config.learning_rate"));
 
     let checkpoints = checkpoint_facts(&survey);
 
-    assert!(
-        checkpoints
-            .iter()
-            .any(|fact| fact.label == "training.checkpoint.latest"
-                && fact.value == FactValue::Text("376".to_owned()))
-    );
-    assert!(
-        checkpoints
-            .iter()
-            .any(|fact| fact.label == "training.checkpoint.count"
-                && fact.value == FactValue::Text("1".to_owned()))
-    );
+    assert!(checkpoints
+        .iter()
+        .any(|fact| fact.label == "training.checkpoint.latest"
+            && fact.value == FactValue::Text("376".to_owned())));
+    assert!(checkpoints
+        .iter()
+        .any(|fact| fact.label == "training.checkpoint.count"
+            && fact.value == FactValue::Text("1".to_owned())));
 }
 
 #[test]
@@ -567,12 +553,10 @@ fn saved_metrics_show_one_based_epochs_and_keep_cumulative_counts_in_details() {
             serde_json::from_str(&metrics_body(1, epoch, 1_585_800)).unwrap();
         metrics.samples_seen = 1_585_800;
         let summary = metric_summary(&metrics);
-        assert!(
-            summary
-                .iter()
-                .any(|fact| fact.label == "workflow.training.metrics_epoch"
-                    && fact.value == FactValue::Text(expected.into()))
-        );
+        assert!(summary
+            .iter()
+            .any(|fact| fact.label == "workflow.training.metrics_epoch"
+                && fact.value == FactValue::Text(expected.into())));
         assert!(!summary.iter().any(|fact| matches!(
             fact.label,
             "workflow.training.metrics_step" | "training.metrics.samples_seen"

@@ -1,6 +1,6 @@
 //! Persistent workflow navigation and the settings entry.
 
-use gpui::{App, Div, Entity, FontWeight, ParentElement, Styled, div, px, svg};
+use gpui::{div, px, svg, App, Div, Entity, FontWeight, ParentElement, Styled};
 use yororen_ui::headless::button::button;
 use yororen_ui::headless::icon::IconSource;
 use yororen_ui::i18n::Translate;

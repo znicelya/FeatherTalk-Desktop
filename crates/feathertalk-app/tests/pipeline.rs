@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use feathertalk_app::pipeline::{Job, Submission, TaskUpdate, submit};
+use feathertalk_app::pipeline::{submit, Job, Submission, TaskUpdate};
 use feathertalk_client::{CancelToken, ClientError, EventSink, SessionOutcome};
 use feathertalk_domain::{Event, ProjectDirParams, Request, TaskId, TaskKind, TaskStage};
 use feathertalk_supervisor::policy::RestartPolicy;
@@ -162,10 +162,9 @@ fn report(updates: Vec<TaskUpdate>) -> Box<feathertalk_supervisor::SupervisionRe
 #[test]
 fn a_completed_task_reports_its_events_then_one_report() {
     let logs = tempfile::tempdir().expect("a temporary directory");
-    let (runner, _attempts) = ScriptedRunner::new(vec![
-        Step::new(SessionOutcome::Completed { result: None })
-            .with_stages(&[TaskStage::Preparing, TaskStage::Completed]),
-    ]);
+    let (runner, _attempts) =
+        ScriptedRunner::new(vec![Step::new(SessionOutcome::Completed { result: None })
+            .with_stages(&[TaskStage::Preparing, TaskStage::Completed])]);
 
     let submission = submit(runner, job(logs.path().to_path_buf())).expect("a thread starts");
 
@@ -223,9 +222,9 @@ fn a_cancelled_submission_reaches_the_worker() {
 #[test]
 fn a_dropped_receiver_does_not_stop_the_run() {
     let logs = tempfile::tempdir().expect("a temporary directory");
-    let (runner, attempts) = ScriptedRunner::new(vec![
-        Step::new(SessionOutcome::Completed { result: None }).with_stages(&[TaskStage::Preparing]),
-    ]);
+    let (runner, attempts) =
+        ScriptedRunner::new(vec![Step::new(SessionOutcome::Completed { result: None })
+            .with_stages(&[TaskStage::Preparing])]);
 
     let Submission { updates, cancel } =
         submit(runner, job(logs.path().to_path_buf())).expect("a thread starts");

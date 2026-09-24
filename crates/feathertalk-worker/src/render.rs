@@ -4,7 +4,7 @@ use std::{
     cell::RefCell,
     sync::atomic::{AtomicU64, Ordering}};
 
-use burn::{module::AutodiffModule, tensor::Device};
+use burn::{module::Module, tensor::Device};
 use feathertalk_domain::{ErrorCode, Progress, RenderParams, TaskError, TaskStage};
 use feathertalk_inference::{
     BgrFrame, CommandSpec, FrameReader, InferenceError, RawVideoSink, RawVideoSinkFactory,

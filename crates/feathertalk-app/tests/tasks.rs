@@ -2,17 +2,17 @@ use std::path::PathBuf;
 
 use feathertalk_app::pipeline::TaskUpdate;
 use feathertalk_app::tasks::{
-    CRASHED_KEY, REJECTED_KEY, Summary, TaskCenter, UNAVAILABLE_KEY, UNSUPPORTED_KEY, blocked_key,
-    kind_key, latest_row, recovery_key, stage_key, status_key,
+    blocked_key, kind_key, latest_row, recovery_key, stage_key, status_key, Summary, TaskCenter,
+    CRASHED_KEY, REJECTED_KEY, UNAVAILABLE_KEY, UNSUPPORTED_KEY,
 };
 use feathertalk_client::{CancelToken, ClientError};
 use feathertalk_domain::{
     ErrorCode, Event, Progress, Recovery, TaskError, TaskId, TaskKind, TaskStage, TaskStatus,
 };
-use feathertalk_supervisor::TaskHistoryStatus;
 use feathertalk_supervisor::crash_log::CrashLogOutcome;
 use feathertalk_supervisor::recovery::IncompleteTask;
 use feathertalk_supervisor::supervisor::{SupervisedOutcome, SupervisionReport};
+use feathertalk_supervisor::TaskHistoryStatus;
 
 /// Every recovery suggestion the protocol defines. `Recovery` has no `ALL`, so
 /// the list is spelled out; a new variant makes the key test fail here.

@@ -1,5 +1,5 @@
 use burn::{
-    module::AutodiffModule,
+    module::Module,
     optim::GradientsParams,
 };
 use feathertalk_models::unet::TrainableTalkingHead;
@@ -43,7 +43,7 @@ fn commit_gradients<M, O>(
     forward_started: Instant,
 ) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
 where
-    M: AutodiffModule,
+    M: Module,
     O: CheckpointableOptimizer,
 {
     let values = LossValues::from_breakdown(&breakdown);
@@ -103,7 +103,7 @@ pub fn train_single_frame_step<M, O, E>(
     config: &TrainingConfig,
 ) -> Result<(M, LossValues), TrainingError>
 where
-    M: TrainableTalkingHead + AutodiffModule,
+    M: TrainableTalkingHead + Module,
     O: CheckpointableOptimizer,
     E: PerceptualFeatureExtractor,
 {
@@ -120,7 +120,7 @@ pub(crate) fn train_single_frame_step_profiled<M, O, E>(
     config: &TrainingConfig,
 ) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
 where
-    M: TrainableTalkingHead + AutodiffModule,
+    M: TrainableTalkingHead + Module,
     O: CheckpointableOptimizer,
     E: PerceptualFeatureExtractor,
 {
@@ -168,7 +168,7 @@ pub fn train_temporal_step<M, O, E>(
     config: &TrainingConfig,
 ) -> Result<(M, LossValues), TrainingError>
 where
-    M: TrainableTalkingHead + AutodiffModule,
+    M: TrainableTalkingHead + Module,
     O: CheckpointableOptimizer,
     E: PerceptualFeatureExtractor,
 {
@@ -185,7 +185,7 @@ pub(crate) fn train_temporal_step_profiled<M, O, E>(
     config: &TrainingConfig,
 ) -> Result<(M, LossValues, StepComputeTimings), TrainingError>
 where
-    M: TrainableTalkingHead + AutodiffModule,
+    M: TrainableTalkingHead + Module,
     O: CheckpointableOptimizer,
     E: PerceptualFeatureExtractor,
 {

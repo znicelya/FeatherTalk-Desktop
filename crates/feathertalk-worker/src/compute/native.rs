@@ -7,7 +7,8 @@ mod windows;
 pub(super) struct NativeMetadata {
     pub identity: Option<String>,
     pub vram_bytes: Option<u64>,
-    pub software_or_indirect: bool}
+    pub software_or_indirect: bool,
+}
 
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 pub(super) fn metadata(adapter: &wgpu::Adapter, info: &wgpu::AdapterInfo) -> NativeMetadata {

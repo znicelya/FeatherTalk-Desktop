@@ -1,9 +1,12 @@
 use std::{
     collections::HashSet,
-    path::{Path, PathBuf}};
+    path::{Path, PathBuf},
+};
 
-use burn_store::{ApplyError, ApplyResult, ModuleSnapshot, ModuleStore, PytorchStore, PytorchStoreError,
-    pytorch::{PytorchError, PytorchReader}};
+use burn_store::{
+    ApplyError, ApplyResult, ModuleSnapshot, ModuleStore, PytorchStore, PytorchStoreError,
+    pytorch::{PytorchError, PytorchReader},
+};
 use serde::Serialize;
 
 use crate::{
@@ -11,7 +14,9 @@ use crate::{
     key_map::{LegacyModelKind, configure_store, is_known_ignored_key_for, map_key},
     source::{
         DEFAULT_MAX_FILE_BYTES, DEFAULT_MAX_TENSOR_COUNT, DEFAULT_MAX_TOTAL_ELEMENTS, SnapshotFile,
-        tensor_elements}};
+        tensor_elements,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub struct LegacyImportRequest {
@@ -20,7 +25,8 @@ pub struct LegacyImportRequest {
     pub top_level_key: Option<String>,
     pub max_file_bytes: u64,
     pub max_tensor_count: usize,
-    pub max_total_elements: u64}
+    pub max_total_elements: u64,
+}
 
 impl Default for LegacyImportRequest {
     fn default() -> Self {
@@ -30,7 +36,8 @@ impl Default for LegacyImportRequest {
             top_level_key: None,
             max_file_bytes: DEFAULT_MAX_FILE_BYTES,
             max_tensor_count: DEFAULT_MAX_TENSOR_COUNT,
-            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS}
+            max_total_elements: DEFAULT_MAX_TOTAL_ELEMENTS,
+        }
     }
 }
 
@@ -40,7 +47,8 @@ pub struct ImportReport {
     pub applied: Vec<String>,
     pub ignored: Vec<String>,
     pub tensor_count: usize,
-    pub total_elements: u64}
+    pub total_elements: u64,
+}
 
 pub fn import_into<M>(
     module: &mut M,
@@ -64,32 +72,31 @@ struct StrictPytorchStore {
     source_sha256: String,
     ignored: Vec<String>,
     tensor_count: usize,
-    total_elements: u64}
+    total_elements: u64,
+}
 
 impl ModuleStore for StrictPytorchStore {
     type Error = WeightImportError;
 
-    fn collect_from<M: ModuleSnapshot>(
-        &mut self,
-        module: &M,
-    ) -> Result<(), Self::Error> {
+    fn collect_from<M: ModuleSnapshot>(&mut self, module: &M) -> Result<(), Self::Error> {
         self.store.collect_from(module).map_err(store_error)
     }
 
-    fn apply_to<M: ModuleSnapshot>(
-        &mut self,
-        module: &mut M,
-    ) -> Result<ApplyResult, Self::Error> {
+    fn apply_to<M: ModuleSnapshot>(&mut self, module: &mut M) -> Result<ApplyResult, Self::Error> {
         self.store.apply_to(module).map_err(store_error)
     }
 
-    fn get_tensor(&mut self, name: &str) -> Result<Option<&burn_store::burn_pack::Tensor>, Self::Error> {
+    fn get_tensor(
+        &mut self,
+        name: &str,
+    ) -> Result<Option<&burn_store::burn_pack::Tensor>, Self::Error> {
         self.store.get_tensor(name).map_err(store_error)
     }
 
     fn get_all_tensors(
         &mut self,
-    ) -> Result<&std::collections::BTreeMap<String, burn_store::burn_pack::Tensor>, Self::Error> {
+    ) -> Result<&std::collections::BTreeMap<String, burn_store::burn_pack::Tensor>, Self::Error>
+    {
         self.store.get_all_tensors().map_err(store_error)
     }
 
@@ -105,7 +112,8 @@ fn build_strict_store(
     let top_level_key = select_top_level_key(snapshot.path(), request)?;
     let reader = match top_level_key.as_deref() {
         Some(key) => PytorchReader::with_top_level_key(snapshot.path(), key),
-        None => PytorchReader::new(snapshot.path())}
+        None => PytorchReader::new(snapshot.path()),
+    }
     .map_err(store_error)?;
     reject_duplicate_remapped_keys(request.kind, reader.keys())?;
 
@@ -125,7 +133,8 @@ fn build_strict_store(
         _snapshot: snapshot,
         ignored,
         tensor_count,
-        total_elements})
+        total_elements,
+    })
 }
 
 pub(crate) fn select_top_level_key(
@@ -150,7 +159,8 @@ pub(crate) fn select_top_level_key(
             Ok(keys) if !keys.is_empty() => return Ok(candidate),
             Ok(_) => continue,
             Err(PytorchStoreError::Reader(PytorchError::KeyNotFound(_))) => continue,
-            Err(error) => return Err(store_error(error))}
+            Err(error) => return Err(store_error(error)),
+        }
     }
 
     Err(WeightImportError::UnsupportedStructure(
@@ -225,7 +235,8 @@ fn validate_apply_result(
             ApplyError::DTypeMismatch { path, .. } => {
                 WeightImportError::DTypeMismatch(path.clone())
             }
-            other => WeightImportError::Store(other.to_string())});
+            other => WeightImportError::Store(other.to_string()),
+        });
     }
     if let Some(key) = result
         .unused
@@ -247,7 +258,8 @@ fn build_report(
         applied: result.applied,
         ignored: store.ignored.clone(),
         tensor_count: store.tensor_count,
-        total_elements: store.total_elements})
+        total_elements: store.total_elements,
+    })
 }
 
 fn store_error(error: impl std::fmt::Display) -> WeightImportError {
