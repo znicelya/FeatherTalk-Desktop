@@ -243,6 +243,25 @@ powershell -NoProfile -File .\installer\windows\verify.ps1 -MsiPath .\dist\Feath
 
 脚本会校验模型源哈希、MSI 文件清单、开始菜单入口和升级/降级规则；详细参数、模型转换和输出位置请阅读 [`installer/windows/README.md`](installer/windows/README.md)。
 
+## Linux 打包
+
+Linux x86_64 打包脚本位于 [`installer/linux/`](installer/linux/)，会把 `feathertalk-app`、`feathertalk-worker`、`feathertalk`、可选的 FFmpeg、运行依赖和转换后的模型打成可重定位的 `.tar.gz`，附带 `install.sh`、桌面入口、SHA-256 校验与 `payload.json` 文件清单。构建机需要 Linux x86_64、Rust 1.95 和 Python 3：
+
+```bash
+installer/linux/build.sh --ffmpeg-dir /usr/bin
+installer/linux/verify.sh --archive dist/FeatherTalk-0.1.0-linux-x86_64.tar.gz
+```
+
+不打包 FFmpeg 时加 `--no-ffmpeg`，运行时改用系统 `ffmpeg` 或 `FEATHERTALK_WORKER_FFMPEG`/`FEATHERTALK_WORKER_FFPROBE`。安装与卸载：
+
+```bash
+tar -xzf dist/FeatherTalk-0.1.0-linux-x86_64.tar.gz
+sudo FeatherTalk-0.1.0-linux-x86_64/install.sh --prefix /opt/feathertalk --bindir /usr/local/bin
+sudo /opt/feathertalk/install.sh --uninstall
+```
+
+脚本会校验四个模型包的来源哈希与权重，并在归档内生成文件清单；详细参数和模型来源请阅读 [`installer/linux/README.md`](installer/linux/README.md)。
+
 ## 故障排查
 
 - `capabilities` 中没有媒体命令：检查 FFmpeg/FFprobe 路径和可执行权限。
