@@ -282,6 +282,8 @@ fn arc_and_radeon_selection_reaches_the_worker_and_training_handshake() {
                 native: BTreeMap::new(),
                 #[cfg(any(target_os = "windows", target_os = "linux"))]
                 cuda: BTreeMap::new(),
+                #[cfg(target_os = "linux")]
+                rocm: BTreeMap::new(),
             };
             assert_eq!(registry.resolve(Backend::Wgpu, None).unwrap(), adapter);
             let config = crate::WorkerConfig::from_values_with_training(
@@ -723,8 +725,8 @@ fn nested_runtime_and_profiling_errors_preserve_typed_allocation_failure() {
     let errors = [
         ServerError::Launch(allocation()),
         ServerError::Io(io_oom()),
-        // burn 0.22.0-pre.4: several failures at once, and a skipped read whose
-        // oot names the real cause. Both must still classify as OOM.
+        // burn 0.22.0: several failures at once, and a skipped read whose
+        // root names the real cause. Both must still classify as OOM.
         ServerError::Several {
             errors: vec![ServerError::Launch(allocation())],
             backtrace: Default::default(),
@@ -814,7 +816,7 @@ fn native_gpu_tensor_smoke() {
         assert_eq!(context.graphics_api(), "metal");
         assert!(actual.name.starts_with("Apple "));
     }
-    // burn 0.22.0-pre.4 exposes only the runtime name on the client; the
+    // burn 0.22.0 exposes only the runtime name on the client; the
     // concrete graphics backend is asserted above via the adapter info and
     // graphics_api(). On Vulkan the wgpu runtime still selects the native
     // SPIR-V compiler, which its name reflects.

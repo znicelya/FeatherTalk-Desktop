@@ -326,7 +326,7 @@ impl NativeAdapter {
             // init_device registers the wgpu runtime for this WgpuDevice; wrap it
             // through the standard From<WgpuDevice> so it lands as
             // DispatchDevice::Cube(CubeDevice::Wgpu(_)), the only wgpu variant in
-            // burn 0.22.0-pre.4 (AutoCompiler still chooses WGSL/SPIR-V/MSL).
+            // burn 0.22.0 (AutoCompiler still chooses WGSL/SPIR-V/MSL).
             device: Device::new(native),
             setup,
             faults,
@@ -451,7 +451,7 @@ fn wgpu_native(device: &Device) -> Option<&WgpuDevice> {
 }
 
 /// The wgpu device as the runtime-tagged [CubeDevice] used to reach its
-/// CubeCL client. burn 0.22.0-pre.4 folds Vulkan/DX12/Metal-MSL/WebGPU into the
+/// CubeCL client. burn 0.22.0 folds Vulkan/DX12/Metal-MSL/WebGPU into the
 /// single wgpu runtime, so this is the only wgpu-backed dispatch variant.
 fn wgpu_cube_device(device: &Device) -> Option<&CubeDevice> {
     let mut dispatch = device.as_dispatch();
@@ -470,7 +470,7 @@ pub(crate) fn wgpu_memory_usage_bytes(device: &Device) -> Option<u64> {
         return None;
     }
     let cube = wgpu_cube_device(device)?;
-    catch_unwind(AssertUnwindSafe(|| cube.client().memory_usage().bytes_in_use)).ok()
+    catch_unwind(AssertUnwindSafe(|| cube.client().memory_report(burn::cubecl::MemoryScope::Device).usage().bytes_in_use)).ok()
 }
 
 #[derive(Clone, Debug, thiserror::Error)]
@@ -772,14 +772,16 @@ fn server_failure(error: ServerError) -> GpuFailure {
     fn io_is_oom(error: &IoError) -> bool {
         matches!(
             error,
-            IoError::OutOfMemory { .. } | IoError::PoolCapacityExceeded { .. }
+            IoError::OutOfMemory { .. }
+                | IoError::PageUpdateForbidden { .. }
+                | IoError::PageSizesExhausted { .. }
         )
     }
     fn allocation_failure(error: &ServerError) -> bool {
         match error {
             ServerError::Launch(LaunchError::OutOfMemory { .. }) => true,
             ServerError::Io(error) => io_is_oom(error),
-            // burn 0.22.0-pre.4 reports a skipped read as Unwritten, whose
+            // burn 0.22.0 reports a skipped read as Unwritten, whose
             // oot names the failure that actually happened; several failures
             // arrive together in Several. Recurse so an OOM anywhere in the
             // chain is still classified as one.

@@ -63,7 +63,7 @@ fn rocm_cube_device(device: &Device) -> Option<&CubeDevice> {
 
 pub(crate) fn memory_usage_bytes(device: &Device) -> Option<u64> {
     let device = rocm_cube_device(device)?;
-    catch_unwind(AssertUnwindSafe(|| device.client().memory_usage().bytes_in_use)).ok()
+    catch_unwind(AssertUnwindSafe(|| device.client().memory_report(burn::cubecl::MemoryScope::Device).usage().bytes_in_use)).ok()
 }
 
 pub(super) fn discover() -> Vec<(AdapterInfo, RocmContext)> {

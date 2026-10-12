@@ -225,7 +225,7 @@ pub fn initializer_from_snapshot(
             name: name.clone(),
             message: error.to_string()})?;
     let actual_shape = data
-        .shape
+        .shape()
         .iter()
         .map(|dimension| i64::try_from(*dimension).unwrap_or(i64::MAX))
         .collect::<Vec<_>>();

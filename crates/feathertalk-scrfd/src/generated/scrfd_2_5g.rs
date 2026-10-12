@@ -755,10 +755,10 @@ impl Model {
             let target_width = concat2_out1[3] as usize;
             burn::tensor::module::interpolate(
                 conv2d35_out1.clone(),
-                [target_height, target_width],
                 burn::tensor::ops::InterpolateOptions::new(
                         burn::tensor::ops::InterpolateMode::Nearest,
                     )
+                    .with_output_size([target_height, target_width])
                     .with_align_corners(false),
             )
         };
@@ -797,10 +797,10 @@ impl Model {
             let target_width = concat4_out1[3] as usize;
             burn::tensor::module::interpolate(
                 add14_out1.clone(),
-                [target_height, target_width],
                 burn::tensor::ops::InterpolateOptions::new(
                         burn::tensor::ops::InterpolateMode::Nearest,
                     )
+                    .with_output_size([target_height, target_width])
                     .with_align_corners(false),
             )
         };

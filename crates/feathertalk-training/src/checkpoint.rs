@@ -429,7 +429,7 @@ where
         // The pinned burn version is recorded explicitly so a checkpoint
         // cannot silently change format when the training crate's own package
         // version changes. 0.22 moved the default recorder to burn-pack.
-        burn_version: "0.22.0-pre.3".to_owned(),
+        burn_version: "0.22.0".to_owned(),
         rust_version: "1.95.0".to_owned()};
     manifest.validate()?;
 

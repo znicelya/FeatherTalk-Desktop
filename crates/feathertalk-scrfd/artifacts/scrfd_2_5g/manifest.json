@@ -174,8 +174,8 @@
   ],
   "generated_source": {
     "file_name": "scrfd_2_5g.rs",
-    "file_bytes": 39148,
-    "sha256": "548cf1b531fa466415301a2cb06f2c321583e8a252605c411a03d2ba715159a9"
+    "file_bytes": 38727,
+    "sha256": "00ac8a367cb253af3e441c549ff594afb869331443b3b7c690deb6ae212fe004"
   },
   "weights": {
     "format": "safetensors",

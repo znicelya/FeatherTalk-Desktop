@@ -91,7 +91,7 @@ pub(crate) fn sha256_file(path: &Path) -> Result<String, WeightImportError> {
     Ok(hex::encode(hasher.finalize()))
 }
 
-/// Convert the pytorch reader dtype enum to burn's. burn 0.22.0-pre.4 gives the
+/// Convert the pytorch reader dtype enum to burn's. burn 0.22.0 gives the
 /// reader its own `DType` (no `Flex32`/`QFloat`), so bridge it explicitly.
 pub(crate) fn reader_dtype_to_burn(dtype: burn_store::pytorch_reader::DType) -> burn::tensor::DType {
     use burn::tensor::DType as B;
@@ -114,7 +114,7 @@ pub(crate) fn reader_dtype_to_burn(dtype: burn_store::pytorch_reader::DType) -> 
 }
 
 /// Element count from raw dimensions, sharing the overflow guards of
-/// [`tensor_elements`]. burn 0.22.0-pre.4 split the pytorch reader tensor out of
+/// [`tensor_elements`]. burn 0.22.0 split the pytorch reader tensor out of
 /// `burn_pack::Tensor`, so reader-side callers pass `Tensor::shape()` here.
 pub(crate) fn shape_elements<'a>(dims: impl IntoIterator<Item = &'a usize>) -> Result<u64, WeightImportError> {
     dims.into_iter().try_fold(1u64, |total, dimension| {

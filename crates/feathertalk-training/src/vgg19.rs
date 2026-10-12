@@ -1,6 +1,6 @@
 use burn::{
     nn::{PaddingConfig2d, conv::Conv2d, conv::Conv2dConfig},
-    tensor::{Tensor, activation::relu, module::max_pool2d}};
+    tensor::{Tensor, activation::relu, module::max_pool2d, ops::MaxPoolOptions}};
 
 #[derive(burn::module::Module, Debug)]
 pub struct Vgg19Conv3_3 {
@@ -35,10 +35,10 @@ impl Vgg19Conv3_3 {
 
         let output = relu(self.conv1_1.forward(input));
         let output = relu(self.conv1_2.forward(output));
-        let output = max_pool2d(output, [2, 2], [2, 2], [0, 0], [1, 1], false);
+        let output = max_pool2d(output, MaxPoolOptions::new([2, 2]));
         let output = relu(self.conv2_1.forward(output));
         let output = relu(self.conv2_2.forward(output));
-        let output = max_pool2d(output, [2, 2], [2, 2], [0, 0], [1, 1], false);
+        let output = max_pool2d(output, MaxPoolOptions::new([2, 2]));
         let output = relu(self.conv3_1.forward(output));
         let output = relu(self.conv3_2.forward(output));
         self.conv3_3.forward(output)

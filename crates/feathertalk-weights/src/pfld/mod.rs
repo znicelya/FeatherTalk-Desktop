@@ -249,7 +249,7 @@ where
     }
     if let Some((path, _)) = target
         .iter()
-        .find(|(_, snapshot)| snapshot.dtype != DType::F32)
+        .find(|(_, snapshot)| snapshot.dtype() != DType::F32)
     {
         return Err(WeightImportError::DTypeMismatch(path.clone()));
     }

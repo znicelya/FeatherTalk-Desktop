@@ -8,13 +8,13 @@ publish = false
 [workspace]
 
 [dependencies]
-cubecl-cuda = { version = "=0.11.0-pre.3", default-features = false, features = ["std"] }
-cubecl-core = { version = "=0.11.0-pre.3", default-features = false, features = ["std"] }
-cubecl-runtime = { version = "=0.11.0-pre.3", default-features = false, features = ["std", "channel-mutex"] }
-# Match the FeatherTalk workspace pin: pliron 0.18 postdates burn 0.22-pre and its
-# derive 0.18 does not compile against pliron 0.17 sources pulled transitively.
-pliron = "=0.17.0"
-pliron-derive = "=0.17.0"
+cubecl-cuda = { version = "=0.11.0", default-features = false, features = ["std"] }
+cubecl-core = { version = "=0.11.0", default-features = false, features = ["std"] }
+cubecl-runtime = { version = "=0.11.0", default-features = false, features = ["std", "channel-mutex"] }
+# Match the FeatherTalk workspace pin: cubecl 0.11's cubecl-core requires pliron
+# `^0.19`; pin the pair so a `cargo update` cannot drift them.
+pliron = "=0.19.0"
+pliron-derive = "=0.19.0"
 # cubecl-cuda pulls cudarc with `cuda-version-from-build-system`, which on this
 # host (11.8 also on PATH) resolves a binding lacking the CUtensorMap* types.
 # Force the 12.8 bindings the way the FeatherTalk workspace does; the explicit
