@@ -92,9 +92,8 @@ pub fn validate_apply_result(result: &burn_store::ApplyResult) -> Result<(), Too
 
 pub fn snapshot_map<M>(
     module: &M,
-) -> Result<BTreeMap<String, burn_store::burn_store::burn_pack::Tensor>, ToolError>
+) -> Result<BTreeMap<String, burn_store::burn_pack::Tensor>, ToolError>
 where
-    B: burn::tensor::,
     M: burn_store::ModuleSnapshot,
 {
     let mut snapshots = BTreeMap::new();
@@ -111,7 +110,6 @@ where
 
 pub fn compare_snapshots<M>(expected: &M, actual: &M) -> Result<(), ToolError>
 where
-    B: burn::tensor::,
     M: burn_store::ModuleSnapshot,
 {
     let expected = snapshot_map::<M>(expected)?;
@@ -138,11 +136,9 @@ where
                 left.dtype, right.dtype
             )));
         }
-        let left_data = left
-            .to_data()
+        let left_data = burn_store::bridge::to_data(left)
             .map_err(|error| ToolError::Snapshot(format!("{key}: {error}")))?;
-        let right_data = right
-            .to_data()
+        let right_data = burn_store::bridge::to_data(right)
             .map_err(|error| ToolError::Snapshot(format!("{key}: {error}")))?;
         if left_data != right_data {
             return Err(ToolError::Snapshot(format!(

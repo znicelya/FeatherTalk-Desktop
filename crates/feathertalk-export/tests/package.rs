@@ -286,9 +286,14 @@ fn loader_rejects_symlinked_model_when_supported() {
     let backup = root.path().join("model.backup");
     fs::write(&backup, original).unwrap();
     fs::remove_file(request.destination.join("model.safetensors")).unwrap();
-    if std::os::windows::fs::symlink_file(&backup, request.destination.join("model.safetensors"))
-        .is_err()
-    {
+    let link = request.destination.join("model.safetensors");
+    #[cfg(unix)]
+    let symlinked = std::os::unix::fs::symlink(&backup, &link).is_ok();
+    #[cfg(windows)]
+    let symlinked = std::os::windows::fs::symlink_file(&backup, &link).is_ok();
+    #[cfg(not(any(unix, windows)))]
+    let symlinked = false;
+    if !symlinked {
         return;
     }
 

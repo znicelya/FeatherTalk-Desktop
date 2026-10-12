@@ -4,7 +4,7 @@ mod generated {
 }
 
 #[cfg(scrfd_generated)]
-pub fn convert_burnpack<B: burn::tensor::>(
+pub fn convert_burnpack(
     burnpack: &std::path::Path,
     safetensors: &std::path::Path,
 ) -> Result<(), crate::ToolError> {
