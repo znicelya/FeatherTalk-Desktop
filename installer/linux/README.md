@@ -32,8 +32,9 @@ installer/linux/build.sh --ffmpeg-dir /usr/bin
   不传时从 `PATH` 定位。
 - `--no-ffmpeg`：不打包 FFmpeg，运行时使用系统 `ffmpeg` 或
   `FEATHERTALK_WORKER_FFMPEG`/`FEATHERTALK_WORKER_FFPROBE` 指定的绝对路径。
-- `--source-repo DIR`：原始 FeatherTalk 仓库目录，用于读取项目 `LICENSE`；
-  默认取当前 workspace 的上级目录，找不到时回退仓库根目录的 `LICENSE`。
+- `--source-repo DIR`：读取项目 `LICENSE` 的目录。默认直接用仓库根的
+  `LICENSE`（Apache-2.0），通常无需指定；仅当仓库根缺少 `LICENSE` 的旧布局才需要
+  指向包含 `LICENSE` 的仓库。
 - `--output-dir DIR`：产物输出目录，默认 `<repo>/dist`。
 - `--skip-build`：复用 `target/release` 中已有的二进制，不重新编译。
 - `--scrfd-dir` / `--pfld-dir` / `--hubert-dir` / `--vgg19-dir`：覆盖为其他已转换

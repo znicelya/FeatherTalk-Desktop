@@ -35,8 +35,8 @@ usage() {
                           不指定时从 PATH 定位。
   --no-ffmpeg             不打包 FFmpeg；运行时使用系统 ffmpeg 或
                           FEATHERTALK_WORKER_FFMPEG/FFPROBE 配置。
-  --source-repo DIR       原始 FeatherTalk 仓库目录，读取 LICENSE；默认取当前
-                          workspace 上级目录。
+  --source-repo DIR       读取项目 LICENSE 的目录。默认优先用仓库根的 LICENSE，
+                          找不到时再取当前 workspace 上级目录。
   --output-dir DIR        产物输出目录，默认 <repo>/dist。
   --skip-build            复用 target/release 现有二进制，不重新编译。
   --scrfd-dir DIR         覆盖 SCRFD 模型包目录（默认 models/scrfd_2_5g）。
@@ -96,14 +96,20 @@ if machine != 0x3E:
 PY
 }
 
-repository_root="${source_repo:-$(cd -- "$rust_root/.." >/dev/null 2>&1 && pwd)}"
-repository_root="$(cd -- "$repository_root" >/dev/null 2>&1 && pwd)"
-license_path="$repository_root/LICENSE"
-if [[ ! -f "$license_path" ]]; then
+# Resolve the project LICENSE. An explicit --source-repo wins; otherwise the
+# repository ships its own Apache-2.0 LICENSE at the root, and the external
+# source-repo layout remains a fallback for older checkouts.
+if [[ -n "$source_repo" ]]; then
+    repository_root="$(cd -- "$source_repo" >/dev/null 2>&1 && pwd)"
+    license_path="$repository_root/LICENSE"
+elif [[ -f "$rust_root/LICENSE" ]]; then
     license_path="$rust_root/LICENSE"
+else
+    repository_root="$(cd -- "$rust_root/.." >/dev/null 2>&1 && pwd)"
+    license_path="$repository_root/LICENSE"
 fi
 if [[ ! -f "$license_path" ]]; then
-    echo "找不到项目 LICENSE，请用 --source-repo 指定原始 FeatherTalk 仓库。" >&2
+    echo "找不到项目 LICENSE，请用 --source-repo 指定包含 LICENSE 的仓库。" >&2
     exit 1
 fi
 

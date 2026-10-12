@@ -73,9 +73,9 @@ powershell -NoProfile -File .\installer\windows\build.ps1 -FfmpegDirectory 'D:\e
 仅调整 WiX 文件时可用 `-SkipBuild` 复用默认 `target/release` 目录中的原生构建，
 使用自定义编译 target 时请执行完整构建。
 
-独立桌面仓库通过 `-SourceRepositoryDirectory` 指定原始 FeatherTalk 仓库的位置，
-用于读取项目 `LICENSE` 和默认的 FeatherHuBERT 检查点；上面的示例假定两个仓库为同级目录。
-不传该参数时沿用旧布局，查找当前 Rust workspace 的上级目录。
+项目 `LICENSE` 默认直接使用仓库根的 Apache-2.0 `LICENSE`，通常无需传参。
+`-SourceRepositoryDirectory` 可指定包含 `LICENSE` 的其他仓库（例如旧布局下的
+原始 FeatherTalk 仓库）；仓库根缺少 `LICENSE` 时才回退到当前 workspace 的上级目录。
 
 模型打包默认直接使用仓库 `models/` 下的四个预构建包：`models/scrfd_2_5g`、
 `models/pfld_ghost_one`、`models/feather_hubert`、`models/vgg19`。

@@ -237,7 +237,7 @@ $env:FEATHERTALK_TRAIN_FREEZE = 'audio'
 从源码构建 MSI 需要 Windows x64、Rust 1.94、MSVC、.NET 8 运行时和 FFmpeg Windows 发布目录（含 `LICENSE`、`README.txt`）：
 
 ```powershell
-powershell -NoProfile -File .\installer\windows\build.ps1 -FfmpegDirectory 'D:\environment\ffmpeg' -SourceRepositoryDirectory '..\FeatherTalk'
+powershell -NoProfile -File .\installer\windows\build.ps1 -FfmpegDirectory 'D:\environment\ffmpeg'
 powershell -NoProfile -File .\installer\windows\verify.ps1 -MsiPath .\dist\FeatherTalk-0.1.0-x64.msi
 ```
 

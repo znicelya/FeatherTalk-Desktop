@@ -23,14 +23,18 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT -or ![Environmen
 }
 
 $rustRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
-$repositoryRoot = if ($SourceRepositoryDirectory) {
-    (Resolve-Path -LiteralPath $SourceRepositoryDirectory).Path
+# Resolve the project LICENSE. An explicit -SourceRepositoryDirectory wins;
+# otherwise the repository ships its own Apache-2.0 LICENSE at the root, and
+# the external source-repo layout remains a fallback for older checkouts.
+$licensePath = if ($SourceRepositoryDirectory) {
+    Join-Path (Resolve-Path -LiteralPath $SourceRepositoryDirectory).Path 'LICENSE'
+} elseif (Test-Path -LiteralPath (Join-Path $rustRoot 'LICENSE') -PathType Leaf) {
+    Join-Path $rustRoot 'LICENSE'
 } else {
-    [IO.Path]::GetFullPath((Join-Path $rustRoot '..'))
+    Join-Path ([IO.Path]::GetFullPath((Join-Path $rustRoot '..'))) 'LICENSE'
 }
-$licensePath = Join-Path $repositoryRoot 'LICENSE'
 if (!(Test-Path -LiteralPath $licensePath -PathType Leaf)) {
-    throw "Project LICENSE not found at $licensePath. Pass -SourceRepositoryDirectory with the original FeatherTalk repository."
+    throw "Project LICENSE not found at $licensePath. Pass -SourceRepositoryDirectory with a repository that contains LICENSE."
 }
 $utf8 = [Text.UTF8Encoding]::new($false)
 $cargo = (Get-Command cargo -CommandType Application).Source
