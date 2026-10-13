@@ -350,8 +350,10 @@ fn media_tool_path(
     }
 }
 
-/// Bundled base models live in the executable's models directory. Validate the
-/// package contents when a job loads them, as with explicitly configured paths.
+/// Bundled base models live beside the executable in a portable archive, or in
+/// the install root when the archive's `bin/` directory is installed below it.
+/// Validate the package contents when a job loads them, as with explicitly
+/// configured paths.
 fn model_package_path(
     configured: Option<OsString>,
     executable: Option<&Path>,
@@ -360,15 +362,18 @@ fn model_package_path(
     if let Some(configured) = configured {
         return Some(configured.into_string().unwrap_or_default());
     }
-    let path = executable?.parent()?.join("models").join(name);
-    if path.is_absolute()
-        && path.join("manifest.json").is_file()
-        && path.join("model.safetensors").is_file()
-    {
-        path.to_str().map(str::to_owned)
-    } else {
-        None
+    let executable_dir = executable?.parent()?;
+    for root in [Some(executable_dir), executable_dir.parent()] {
+        let Some(root) = root else { continue };
+        let path = root.join("models").join(name);
+        if path.is_absolute()
+            && path.join("manifest.json").is_file()
+            && path.join("model.safetensors").is_file()
+        {
+            return path.to_str().map(str::to_owned);
+        }
     }
+    None
 }
 
 fn media_toolchain(
@@ -513,6 +518,15 @@ mod bundled_model_tests {
             let actual = model_package_path(None, Some(&worker), name).unwrap();
             assert_eq!(PathBuf::from(actual), expected);
         }
+    }
+
+    #[test]
+    fn installed_models_are_found_from_the_parent_of_the_bin_directory() {
+        let directory = tempfile::tempdir().unwrap();
+        let worker = directory.path().join("bin/feathertalk-worker");
+        let expected = package(directory.path(), "scrfd_2_5g");
+        let actual = model_package_path(None, Some(&worker), "scrfd_2_5g").unwrap();
+        assert_eq!(PathBuf::from(actual), expected);
     }
 
     #[test]

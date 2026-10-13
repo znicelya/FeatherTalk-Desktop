@@ -74,9 +74,9 @@ sudo /opt/feathertalk/install.sh --uninstall
 归档本身是可重定位的，也可以不安装，直接从解压目录运行
 `bin/feathertalk-app` 或 `bin/feathertalk`。
 
-程序自动从二进制同级的 `models/` 目录查找四个模型，并优先使用同目录内的
-`ffmpeg`/`ffprobe`；因此 `bin/` 内的三个程序、FFmpeg 工具与 `models/` 需保持在同一
-安装目录内。仍可用 `FEATHERTALK_WORKER_FFMPEG`、`FEATHERTALK_WORKER_FFPROBE`、
+程序会从二进制同级或安装根目录的 `models/` 目录查找四个模型，并优先使用 worker
+同目录内的 `ffmpeg`/`ffprobe`。仍可用 `FEATHERTALK_WORKER_FFMPEG`、
+`FEATHERTALK_WORKER_FFPROBE`、
 `FEATHERTALK_WORKER_SCRFD_DIR`、`FEATHERTALK_WORKER_PFLD_DIR`、
 `FEATHERTALK_WORKER_HUBERT_DIR`、`FEATHERTALK_WORKER_VGG19_DIR` 指向其他绝对路径，
 显式配置优先。CLI 支持 `--backend auto|cpu|wgpu|cuda|rocm`（默认 `auto`）和
