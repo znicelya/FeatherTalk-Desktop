@@ -8,7 +8,7 @@ use std::{
 
 use burn::{
     backend::{DispatchDevice, wgpu::CubeBackend},
-    cubecl::{Device as CubeDevice, future::block_on, hip::AmdDevice},
+    cubecl::{Device as CubeDevice, future::block_on},
     tensor::{Device, Tensor},
 };
 use cubecl_hip_sys::{
@@ -86,6 +86,15 @@ pub(super) fn discover() -> Vec<(AdapterInfo, RocmContext)> {
 }
 
 fn discover_checked() -> Result<Vec<(AdapterInfo, RocmContext)>, String> {
+    // The generated HIP bindings panic when the runtime cannot be loaded.
+    // Their extern-C trampoline cannot unwind, so checking with catch_unwind
+    // around a HIP call is too late: it aborts the process. Probe the dynamic
+    // libraries through cubecl-hip-sys first; this is safe on machines without
+    // ROCm and preserves the CUDA/wgpu/CPU discovery paths.
+    if !cubecl_hip_sys::is_available() {
+        return Err("HIP runtime libraries are unavailable".into());
+    }
+
     let mut count = 0_i32;
     // SAFETY: `count` is a live output integer and this probe owns the call.
     let status = unsafe { hipGetDeviceCount(&mut count) };
@@ -165,4 +174,19 @@ fn open_and_probe(index: usize) -> Result<(AdapterInfo, RocmContext), String> {
         },
         context,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_hip_libraries_are_reported_before_ffi_calls() {
+        if cubecl_hip_sys::is_available() {
+            return;
+        }
+
+        let error = discover_checked().expect_err("unavailable HIP runtime must be skipped");
+        assert!(error.contains("HIP runtime libraries are unavailable"));
+    }
 }

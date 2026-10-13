@@ -185,7 +185,8 @@ done
 
 # -- stage payload ------------------------------------------------------------
 package_name="FeatherTalk-$version-linux-x86_64"
-build_dir="$rust_root/target/installer/build-$(date +%s)-$$"
+# build_dir="$rust_root/target/installer/build-$(date +%s)-$$"
+build_dir="$HOME/.feathertalk-installer/build-$(date +%s)-$$"
 stage="$build_dir/$package_name"
 rm -rf "$build_dir"
 mkdir -p "$stage/bin" "$stage/models" "$stage/licenses"

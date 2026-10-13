@@ -10,3 +10,4 @@ docs/reports
 .superpowers
 /tools/*/target
 /vendor/*/target
+.idea
