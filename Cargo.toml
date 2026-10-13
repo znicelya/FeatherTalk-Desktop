@@ -30,7 +30,7 @@ members = [
   "tools/onnx-validate",
   "tools/feathertalk-benchmark",
 ]
-exclude = ["crates/feathertalk-app", "tools/scrfd-import", "vendor/cubek-matmul"]
+exclude = ["crates/feathertalk-app", "tools/scrfd-import"]
 
 [workspace.package]
 version = "0.1.0"

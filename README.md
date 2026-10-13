@@ -28,7 +28,7 @@ FeatherTalk 是一个离线优先的数字人/说话头像工作台。它把视�
           └──────────── feathertalk-cli（脚本与 CI）
 ```
 
-根 workspace 默认包含 `crates/feathertalk-*` 核心库、`feathertalk-cli`、`feathertalk-worker` 及 `tools/*`。`crates/feathertalk-app` 是独立 workspace（gpui 依赖较重），需要使用它自己的 manifest 构建。`vendor/cubek-matmul` 是带 FeatherTalk 补丁的本地依赖。
+根 workspace 默认包含 `crates/feathertalk-*` 核心库、`feathertalk-cli`、`feathertalk-worker` 及 `tools/*`。`crates/feathertalk-app` 是独立 workspace（gpui 依赖较重），需要使用它自己的 manifest 构建。
 
 主要 crate：
 
@@ -281,7 +281,7 @@ sudo /opt/feathertalk/install.sh --uninstall
 
 ## 许可证与第三方声明
 
-本项目代码采用 Apache-2.0（发布包会附带许可证文本）。FFmpeg、Burn/CubeCL、gpui、yororen_ui 及模型权重分别遵循各自许可证；发布包会附带 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`、`THIRD-PARTY-NOTICES.txt` 和模型目录中的 `LICENSES.json`。模型许可证不会因 FeatherTalk 的 Apache-2.0 许可而改变。对 `vendor/cubek-matmul` 的修改说明位于 [`vendor/cubek-matmul/FEATHERTALK-PATCH.md`](vendor/cubek-matmul/FEATHERTALK-PATCH.md)。
+本项目代码采用 Apache-2.0（发布包会附带许可证文本）。FFmpeg、Burn/CubeCL、Cubek、gpui、yororen_ui 及模型权重分别遵循各自许可证；发布包会附带 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`、`THIRD-PARTY-NOTICES.txt` 和模型目录中的 `LICENSES.json`。模型许可证不会因 FeatherTalk 的 Apache-2.0 许可而改变。
 
 ## 贡献与开发约定
 

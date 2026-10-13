@@ -246,18 +246,12 @@ Copy-Item -LiteralPath $licensePath -Destination (Join-Path $stage 'LICENSE.txt'
 Copy-Item -LiteralPath (Join-Path $ffmpegRoot 'LICENSE') -Destination (Join-Path $stage 'FFmpeg-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $ffmpegRoot 'README.txt') -Destination (Join-Path $stage 'FFmpeg-README.txt')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $stage 'README.txt')
-$cubekNotices = Join-Path $stage 'licenses/cubek-matmul'
-New-Item -ItemType Directory -Path $cubekNotices -Force | Out-Null
-foreach ($name in @('LICENSE-MIT', 'LICENSE-APACHE', 'FEATHERTALK-PATCH.md')) {
-    Copy-Item -LiteralPath (Join-Path $rustRoot "vendor/cubek-matmul/$name") -Destination (Join-Path $cubekNotices $name)
-}
 $notices = @'
 FeatherTalk is licensed under Apache-2.0; see LICENSE.txt.
 Project and source: https://github.com/anliyuan/FeatherTalk
 
-The worker includes cubek-matmul 0.2.0 (MIT OR Apache-2.0) with a local
-double-buffered K bounds correction. Upstream licenses, source provenance,
-and the modification notice are included under licenses/cubek-matmul.
+The Cubek matrix-multiplication kernels are provided by the cubek-matmul 0.3.0
+dependency (MIT OR Apache-2.0) from crates.io.
 Cubek project: https://github.com/tracel-ai/cubek
 
 FFmpeg and FFprobe are separate executables, distributed without modification.

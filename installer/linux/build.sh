@@ -189,7 +189,7 @@ package_name="FeatherTalk-$version-linux-x86_64"
 build_dir="$HOME/.feathertalk-installer/build-$(date +%s)-$$"
 stage="$build_dir/$package_name"
 rm -rf "$build_dir"
-mkdir -p "$stage/bin" "$stage/models" "$stage/licenses"
+mkdir -p "$stage/bin" "$stage/models"
 
 install -m 0755 "$app_executable" "$stage/bin/feathertalk-app"
 install -m 0755 "$worker_executable" "$stage/bin/feathertalk-worker"
@@ -235,17 +235,11 @@ if [[ "$bundle_ffmpeg" -eq 1 ]]; then
     [[ -f "$stage/FFmpeg-README" ]] && mv "$stage/FFmpeg-README" "$stage/FFmpeg-README.txt"
 fi
 
-mkdir -p "$stage/licenses/cubek-matmul"
-for name in LICENSE-MIT LICENSE-APACHE FEATHERTALK-PATCH.md; do
-    install -m 0644 "$rust_root/vendor/cubek-matmul/$name" "$stage/licenses/cubek-matmul/$name"
-done
-
 cat > "$stage/THIRD-PARTY-NOTICES.txt" <<'NOTICES'
 FeatherTalk is licensed under Apache-2.0; see LICENSE.txt.
 
-A local fix to the Cubek matrix-multiplication kernels is used. The upstream
-license, source reference and modification notice are included under
-licenses/cubek-matmul.
+The Cubek matrix-multiplication kernels are provided by the cubek-matmul 0.3.0
+dependency (MIT OR Apache-2.0) from crates.io.
 Cubek project: https://github.com/tracel-ai/cubek
 
 FFmpeg and FFprobe, when bundled, are separate executables distributed without
@@ -313,7 +307,7 @@ fi
 
 echo "安装到 $prefix ..."
 mkdir -p "$prefix"
-cp -a "$here/bin" "$here/models" "$here/licenses" "$prefix/"
+cp -a "$here/bin" "$here/models" "$prefix/"
 for f in "$here"/*.txt "$here"/*.desktop; do
     [[ -e "$f" ]] && cp -a "$f" "$prefix/"
 done

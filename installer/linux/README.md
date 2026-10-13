@@ -64,7 +64,7 @@ cd FeatherTalk-0.1.0-linux-x86_64
 sudo ./install.sh --prefix /opt/feathertalk --bindir /usr/local/bin
 ```
 
-安装器把 `bin/`、`models/`、`licenses/` 和说明文件复制到前缀目录，并在 `bindir`
+安装器把 `bin/`、`models/` 和说明文件复制到前缀目录，并在 `bindir`
 创建 `feathertalk-app`、`feathertalk` 的软链接，再写入桌面入口。卸载：
 
 ```bash
@@ -101,7 +101,7 @@ installer/linux/verify.sh --archive dist/FeatherTalk-0.1.0-linux-x86_64.tar.gz
 
 FeatherTalk 使用 Apache-2.0（归档内 `LICENSE.txt`）。打包 FFmpeg 时附带
 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`（存在时）；其余第三方说明见
-`THIRD-PARTY-NOTICES.txt`。本地修正的 Cubek 矩阵乘法内核，其上游许可、来源与修改
-说明位于 `licenses/cubek-matmul`。模型保留各自清单中的来源与许可元数据，
+`THIRD-PARTY-NOTICES.txt`。Cubek 矩阵乘法内核来自 crates.io 的 `cubek-matmul 0.3.0`
+依赖（MIT 或 Apache-2.0）。模型保留各自清单中的来源与许可元数据，
 FeatherHuBERT、VGG19 的记录在各自的 `LICENSES.json`；应用的 Apache-2.0 许可不会
 替代模型权重的许可证。

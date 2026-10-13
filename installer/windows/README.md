@@ -134,6 +134,6 @@ worker 与媒体处理，并使用包内模型在 CPU 上执行一帧人脸/关�
 
 FeatherTalk 使用 Apache-2.0。随包 FFmpeg 的许可证和源码版本见
 `FFmpeg-LICENSE.txt`、`FFmpeg-README.txt`；其他运行依赖说明见 `THIRD-PARTY-NOTICES.txt`。
-本地修正的 Cubek 矩阵乘法内核，其上游许可证、来源和修改说明位于 `licenses/cubek-matmul`。
+Cubek 矩阵乘法内核来自 crates.io 的 `cubek-matmul 0.3.0` 依赖（MIT 或 Apache-2.0）。
 模型保留各自清单中的来源和许可证元数据，FeatherHuBERT、VGG19 的记录在各自的 `LICENSES.json`
 中；应用的 Apache-2.0 许可证不会替代模型权重的许可证。
